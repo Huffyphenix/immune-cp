@@ -3,6 +3,7 @@
 ###############
 read.table("mut_rate.filter_cancer.txt",sep="\t",header = T,row.names = 1)->mut_rate.filter_cancer.txt
 read.table("number_of_samples_in_cancers",sep="\t",row.names = 1)->number_of_samples_in_cancers
+read.table("mut_num.filter.txt",sep="\t",row.names = 1,header = T)->mut_num.filter.txt
 mut_num.filter.txt[rownames(mut_rate.filter_cancer.txt),]->mut_num.filter.txt
 mut_num.filter.txt[,colnames(mut_rate.filter_cancer.txt)]->mut_num.filter.txt
 cbind(colnames(mut_rate.filter_cancer.txt),number_of_samples_in_cancers[colnames(mut_rate.filter_cancer.txt),"V2"])->sample.n
