@@ -101,7 +101,23 @@ genelist_snv_per_in_groups_cancers %>%
   dplyr::filter(cancer_types.x %in% cancers_with_enough_high_mutation) %>%
   ggplot(aes(x=cancer_types.x,y=symbol,fill=per)) +
   geom_tile(color = "black") +
-  scale_fill_gradient2(low="#F0FFF0",high="#008B00") +
+  scale_fill_gradient2(low="#F0FFF0",high="#008B00",
+                       name = "Mutation Frequency (%)",
+                       limit = c(0, 0.4),
+                       breaks = c(seq(0, 0.05, 0.05), seq(0.1, 0.4, 0.1)),
+                       label = c("0", "5", "10", "20","30", "40")) +
   facet_grid(~mutation_status) +
   scale_x_discrete(limit=cancer_rank$cancer_types.x) +
-  scale_y_discrete(limit = gene_rank$symbol)
+  scale_y_discrete(limit = gene_rank$symbol) +
+  theme(
+    panel.background = element_blank()
+  )
+
+
+
+# get mutation signiture --------------------------------------------------------
+## don't run
+library(maftools)
+mc3_pass <- readr::read_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv", "01-snv_mutation_mc3_public.pass.filtered_maf.rds.gz"))
+maftools::subsetMaf(mc3_pass, genes = gene_list$symbol, mafObj = T, tsb = ) -> gene_list_maf
+

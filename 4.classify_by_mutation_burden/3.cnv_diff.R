@@ -19,6 +19,7 @@ mutation_burden_class <- readr::read_rds(file.path(burden_path,"classfication_of
 
 cnv <- readr::read_rds(file.path(tcga_path,"pancan34_cnv_threshold.rds.gz"))
 gene_list <- read.table(file.path(gene_list_path, "all.entrez_id-gene_id"),header=T)
+gene_list_type <- read.table(file.path(gene_list_path, "checkpoint.type"),header=T)
 
 
 # cnv difference calculate ------------------------------------------------
@@ -133,7 +134,119 @@ genelist_cnv_per_in_groups_cancers %>%
     plot.margin = grid::unit(c(0, 0, 0, 0), "mm"),
     panel.border  = element_rect(fill=NA),
     axis.text.x = element_text(angle = 45,hjust = 1)
-) -> p
+  ) -> p  ### save with export on the plots panel
 
 
-    
+# cluster analysis --------------------------------------------------------
+
+## data prepare
+cnv_merge_snv_data %>%
+  # dplyr::mutate(cnv = ifelse(abs(cnv)<2,0,cnv/2)) %>%
+  dplyr::filter(symbol %in% names(gene_clustere_efficient_for_cluster_samples)) %>%
+  dplyr::filter(cancer_types.x %in% c("LUAD","SKCM","STAD","HNSC")) %>% #"BLCA","COAD","LUSC",,"UCEC"
+  dplyr::select(symbol,barcode,cnv) %>%
+  tidyr::spread(key=barcode,value=cnv) %>%
+  as.data.frame() -> cnv_data_for_cluster
+rownames(cnv_data_for_cluster) <- cnv_data_for_cluster$symbol
+cnv_data_for_cluster <- cnv_data_for_cluster[,-1]
+
+## do cluster to see if the tree can seperate the samples into clusters
+### sample cluster
+col_dend = hclust(dist(t(cnv_data_for_cluster))) # column clustering
+plot(col_dend,hang = -1,cex=.8)      #聚类树状图
+re <- rect.hclust(col_dend, k = 10)    #用矩形画出分为3类的区域
+re   # 样本分类信息
+
+### gene cluster
+row_dend = hclust(dist(cnv_data_for_cluster)) # column clustering
+plot(row_dend,hang = -1,cex=.8)      #聚类树状图
+re <- rect.hclust(row_dend, k = 10)    #用矩形画出分为3类的区域
+re   # 样本分类信息
+c(re[[3]] %>% unlist(),re[[4]] %>% unlist(),re[[5]] %>% unlist(),re[[8]] %>% unlist(),re[[9]] %>% unlist(),re[[10]] %>% unlist()) -> gene_clustere_efficient_for_cluster_samples    # use this gene list To filter the data in data prepare part
+
+#### 水平的进化树
+row_dend = cnv_data_for_cluster %>% dist %>% hclust %>% as.dendrogram
+row_dend %>% plot(horiz = TRUE,main = "Horizontal Dendrogram")
+## if can, do next, use heatmap to see detail cnv condition in clusters 
+
+## side bar preparation
+
+library(ComplexHeatmap)
+
+### Up annotation
+
+cnv_merge_snv_data %>%
+  # dplyr::mutate(cnv = ifelse(abs(cnv)<2,0,cnv/2)) %>%
+  dplyr::filter(cancer_types.x %in% c("LUAD","SKCM","STAD","HNSC")) %>% #"BLCA","COAD","LUSC",,"UCEC"
+  dplyr::select(barcode,mutation_status,cancer_types.x) %>%
+  unique() -> sample_anno
+
+# RColorBrewer::brewer.pal(8,"Set1") -> cancer_color
+# gene_list_expr_simplify$cancer_types %>% unique() -> cancer_tyes
+# data.frame(cancer_color=cancer_color,cancer_types=cancer_tyes) -> cancer_anno
+# fn_get_cancer_color <- function(i){
+#   cancer_anno[i,2] -> x
+#   cancer_anno[i,1] -> y
+#   print(paste(x, "=", y))
+# }
+
+up_anno <- HeatmapAnnotation(df = data.frame(mutation_status=sample_anno$mutation_status,
+                                             cancer_types=sample_anno$cancer_types.x),
+                             col = list(mutation_status = c("low_mutation_burden" = "#8C8C8C",
+                                                            "high_muation_burden" = "#FFC1C1"),
+                                        cancer_types = c("BLCA" = "#E41A1C",
+                                                         "HNSC" = "#377EB8",
+                                                         "LUAD" = "#4DAF4A",
+                                                         "SKCM" = "#984EA3",
+                                                         "LUSC" = "#FF7F00",
+                                                         "UCEC" = "#FFFF33",
+                                                         "STAD" = "#A65628",
+                                                         "COAD" = "#F781BF")
+                             ),
+                             width = unit(0.5, "cm"))
+draw(up_anno, 1:10)
+
+### side annotation
+cnv_merge_snv_data %>%
+  dplyr::mutate(cnv = ifelse(abs(cnv)<2,0,cnv/2)) %>%
+  dplyr::filter(cancer_types.x %in% c("LUAD","SKCM","BLCA","COAD","LUSC","STAD","HNSC","UCEC")) %>%
+  dplyr::inner_join(gene_list_type,by="symbol") %>%
+  dplyr::select(symbol,type,functionWithImmune) %>%
+  unique() -> gene_anno
+side_anno <- rowAnnotation(df=data.frame(type=gene_anno$type,function_type=gene_anno$functionWithImmune),
+                           col = list(type = c("Ligand" = "#66C2A5",
+                                               "Receptor" = "#FC8D62",
+                                               "Ligand&Receptor" = "#E78AC3"),
+                                      function_type = c("TwoSide" = "#FFFF33",
+                                                       "Activate" = "#B3B3B3",
+                                                       "Inhibit" = "#A6D854")
+                           ),
+                           width = unit(0.5, "cm")
+)
+grid.newpage()
+draw(side_anno,1:10)    
+
+
+### determining the optimal number of clusters
+set.seed(123)
+library(NbClust)
+cnv_data_for_cluster %>%
+  NbClust(distance = "euclidean",
+          min.nc = 2, max.nc = 10, 
+          method = "complete", index ="all") -> res.nbclust
+
+### get heatmap
+library(circlize)
+library(dendextend)
+row_dend = hclust(dist(cnv_data_for_cluster)) # row clustering
+col_dend = hclust(dist(t(cnv_data_for_cluster))) # column clustering
+Heatmap(cnv_data_for_cluster, name = "cnv", # km = 5, 
+        col = colorRamp2(c(-2, 0, 2), c("green", "white", "red")),
+        top_annotation = up_anno, 
+        show_row_names = T, show_column_names = FALSE,
+        column_dend_height = unit(30, "mm"),
+        cluster_rows = color_branches(row_dend, k = 10),     # add color on the row tree branches
+        cluster_columns = color_branches(col_dend, k = 10)   # add color on the column tree branches
+) -> he
+
+he+side_anno
