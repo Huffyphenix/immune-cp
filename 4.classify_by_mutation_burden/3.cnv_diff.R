@@ -1,5 +1,5 @@
 ###############################################
-# mutation load changes between groups
+# CNV Frequence changes between groups
 
 library(magrittr)
 library(ggplot2)
