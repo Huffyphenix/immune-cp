@@ -142,7 +142,7 @@ genelist_cnv_per_in_groups_cancers %>%
 ## data prepare
 cnv_merge_snv_data %>%
   # dplyr::mutate(cnv = ifelse(abs(cnv)<2,0,cnv/2)) %>%
-  dplyr::filter(symbol %in% names(gene_clustere_efficient_for_cluster_samples)) %>%
+  # dplyr::filter(symbol %in% names(gene_clustere_efficient_for_cluster_samples)) %>%
   dplyr::filter(cancer_types.x %in% c("LUAD","SKCM","STAD","HNSC")) %>% #"BLCA","COAD","LUSC",,"UCEC"
   dplyr::select(symbol,barcode,cnv) %>%
   tidyr::spread(key=barcode,value=cnv) %>%
@@ -179,7 +179,8 @@ cnv_merge_snv_data %>%
   # dplyr::mutate(cnv = ifelse(abs(cnv)<2,0,cnv/2)) %>%
   dplyr::filter(cancer_types.x %in% c("LUAD","SKCM","STAD","HNSC")) %>% #"BLCA","COAD","LUSC",,"UCEC"
   dplyr::select(barcode,mutation_status,cancer_types.x) %>%
-  unique() -> sample_anno
+  unique() %>%
+  dplyr::arrange(barcode) -> sample_anno
 
 # RColorBrewer::brewer.pal(8,"Set1") -> cancer_color
 # gene_list_expr_simplify$cancer_types %>% unique() -> cancer_tyes
@@ -212,7 +213,8 @@ cnv_merge_snv_data %>%
   dplyr::filter(cancer_types.x %in% c("LUAD","SKCM","BLCA","COAD","LUSC","STAD","HNSC","UCEC")) %>%
   dplyr::inner_join(gene_list_type,by="symbol") %>%
   dplyr::select(symbol,type,functionWithImmune) %>%
-  unique() -> gene_anno
+  unique() %>%
+  dplyr::arrange(symbol)-> gene_anno
 side_anno <- rowAnnotation(df=data.frame(type=gene_anno$type,function_type=gene_anno$functionWithImmune),
                            col = list(type = c("Ligand" = "#66C2A5",
                                                "Receptor" = "#FC8D62",

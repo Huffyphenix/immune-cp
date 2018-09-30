@@ -180,16 +180,18 @@ gene_list_expr_with_mutation_load %>%
 ## data preparation
 gene_list_expr_with_mutation_load %>%
   tidyr::unnest() %>%
-  dplyr::select(-entrez_id, -sm_count) %>%
+  dplyr::filter(T_N == "Tumor") %>%
+  dplyr::select(-entrez_id,-T_N) %>%
   # dplyr::filter(symbol %in% gene_list_fc_sig$symbol) %>%
-  dplyr::filter(cancer_types %in% c("LUAD","SKCM","BLCA","COAD","LUSC","STAD","HNSC","UCEC")) %>%  # cancers with more samples with high mutation load
+  # dplyr::filter(cancer_types %in% c("LUAD","SKCM","BLCA","COAD","LUSC","STAD","HNSC","UCEC")) %>%  # cancers with more samples with high mutation load
+  dplyr::filter(cancer_types %in% c("LUAD","SKCM","BLCA")) %>%  # SKCM,LUAD
   dplyr::group_by(barcode,symbol) %>%
   dplyr::mutate(expr=mean(expr)) %>%          # use mean value to represent expression of the samples from same patient
   dplyr::ungroup() %>%
   unique() -> gene_list_expr_simplify
 
 gene_list_expr_simplify %>%
-  dplyr::select(-cancer_types,-mutation_status) %>%
+  dplyr::select(-cancer_types,-mutation_status,-sm_count) %>%
   tidyr::spread(key=barcode, value=expr)  %>%
   as.data.frame() -> gene_list_expr_scale
 
@@ -205,22 +207,27 @@ library(ComplexHeatmap)
 ### Up annotation
 
 gene_list_expr_simplify %>%
-  dplyr::select(barcode,mutation_status,cancer_types) %>%
-  unique() -> sample_anno
+  dplyr::select(barcode,mutation_status,sm_count,cancer_types) %>%
+  unique() %>%
+  dplyr::arrange(barcode)-> sample_anno
 
-RColorBrewer::brewer.pal(8,"Set1") -> cancer_color
-gene_list_expr_simplify$cancer_types %>% unique() -> cancer_tyes
-data.frame(cancer_color=cancer_color,cancer_types=cancer_tyes) -> cancer_anno
-fn_get_cancer_color <- function(i){
-  cancer_anno[i,2] -> x
-  cancer_anno[i,1] -> y
-  print(paste(x, "=", y))
-}
+# RColorBrewer::brewer.pal(8,"Set1") -> cancer_color
+# gene_list_expr_simplify$cancer_types %>% unique() -> cancer_tyes
+# data.frame(cancer_color=cancer_color,cancer_types=cancer_tyes) -> cancer_anno
+# fn_get_cancer_color <- function(i){
+#   cancer_anno[i,2] -> x
+#   cancer_anno[i,1] -> y
+#   print(paste(x, "=", y))
+# }
 
 up_anno <- HeatmapAnnotation(df = data.frame(mutation_status=sample_anno$mutation_status,
+                                             sm_count = log2(sample_anno$sm_count),
                                              cancer_types=sample_anno$cancer_types),
                                   col = list(mutation_status = c("low_mutation_burden" = "#8C8C8C",
                                                                "high_muation_burden" = "#FFC1C1"),
+                                             sm_count = circlize::colorRamp2(c(0,
+                                                                               max(log2(sample_anno$sm_count))),
+                                                                             c("white","red")),
                                              cancer_types = c("BLCA" = "#E41A1C",
                                                             "HNSC" = "#377EB8",
                                                             "LUAD" = "#4DAF4A",
@@ -238,7 +245,8 @@ draw(up_anno, 1:10)
 gene_list_expr_simplify %>%
   dplyr::inner_join(gene_list_type,by="symbol") %>%
   dplyr::select(symbol,type,functionWithImmune) %>%
-  unique() -> gene_anno
+  unique() %>%
+  dplyr::arrange(symbol) -> gene_anno
 side_anno <- rowAnnotation(df=data.frame(type=gene_anno$type,function_type=gene_anno$functionWithImmune),
                            width = unit(0.5, "cm")
                            )
@@ -246,25 +254,28 @@ grid.newpage()
 draw(side_anno,1:10)
 
 ### determining the optimal number of clusters
-set.seed(123)
-library(NbClust)
-gene_list_expr_scale %>%
-  NbClust(distance = "euclidean",
-          min.nc = 2, max.nc = 10, 
-          method = "complete", index ="all") -> res.nbclust
+# set.seed(123)
+# library(NbClust)
+# gene_list_expr_scale %>%
+#   NbClust(distance = "euclidean",
+#           min.nc = 2, max.nc = 10, 
+#           method = "complete", index ="all") -> res.nbclust
 
 ### get heatmap
 library(circlize)
 library(dendextend)
 row_dend = hclust(dist(gene_list_expr_scale)) # row clustering
+plot(row_dend)
 col_dend = hclust(dist(t(gene_list_expr_scale))) # column clustering
-Heatmap(gene_list_expr_scale, name = "expression",  km = 5, 
+plot(col_dend)
+
+Heatmap(gene_list_expr_scale, name = "expression",  #km = 5, 
         col = colorRamp2(c(-2, 0, 2), c("green", "white", "red")),
         top_annotation = up_anno, 
         show_row_names = T, show_column_names = FALSE,
-        column_dend_height = unit(30, "mm")
-        #cluster_rows = color_branches(row_dend, k = 4)     # add color on the row tree branches
-        # cluster_columns = color_branches(col_dend, k = 2)   # add color on the column tree branches
+        column_dend_height = unit(30, "mm"),
+        cluster_rows = color_branches(row_dend, k = 5),     # add color on the row tree branches
+        cluster_columns = color_branches(col_dend, k = 10)   # add color on the column tree branches
         ) -> he
 
 he+side_anno
