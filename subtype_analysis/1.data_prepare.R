@@ -117,5 +117,25 @@ PanCan26_gene_list_methy_matrix %>%
 
 
 # 4. clinical data --------------------------------------------------------
+clinical <- readr::read_rds(file.path(tcga_path,"pancan34_clinical.rds.gz"))
 
+fn_merge <- function(cli,cancer){
+  print(cancer)
+  cli %>%
+    dplyr::select(barcode,os_days,os_status) %>%
+    dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+    dplyr::select(-cancer_types) %>%
+    dplyr::mutate(os_status = ifelse(os_status == "Dead",1,0))
+}
+clinical %>%
+  dplyr::filter(cancer_types %in% cancers_in_mutaion_burden_class) %>%
+  dplyr::mutate(cli_snv_merge = purrr::map2(.x=clinical,cancer_types,fn_merge)) %>%
+  dplyr::select(-clinical) %>%
+  tidyr::unnest() %>%
+  dplyr::select(barcode,os_days,os_status) -> time_status
 
+time_status %>%
+  readr::write_tsv(file.path(data_result_path,"time_status.tsv"))
+
+save.image(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
+load(file = file.path(expr_path_a, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
