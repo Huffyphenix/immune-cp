@@ -68,10 +68,12 @@ gene_list_expr %>%
   dplyr::arrange(barcode) -> gene_list_expr_with_mutation_load # arrange is important for the sample corresponding between survival time and expr data. cause spread will arrange the barcode auto
 
 gene_list_expr_with_mutation_load %>% 
+  dplyr::filter(T_N == "Tumor") %>%
   dplyr::select(barcode,os_days) %>%
   unique() %>% .$os_days -> expr_time
 
 gene_list_expr_with_mutation_load %>% 
+  dplyr::filter(T_N == "Tumor") %>%
   dplyr::select(barcode,os_status) %>%
   unique() %>% .$os_status -> expr_status
 
@@ -172,11 +174,50 @@ gene_list_expr_with_mutation_load %>% .$barcode %>% unique() -> expr_samples
 intersect(methy_samples,cnv_samples) %>% intersect(expr_samples) -> samples.intersect
 
 genelist_methy_mutaion_class %>% 
-  dplyr::filter(barcode %in% samples.intersect) -> genelist_methy_mutaion_class.combine
+  dplyr::filter(barcode %in% samples.intersect) %>%
+  dplyr::select(symbol,barcode,methy) %>%
+  dplyr::group_by(symbol,barcode) %>%
+  dplyr::mutate(methy = mean(methy)) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = barcode,value = methy)-> genelist_methy_mutaion_class.combine.spread
+
+PanCan26_gene_list_methy_matrix.combine <- as.matrix(genelist_methy_mutaion_class.combine.spread[,-1])
+rownames(PanCan26_gene_list_methy_matrix.combine) <- genelist_methy_mutaion_class.combine.spread$symbol
+
 cnv_merge_snv_data %>% 
-  dplyr::filter(barcode %in% samples.intersect) -> cnv_merge_snv_data.combine
+  dplyr::filter(barcode %in% samples.intersect) %>%
+  dplyr::select(symbol,barcode,cnv) %>%
+  dplyr::group_by(symbol,barcode) %>%
+  dplyr::mutate(cnv = mean(cnv)) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = barcode,value = cnv)-> cnv_merge_snv_data.combine
+cnv_merge_snv_data.matrix.combine <- as.matrix(cnv_merge_snv_data.combine[,-1])
+rownames(cnv_merge_snv_data.matrix.combine) <- cnv_merge_snv_data.combine$symbol
+
 gene_list_expr_with_mutation_load %>% 
-  dplyr::filter(barcode %in% samples.intersect) -> gene_list_expr_with_mutation_load.combine
+  dplyr::filter(barcode %in% samples.intersect) %>%
+  dplyr::select(symbol,barcode,expr) %>%
+  dplyr::group_by(symbol,barcode) %>%
+  dplyr::mutate(expr = mean(expr)) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = barcode,value = expr)-> gene_list_expr_with_mutation_load.combine
+
+gene_list_expr_with_mutation_load.matrix.combine <- as.matrix(gene_list_expr_with_mutation_load.combine[,-1])
+rownames(gene_list_expr_with_mutation_load.matrix.combine) <- gene_list_expr_with_mutation_load.combine$symbol
+
+time_status %>%
+  dplyr::filter(barcode %in% samples.intersect) %>%
+  dplyr::select(barcode,os_days) %>%
+  dplyr::arrange(barcode) %>%
+  unique() %>% .$os_days ->  time.combine
+time_status %>%
+  dplyr::filter(barcode %in% samples.intersect) %>%
+  dplyr::select(barcode,os_status) %>%
+  dplyr::arrange(barcode) %>%
+  unique() %>% .$os_status -> status.combine
 # save work space ---------------------------------------------------------
 
 save.image(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
