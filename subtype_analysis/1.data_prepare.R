@@ -13,6 +13,29 @@ data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
 
 mutation_burden_class <- readr::read_rds(file.path(burden_path,"classfication_of_26_cancers_by_mutation_burden192.rds.gz")) %>%
   tidyr::unnest()
+
+# 4. clinical data --------------------------------------------------------
+clinical <- readr::read_rds(file.path(tcga_path,"pancan34_clinical.rds.gz"))
+
+fn_merge <- function(cli,cancer){
+  print(cancer)
+  cli %>%
+    dplyr::select(barcode,os_days,os_status) %>%
+    dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+    dplyr::select(-cancer_types) %>%
+    dplyr::mutate(os_status = ifelse(os_status == "Dead",1,0))
+}
+clinical %>%
+  dplyr::filter(cancer_types %in% cancers_in_mutaion_burden_class) %>%
+  dplyr::mutate(cli_snv_merge = purrr::map2(.x=clinical,cancer_types,fn_merge)) %>%
+  dplyr::select(-clinical) %>%
+  tidyr::unnest() %>%
+  dplyr::select(barcode,os_days,os_status) %>%
+  tidyr::drop_na() -> time_status
+
+time_status %>%
+  readr::write_tsv(file.path(data_result_path,"time_status.tsv"))
+
 # 1. prepare expression data ------------------------------------------------------
 
 expr_data <- readr::read_rds(file.path(tcga_path,"pancan33_expr.rds.gz"))
@@ -40,13 +63,19 @@ gene_list_expr %>%
   dplyr::filter(!is.na(expr)) %>%
   dplyr::mutate(mutation_status = ifelse(T_N=="Normal","Normal",mutation_status)) %>%
   dplyr::mutate(sm_count = ifelse(T_N=="Normal",0,sm_count)) %>%
-  tidyr::nest(-symbol) -> gene_list_expr_with_mutation_load
+  dplyr::inner_join(time_status,by="barcode") %>%   # samples of expr and clinical should be the same
+  dplyr::filter(! is.na(expr)) %>% 
+  dplyr::arrange(barcode) -> gene_list_expr_with_mutation_load # arrange is important for the sample corresponding between survival time and expr data. cause spread will arrange the barcode auto
+
+gene_list_expr_with_mutation_load %>% 
+  dplyr::select(barcode,os_days) %>%
+  unique() %>% .$os_days -> expr_time
+
+gene_list_expr_with_mutation_load %>% 
+  dplyr::select(barcode,os_status) %>%
+  unique() %>% .$os_status -> expr_status
 
 gene_list_expr_with_mutation_load %>%
-  readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_expr_with_mutation_load_class.rds.gz"),compress = "gz")
-
-gene_list_expr_with_mutation_load %>%
-  tidyr::unnest() %>%
   dplyr::filter(T_N == "Tumor") %>%
   dplyr::select(symbol,barcode,expr) %>%
   dplyr::group_by(symbol,barcode) %>%
@@ -62,8 +91,8 @@ PanCan26_gene_list_expr_matrix %>%
   readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_expr_matrix.rds.gz"),compress = "gz")
 
 
-# 2. prepare CNV data (gistic)------------------------------------------------------
-cnv <- readr::read_rds(file.path(tcga_path,"pancan34_cnv_threshold.rds.gz"))
+# 2. prepare CNV data (raw data)------------------------------------------------------
+cnv <- readr::read_rds(file.path(tcga_path,"pancan34_cnv.rds.gz"))
 
 mutation_burden_class$cancer_types %>% unique() ->cancers_in_mutaion_burden_class
 
@@ -74,7 +103,17 @@ cnv %>%
   tidyr::gather(-cancer_types,-symbol,key=barcode,value=cnv) %>%
   dplyr::mutate(barcode = substr(barcode,1,12)) %>%
   dplyr::inner_join(mutation_burden_class,by="barcode") %>%
-  dplyr::filter(! is.na(cnv)) -> cnv_merge_snv_data
+  dplyr::inner_join(time_status,by="barcode") %>%
+  dplyr::filter(! is.na(cnv)) %>% 
+  dplyr::arrange(barcode) -> cnv_merge_snv_data
+
+cnv_merge_snv_data %>% 
+  dplyr::select(barcode,os_days) %>%
+  unique() %>% .$os_days -> cnv_time
+
+cnv_merge_snv_data %>% 
+  dplyr::select(barcode,os_status) %>%
+  unique() %>% .$os_status -> cnv_status
 
 cnv_merge_snv_data %>%
   dplyr::select(symbol,barcode,cnv) %>%
@@ -99,7 +138,17 @@ mthy %>%
   tidyr::gather(-cancer_types,-symbol,key=barcode,value=methy) %>%
   dplyr::mutate(barcode = substr(barcode,1,12)) %>%
   dplyr::inner_join(mutation_burden_class,by="barcode") %>%
-  dplyr::filter(! is.na(methy)) -> genelist_methy_mutaion_class
+  dplyr::inner_join(time_status,by="barcode") %>%
+  dplyr::filter(! is.na(methy)) %>% 
+  dplyr::arrange(barcode) -> genelist_methy_mutaion_class  
+
+genelist_methy_mutaion_class %>% 
+  dplyr::select(barcode,os_days) %>%
+  unique() %>% .$os_days -> methy_time
+
+genelist_methy_mutaion_class %>% 
+  dplyr::select(barcode,os_status) %>%
+  unique() %>% .$os_status -> methy_status
 
 genelist_methy_mutaion_class %>%
   dplyr::select(symbol,barcode,methy) %>%
@@ -116,26 +165,19 @@ PanCan26_gene_list_methy_matrix %>%
   readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_methy_matrix.rds.gz"),compress = "gz")
 
 
-# 4. clinical data --------------------------------------------------------
-clinical <- readr::read_rds(file.path(tcga_path,"pancan34_clinical.rds.gz"))
+# data combine ------------------------------------------------------------
+genelist_methy_mutaion_class %>% .$barcode %>% unique() -> methy_samples
+cnv_merge_snv_data %>% .$barcode %>% unique() -> cnv_samples
+gene_list_expr_with_mutation_load %>% .$barcode %>% unique() -> expr_samples
+intersect(methy_samples,cnv_samples) %>% intersect(expr_samples) -> samples.intersect
 
-fn_merge <- function(cli,cancer){
-  print(cancer)
-  cli %>%
-    dplyr::select(barcode,os_days,os_status) %>%
-    dplyr::inner_join(mutation_burden_class,by="barcode") %>%
-    dplyr::select(-cancer_types) %>%
-    dplyr::mutate(os_status = ifelse(os_status == "Dead",1,0))
-}
-clinical %>%
-  dplyr::filter(cancer_types %in% cancers_in_mutaion_burden_class) %>%
-  dplyr::mutate(cli_snv_merge = purrr::map2(.x=clinical,cancer_types,fn_merge)) %>%
-  dplyr::select(-clinical) %>%
-  tidyr::unnest() %>%
-  dplyr::select(barcode,os_days,os_status) -> time_status
-
-time_status %>%
-  readr::write_tsv(file.path(data_result_path,"time_status.tsv"))
+genelist_methy_mutaion_class %>% 
+  dplyr::filter(barcode %in% samples.intersect) -> genelist_methy_mutaion_class.combine
+cnv_merge_snv_data %>% 
+  dplyr::filter(barcode %in% samples.intersect) -> cnv_merge_snv_data.combine
+gene_list_expr_with_mutation_load %>% 
+  dplyr::filter(barcode %in% samples.intersect) -> gene_list_expr_with_mutation_load.combine
+# save work space ---------------------------------------------------------
 
 save.image(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
-load(file = file.path(expr_path_a, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
+load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
