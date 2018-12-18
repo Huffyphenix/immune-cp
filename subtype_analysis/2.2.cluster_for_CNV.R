@@ -19,16 +19,24 @@ index=which(is.na(PanCan26_gene_list_cnv_matrix)) # no NA value
 PanCan26_gene_list_cnv_spread %>%
   tidyr::gather(-symbol,key = "sample", value = "cnv") %>%
   .$cnv %>% table()
+
 ## Concencus clustering
-cnv_cc <- ExecuteCC(clusterNum=3,d=PanCan26_gene_list_cnv_matrix,maxK=10,clusterAlg="hc",distance="pearson",plot=F)
+setwd(data_result_path)
+cnv_survival <- FSbyCox(PanCan26_gene_list_cnv_matrix,cnv_time,cnv_status,cutoff=0.05)
+cnv_cc <- ExecuteCC(clusterNum=3,d=cnv_survival,maxK=10,clusterAlg="hc",distance="pearson",title = "cnv_sur_cc")
+group_cc=cnv_cc$group
+distanceMatrix_cc=cnv_cc$distanceMatrix
+p_value=survAnalysis(mainTitle="cnv_sur_result",cnv_time,cnv_status,group_cc,
+                     distanceMatrix_cc,similarity=TRUE)
+
 cnv_cc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_cnv_cc.rds.gz"), compress = 'gz')
 
 
 ## SNF
-cnv_snf <- ExecuteSNF(PanCan26_gene_list_cnv_matrix, clusterNum=3, K=20, alpha=0.5, t=20,plot = F)
-cnv_snf %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_cnv_snf.rds.gz"), compress = 'gz')
+# cnv_snf <- ExecuteSNF(PanCan26_gene_list_cnv_matrix, clusterNum=3, K=20, alpha=0.5, t=20,title = "CNV_SNF")
+# cnv_snf %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_cnv_snf.rds.gz"), compress = 'gz')
 
 ## SNF and CC
-cnv_snfcc=ExecuteSNF.CC(PanCan26_gene_list_cnv_matrix, clusterNum=3, K=20, alpha=0.5, t=20,maxK = 10, pItem = 0.8,reps=500, 
-                         plot = F, finalLinkage ="average") # what the meaning of result pic 11?12?13?
-cnv_snfcc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_cnv_snfcc.rds.gz"), compress = 'gz')
+# cnv_snfcc=ExecuteSNF.CC(PanCan26_gene_list_cnv_matrix, clusterNum=3, K=20, alpha=0.5, t=20,maxK = 10, pItem = 0.8,reps=500, 
+#                         title = "CNV_SNF.CC", finalLinkage ="average") # what the meaning of result pic 11?12?13?
+# cnv_snfcc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_cnv_snfcc.rds.gz"), compress = 'gz')
