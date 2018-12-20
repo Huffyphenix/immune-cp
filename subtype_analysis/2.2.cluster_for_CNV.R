@@ -23,13 +23,16 @@ PanCan26_gene_list_cnv_spread %>%
 ## Concencus clustering
 setwd(data_result_path)
 cnv_survival <- FSbyCox(PanCan26_gene_list_cnv_matrix,cnv_time,cnv_status,cutoff=0.05)
-cnv_cc <- ExecuteCC(clusterNum=3,d=cnv_survival,maxK=10,clusterAlg="hc",distance="pearson",title = "cnv_sur_cc")
+cnv_cc <- ExecuteCC(clusterNum=10,d=cnv_survival,maxK=10,clusterAlg="hc",distance="pearson",title = "cnv_sur_cc_10")
+cnv_cc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_cnv_cc_10.rds.gz"), compress = 'gz')
+
 group_cc=cnv_cc$group
 distanceMatrix_cc=cnv_cc$distanceMatrix
+pdf("cnv_sur_cc_10.pdf")
 p_value=survAnalysis(mainTitle="cnv_sur_result",cnv_time,cnv_status,group_cc,
                      distanceMatrix_cc,similarity=TRUE)
+dev.off()
 
-cnv_cc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_cnv_cc.rds.gz"), compress = 'gz')
 
 
 ## SNF

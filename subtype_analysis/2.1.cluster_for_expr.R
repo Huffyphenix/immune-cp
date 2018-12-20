@@ -19,12 +19,14 @@ load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_a
 
 ## Concencus clustering
 expr_survival <- FSbyCox(PanCan26_gene_list_expr_matrix,expr_time,expr_status,cutoff=0.05)
-expr_cc <- ExecuteCC(clusterNum=3,d=expr_survival,maxK=10,clusterAlg="hc",distance="pearson",title = "expr_sur_cc")
+expr_cc <- ExecuteCC(clusterNum=10,d=expr_survival,maxK=10,clusterAlg="hc",distance="pearson",title = "expr_sur_cc_10")
 group_cc=expr_cc$group
 distanceMatrix_cc=expr_cc$distanceMatrix
+expr_cc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_expr_cc_10.rds.gz"), compress = 'gz')
+pdf("expr_sur_cc_10.pdf")
 p_value=survAnalysis(mainTitle="expr_sur_result",expr_time,expr_status,group_cc,
                      distanceMatrix_cc,similarity=TRUE)
-expr_cc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_expr_cc.rds.gz"), compress = 'gz')
+dev.off()
 
 
 ## SNF
