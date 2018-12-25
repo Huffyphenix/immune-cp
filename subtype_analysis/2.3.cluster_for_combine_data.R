@@ -30,11 +30,11 @@ cnv_survival <- FSbyCox(cnv_merge_snv_data.matrix.combine,time.combine,status.co
 methy_survival <- FSbyCox(PanCan26_gene_list_methy_matrix.combine,time.combine,status.combine,cutoff=0.05)
 
 combine_data =list(GeneExp=expr_survival,methy=methy_survival)
-combine_cc <- ExecuteCC(clusterNum=10,d=combine_data,maxK=10,clusterAlg="hc",distance="peason",title = "combine_sur_CC")
-combine_cc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine_cc_10.rds.gz"), compress = 'gz')
+combine_snf <- ExecuteSNF(clusterNum=5,d=combine_data,maxK=10,clusterAlg="hc",distance="peason",title = "combine_sur_snf5")
+combine_snf %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine_snf_5.rds.gz"), compress = 'gz')
 
-group_cc=combine_cc$group
-group_cc %>% table()
+group_snf=combine_snf$group
+group_snf %>% table()
 # distanceMatrix_cc=combine_cc$distanceMatrix
 # p_value=survAnalysis(mainTitle="combine_sur_result",time.combine,status.combine,group_cc,
 #                      distanceMatrix_cc,similarity=TRUE)
