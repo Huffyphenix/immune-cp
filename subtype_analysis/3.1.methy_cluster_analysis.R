@@ -104,6 +104,7 @@ ggsave(filename = "expr_cluster_10_OS_main_cluster.png", device = "png", path = 
 
 ggsave(filename = "CNV_cluster_10_OS.pdf", device = "pdf", path = file.path(result_path,"CNV"), width = 5, height = 4)
 ggsave(filename = "CNV_cluster_10_OS.png", device = "png", path = file.path(result_path,"CNV"), width = 5, height = 4)
+
 # muttaion burden difference ----
 methy_group_survival_data %>%
   dplyr::rename("barcode" = "sample") %>%
@@ -122,7 +123,7 @@ methy_cluster_mutation %>%
                    labels = paste("C",c(1:10),sep="")
                    # expand = c(0.2,0.2,0.2)
                    ) +
-  # facet_wrap(~ cancer_types, strip.position = "bottom", scales = "free") +
+  facet_wrap(~ cancer_types, strip.position = "bottom", scales = "free") +
   scale_color_manual(
     values =  c( "#EE6363","#1C86EE","#8B8B00",c("#7B68EE", "#EE00EE", "#008B00", "#000000", "#00C5CD", "#FFA54F", "#0000CD"))
   )+
