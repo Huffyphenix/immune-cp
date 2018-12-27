@@ -127,6 +127,39 @@ rownames(PanCan26_gene_list_cnv_matrix) <- PanCan26_gene_list_cnv_spread$symbol
 PanCan26_gene_list_cnv_matrix %>%
   readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_cnv_matrix.rds.gz"))
 
+# 2. prepare SNV data (raw data)------------------------------------------------------
+snv <- readr::read_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv","pancan33_snv_from_syn7824274_gather.rds.gz"))
+
+mutation_burden_class$cancer_types %>% unique() ->cancers_in_mutaion_burden_class
+
+snv %>%
+  # dplyr::filter(cancer_types %in% cancers_in_mutaion_burden_class) %>%    # some cancers in TCGA merged serveral cancers into one
+  # tidyr::unnest() %>%
+  dplyr::filter(symbol %in% gene_list$symbol) %>%
+  dplyr::rename("barcode" = "sample","snv"="mut_n") %>%
+  dplyr::select(symbol,barcode,snv) %>%
+  dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+  dplyr::inner_join(time_status,by="barcode") %>%
+  dplyr::filter(! is.na(snv)) %>% 
+  dplyr::arrange(barcode) -> snv_merge_snv_data
+
+snv_merge_snv_data %>% 
+  dplyr::select(barcode,os_days) %>%
+  unique() %>% .$os_days -> snv_time
+
+snv_merge_snv_data %>% 
+  dplyr::select(barcode,os_status) %>%
+  unique() %>% .$os_status -> snv_status
+
+snv_merge_snv_data %>%
+  dplyr::select(symbol,barcode,snv) %>%
+  tidyr::spread(key = barcode,value=snv) -> PanCan26_gene_list_snv_spread
+
+PanCan26_gene_list_snv_matrix <- as.matrix(PanCan26_gene_list_snv_spread[,-1])
+rownames(PanCan26_gene_list_snv_matrix) <- PanCan26_gene_list_snv_spread$symbol
+
+PanCan26_gene_list_snv_matrix %>%
+  readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_snv_matrix.rds.gz"))
 
 # 3. methylation data  ----------------------------------------------------
 
@@ -171,7 +204,8 @@ PanCan26_gene_list_methy_matrix %>%
 genelist_methy_mutaion_class %>% .$barcode %>% unique() -> methy_samples
 cnv_merge_snv_data %>% .$barcode %>% unique() -> cnv_samples
 gene_list_expr_with_mutation_load %>% .$barcode %>% unique() -> expr_samples
-intersect(methy_samples,cnv_samples) %>% intersect(expr_samples) -> samples.intersect
+snv_merge_snv_data %>% .$barcode %>% unique() -> snv_samples
+intersect(methy_samples,cnv_samples) %>% intersect(expr_samples) %>% intersect(snv_samples)-> samples.intersect
 
 genelist_methy_mutaion_class %>% 
   dplyr::filter(barcode %in% samples.intersect) %>%
@@ -196,6 +230,17 @@ cnv_merge_snv_data %>%
 cnv_merge_snv_data.matrix.combine <- as.matrix(cnv_merge_snv_data.combine[,-1])
 rownames(cnv_merge_snv_data.matrix.combine) <- cnv_merge_snv_data.combine$symbol
 
+snv_merge_snv_data %>% 
+  dplyr::filter(barcode %in% samples.intersect) %>%
+  dplyr::select(symbol,barcode,snv) %>%
+  dplyr::group_by(symbol,barcode) %>%
+  dplyr::mutate(snv = mean(snv)) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = barcode,value = snv)-> snv_merge_snv_data.combine
+snv_merge_snv_data.matrix.combine <- as.matrix(snv_merge_snv_data.combine[,-1])
+rownames(snv_merge_snv_data.matrix.combine) <- snv_merge_snv_data.combine$symbol
+
 gene_list_expr_with_mutation_load %>% 
   dplyr::filter(barcode %in% samples.intersect) %>%
   dplyr::select(symbol,barcode,expr) %>%
@@ -204,7 +249,6 @@ gene_list_expr_with_mutation_load %>%
   unique() %>%
   dplyr::ungroup() %>%
   tidyr::spread(key = barcode,value = expr)-> gene_list_expr_with_mutation_load.combine
-
 gene_list_expr_with_mutation_load.matrix.combine <- as.matrix(gene_list_expr_with_mutation_load.combine[,-1])
 rownames(gene_list_expr_with_mutation_load.matrix.combine) <- gene_list_expr_with_mutation_load.combine$symbol
 
