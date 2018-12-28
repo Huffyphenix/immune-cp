@@ -17,26 +17,27 @@ mutation_burden_class <- readr::read_rds(file.path(burden_path,"classfication_of
 mutation_burden_class$cancer_types %>% unique() ->cancers_in_mutaion_burden_class
 cancers_except <- c("COADREAD","GBMLGG","KIPAN","STES","CESC")
 # 4. clinical data --------------------------------------------------------
-clinical <- readr::read_rds(file.path(tcga_path,"pancan34_clinical.rds.gz"))
+clinical <- readr::read_rds(file.path("/project/huff/huff/data/survival","TCGA_pancan_cancer_cell_survival_time.rds.gz"))
 
-fn_merge <- function(cli,cancer){
-  print(cancer)
-  cli %>%
-    dplyr::select(barcode,os_days,os_status) %>%
-    dplyr::inner_join(mutation_burden_class,by="barcode") %>%
-    dplyr::select(-cancer_types) %>%
-    dplyr::mutate(os_status = ifelse(os_status == "Dead",1,0))
-}
+# fn_merge <- function(cli,cancer){
+#   print(cancer)
+#   cli %>%
+#     dplyr::select(barcode,os_days,os_status) %>%
+#     dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+#     dplyr::select(-cancer_types) %>%
+#     dplyr::mutate(os_status = ifelse(os_status == "Dead",1,0))
+# }
 clinical %>%
-  dplyr::filter(cancer_types %in% cancers_in_mutaion_burden_class) %>%
-  dplyr::mutate(cli_snv_merge = purrr::map2(.x=clinical,cancer_types,fn_merge)) %>%
-  dplyr::select(-clinical) %>%
+  dplyr::filter(! type %in% cancers_except) %>%
+  # dplyr::mutate(cli_snv_merge = purrr::map2(.x=clinical,type,fn_merge)) %>%
+  # dplyr::select(-clinical) %>%
   tidyr::unnest() %>%
-  dplyr::select(barcode,os_days,os_status) %>%
-  tidyr::drop_na() -> time_status
+  dplyr::select(bcr_patient_barcode,PFS,PFS.time) %>%
+  tidyr::drop_na() %>%
+  dplyr::rename("barcode" = "bcr_patient_barcode")-> time_status
 
-time_status %>%
-  readr::write_tsv(file.path(data_result_path,"time_status.tsv"))
+# time_status %>%
+#   readr::write_tsv(file.path(data_result_path,"time_status.tsv"))
 
 # 1. prepare expression data ------------------------------------------------------
 
@@ -73,13 +74,13 @@ gene_list_expr %>%
 
 gene_list_expr %>% 
   dplyr::filter(T_N == "Tumor") %>%
-  dplyr::select(barcode,os_days) %>%
-  unique() %>% .$os_days -> expr_time
+  dplyr::select(barcode,PFS.time) %>%
+  unique() %>% .$PFS.time -> expr_time
 
 gene_list_expr %>% 
   dplyr::filter(T_N == "Tumor") %>%
-  dplyr::select(barcode,os_status) %>%
-  unique() %>% .$os_status -> expr_status
+  dplyr::select(barcode,PFS) %>%
+  unique() %>% .$PFS -> expr_status
 
 gene_list_expr %>%
   dplyr::filter(T_N == "Tumor") %>%
@@ -114,12 +115,12 @@ cnv %>%
   dplyr::arrange(barcode) -> cnv_merge_snv_data
 
 cnv_merge_snv_data %>% 
-  dplyr::select(barcode,os_days) %>%
-  unique() %>% .$os_days -> cnv_time
+  dplyr::select(barcode,PFS.time) %>%
+  unique() %>% .$PFS.time -> cnv_time
 
 cnv_merge_snv_data %>% 
-  dplyr::select(barcode,os_status) %>%
-  unique() %>% .$os_status -> cnv_status
+  dplyr::select(barcode,PFS) %>%
+  unique() %>% .$PFS -> cnv_status
 
 cnv_merge_snv_data %>%
   dplyr::select(symbol,barcode,cnv) %>%
@@ -149,12 +150,12 @@ snv %>%
   unique() -> snv_merge_snv_data
 
 snv_merge_snv_data %>% 
-  dplyr::select(barcode,os_days) %>%
-  unique() %>% .$os_days -> snv_time
+  dplyr::select(barcode,PFS.time) %>%
+  unique() %>% .$PFS.time -> snv_time
 
 snv_merge_snv_data %>% 
-  dplyr::select(barcode,os_status) %>%
-  unique() %>% .$os_status -> snv_status
+  dplyr::select(barcode,PFS) %>%
+  unique() %>% .$PFS -> snv_status
 
 snv_merge_snv_data %>%
   dplyr::select(symbol,barcode,snv) %>%
@@ -183,12 +184,12 @@ mthy %>%
   dplyr::arrange(barcode) -> genelist_methy_mutaion_class  
 
 genelist_methy_mutaion_class %>% 
-  dplyr::select(barcode,os_days) %>%
-  unique() %>% .$os_days -> methy_time
+  dplyr::select(barcode,PFS.time) %>%
+  unique() %>% .$PFS.time -> methy_time
 
 genelist_methy_mutaion_class %>% 
-  dplyr::select(barcode,os_status) %>%
-  unique() %>% .$os_status -> methy_status
+  dplyr::select(barcode,PFS) %>%
+  unique() %>% .$PFS -> methy_status
 
 genelist_methy_mutaion_class %>%
   dplyr::select(symbol,barcode,methy) %>%
@@ -259,14 +260,14 @@ rownames(gene_list_expr_with_mutation_load.matrix.combine) <- gene_list_expr_wit
 
 time_status %>%
   dplyr::filter(barcode %in% samples.intersect) %>%
-  dplyr::select(barcode,os_days) %>%
+  dplyr::select(barcode,PFS.time) %>%
   dplyr::arrange(barcode) %>%
-  unique() %>% .$os_days ->  time.combine
+  unique() %>% .$PFS.time ->  time.combine
 time_status %>%
   dplyr::filter(barcode %in% samples.intersect) %>%
-  dplyr::select(barcode,os_status) %>%
+  dplyr::select(barcode,PFS) %>%
   dplyr::arrange(barcode) %>%
-  unique() %>% .$os_status -> status.combine
+  unique() %>% .$PFS -> status.combine
 # save work space ---------------------------------------------------------
 
 save.image(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
