@@ -3,6 +3,7 @@ library(methods)
 library(magrittr)
 library(CancerSubtypes)
 library(ConsensusClusterPlus)
+library(SNFtool)
 
 # load data ---------------------------------------------------------------
 
@@ -41,11 +42,12 @@ pdf(file.path(result_path,"Get_best_clutser_20.pdf"))
 par(mfrow=c(2,2))
 for (i in 2:20) {
   C <- i
+  W <- results[[C]][['consensusMatrix']]
+  group <- results[[i]][['consensusClass']]
   # Figure 1
   displayClusters(W, group)
   
   # Figure 2
-  group <- results[[i]][['consensusClass']]
   group_statistic <- group %>% table()
   less_than_10<- names(group_statistic[group_statistic<10])
   all_clusters <- names(group_statistic)

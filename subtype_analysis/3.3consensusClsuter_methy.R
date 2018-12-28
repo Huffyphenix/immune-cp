@@ -3,7 +3,7 @@ library(methods)
 library(magrittr)
 library(CancerSubtypes)
 library(ConsensusClusterPlus)
-
+library(SNFtool)
 # load data ---------------------------------------------------------------
 
 data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
@@ -42,6 +42,7 @@ pdf(file.path(result_path,"Get_best_clutser_20.pdf"))
 par(mfrow=c(2,2))
 for (i in 2:20) {
   C <- i
+  W <- results[[C]][['consensusMatrix']]
   group <- results[[i]][['consensusClass']]
   # Figure 1
   displayClustersWithHeatmap(W, group)
