@@ -33,7 +33,8 @@ setwd(data_result_path)
 
 combine_data =list(GeneExp=gene_list_expr_with_mutation_load.matrix.combine,methy=PanCan26_gene_list_methy_matrix.combine,cnv=cnv_merge_snv_data.matrix.combine)
 results <- ExecuteSNF(combine_data,clusterNum=20,K=10)
-combine_snf %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine-expr-cnv-methy_snf_20.rds.gz"), compress = 'gz')
+results %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine-expr-cnv-methy_snf_20.rds.gz"), compress = 'gz')
+W <- results$distanceMatrix
 
 # get best K for cluster results  -----------------------------------------
 load("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
@@ -53,12 +54,12 @@ for (i in 2:20) {
   less_than_10<- names(group_statistic[group_statistic<10])
   all_clusters <- names(group_statistic)
   more_than_10 <- setdiff(all_clusters,less_than_10)
-  data.frame(sample = names(group),group=group,time = expr_time,status = expr_status) %>%
+  data.frame(sample = colnames(W),group=group,time = expr_time,status = expr_status) %>%
     dplyr::as.tbl() %>%
     dplyr::filter(group %in% more_than_10)-> group_survival_data
   color_list = rainbow(length(more_than_10))
   if (length(more_than_10)>=2) {
-    fn_survival(group_survival_data,paste("Combined Survival for",C,"Clusters",sep=""),color_list)
+    fn_survival(group_survival_data,paste("Combined PFS for",C,"Clusters",sep=""),color_list)
   }else{
     print("Too small groups")
   }
