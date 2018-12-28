@@ -3,6 +3,8 @@
 library(methods)
 library(magrittr)
 library(CancerSubtypes)
+library(ConsensusClusterPlus)
+library(SNFtool)
 
 # load data ---------------------------------------------------------------
 
@@ -12,15 +14,15 @@ data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
 load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
 
 
-# cnv -----------------------------------------------------------------
+# all data -----------------------------------------------------------------
 # data.checkDistribution(PanCan26_gene_list_cnv_matrix)
-index=which(is.na(PanCan26_gene_list_expr_matrix)) # no NA value
+index=which(is.na(gene_list_expr_with_mutation_load.matrix.combine)) # no NA value
 
-index=which(is.na(PanCan26_gene_list_cnv_matrix)) # no NA value
+index=which(is.na(cnv_merge_snv_data.matrix.combine)) # no NA value
 
 
-index=which(is.na(PanCan26_gene_list_methy_matrix)) # have NA value
-PanCan26_gene_list_methy_matrix=data.imputation(PanCan26_gene_list_methy_matrix,fun="median")
+index=which(is.na(PanCan26_gene_list_methy_matrix.combine)) # have NA value
+PanCan26_gene_list_methy_matrix.combine=data.imputation(PanCan26_gene_list_methy_matrix.combine,fun="median")
 
 
 ## Concencus clustering
@@ -30,22 +32,55 @@ setwd(data_result_path)
 # methy_survival <- FSbyCox(PanCan26_gene_list_methy_matrix.combine,time.combine,status.combine,cutoff=0.05)
 
 combine_data =list(GeneExp=gene_list_expr_with_mutation_load.matrix.combine,methy=PanCan26_gene_list_methy_matrix.combine,cnv=cnv_merge_snv_data.matrix.combine)
-combine_snf <- ExecuteSNF(combine_data,clusterNum=5,K=10)
-combine_snf %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine_snf_5.rds.gz"), compress = 'gz')
+results <- ExecuteSNF(combine_data,clusterNum=20,K=10)
+combine_snf %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine-expr-cnv-methy_snf_20.rds.gz"), compress = 'gz')
 
-group_snf=combine_snf$group
-group_snf %>% table()
-# distanceMatrix_cc=combine_cc$distanceMatrix
-# p_value=survAnalysis(mainTitle="combine_sur_result",time.combine,status.combine,group_cc,
-#                      distanceMatrix_cc,similarity=TRUE)
+# get best K for cluster results  -----------------------------------------
+load("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
+
+result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/combined/")
+pdf(file.path(result_path,"Get_best_clutser_20.pdf"))
+par(mfrow=c(2,2))
+for (i in 2:20) {
+  C <- i
+  group = spectralClustering(W,C)
+  # Figure 1
+  displayClusters(W, group)
+  
+  # Figure 2
+  
+  group_statistic <- group %>% table()
+  less_than_10<- names(group_statistic[group_statistic<10])
+  all_clusters <- names(group_statistic)
+  more_than_10 <- setdiff(all_clusters,less_than_10)
+  data.frame(sample = names(group),group=group,time = expr_time,status = expr_status) %>%
+    dplyr::as.tbl() %>%
+    dplyr::filter(group %in% more_than_10)-> group_survival_data
+  color_list = rainbow(length(more_than_10))
+  if (length(more_than_10)>=2) {
+    fn_survival(group_survival_data,paste("Combined Survival for",C,"Clusters",sep=""),color_list)
+  }else{
+    print("Too small groups")
+  }
+  
+  
+  # Figure 3
+  group_survival_data %>%
+    dplyr::rename("barcode" = "sample") %>%
+    dplyr::left_join(mutation_burden_class,by="barcode") %>%
+    dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) -> group_cluster_mutation
+  comp_mat <- combn(more_than_10,2)
+  comp_list <- list()
+  for (col in 1:ncol(comp_mat)) {
+    comp_list[[col]] <- comp_mat[,col]
+  }
+  fn_mutation_burden(group_cluster_mutation,color_list,comp_list)
+  
+  # Figure 4
+  fn_mutation_burden_all(group_cluster_mutation,color_list,comp_list)
+  
+}
+dev.off()
 
 
 
-## SNF
-# combine_snf <- ExecuteSNF(combine_data, clusterNum=3, K=20, alpha=0.5, t=20,title = "combine_SNF")
-# combine_snf %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine_snf.rds.gz"), compress = 'gz')
-
-# ## SNF and CC
-# combine_snfcc=ExecuteSNF.CC(combine_data, clusterNum=3, K=20, alpha=0.5, t=20,maxK = 10, pItem = 0.8,reps=500, 
-#                         title = "combine_SNF.CC", finalLinkage ="average") # what the meaning of result pic 11?12?13?
-# combine_snfcc %>% readr::write_rds(file.path(data_result_path, ".rds_PanCan28_combine_snfcc.rds.gz"), compress = 'gz')
