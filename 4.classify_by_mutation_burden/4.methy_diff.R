@@ -237,6 +237,7 @@ Heatmap(gene_list_methy_scale, name = "expression",  #km = 5,
         top_annotation = up_anno, 
         show_row_names = T, show_column_names = FALSE,
         column_dend_height = unit(30, "mm"),
+        clustering_distance_columns = "peason",
         cluster_rows = color_branches(row_dend, k = 5),     # add color on the row tree branches
         cluster_columns = color_branches(col_dend, k = 10)   # add color on the column tree branches
 ) -> he
