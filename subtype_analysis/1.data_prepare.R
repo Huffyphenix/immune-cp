@@ -268,6 +268,16 @@ time_status %>%
   dplyr::select(barcode,PFS) %>%
   dplyr::arrange(barcode) %>%
   unique() %>% .$PFS -> status.combine
+
+
+# Tumor purity ------------------------------------------------------------
+
+tumor_purity <- readr::read_tsv("/project/huff/huff/data/TCGA_tumor_purity_from_ABSOLUTE/syn_Purity_Ploidy_All_Samples_4-17-15_syn3582761.txt") %>%
+  dplyr::rename("barcode"="individual_id")
+
+tumor_purity %>%
+  dplyr::select(barcode,tumor_type,purity,ploidy)-> tumor_purity
+
 # save work space ---------------------------------------------------------
 
 save.image(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
