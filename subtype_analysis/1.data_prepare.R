@@ -54,16 +54,17 @@ filter_gene_list <- function(.x, gene_list) {
 expr_data %>%
   dplyr::mutate(filter_expr = purrr::map(expr, filter_gene_list, gene_list = gene_list)) %>%
   dplyr::select(-expr) %>%
-  dplyr::filter(cancer_types %in% mutation_burden_class$cancer_types) -> gene_list_expr
+  dplyr::filter(cancer_types %in% mutation_burden_class$cancer_types) -> gene_list_expr.nest
 
-gene_list_expr %>%
+
+gene_list_expr.nest %>%
   dplyr::filter(!cancer_types %in% cancers_except) %>%    # some cancers in TCGA merged serveral cancers into one
   tidyr::unnest() %>%
   tidyr::gather(-cancer_types,-symbol,-entrez_id,key="barcode",value="expr") %>%
   dplyr::mutate(T_N = ifelse(substr(barcode,14,14) == 1,"Normal","Tumor")) %>%
   dplyr::filter(T_N == "Tumor") %>%
   dplyr::mutate(barcode = substr(barcode,1,12)) %>%
-  dplyr::select(-cancer_types) %>%
+  # dplyr::select(-cancer_types) %>%
   # dplyr::left_join(mutation_burden_class,by="barcode") %>%
   dplyr::filter(!is.na(expr)) %>%
   # dplyr::mutate(mutation_status = ifelse(T_N=="Normal","Normal",mutation_status)) %>%
@@ -71,6 +72,10 @@ gene_list_expr %>%
   dplyr::inner_join(time_status,by="barcode") %>%   # samples of expr and clinical should be the same
   dplyr::filter(! is.na(expr)) %>% 
   dplyr::arrange(barcode) -> gene_list_expr # arrange is important for the sample corresponding between survival time and expr data. cause spread will arrange the barcode auto
+
+gene_list_expr %>%
+  dplyr::select(cancer_types,barcode) %>%
+  unique() -> gene_list_expr.cancer_info
 
 gene_list_expr %>% 
   dplyr::filter(T_N == "Tumor") %>%
@@ -114,6 +119,10 @@ cnv %>%
   dplyr::filter(! is.na(cnv)) %>% 
   dplyr::arrange(barcode) -> cnv_merge_snv_data
 
+cnv_merge_snv_data %>%
+  dplyr::select(cancer_types,barcode) %>%
+  unique() -> cnv_merge_snv_data.cancer_info
+
 cnv_merge_snv_data %>% 
   dplyr::select(barcode,PFS.time) %>%
   unique() %>% .$PFS.time -> cnv_time
@@ -143,11 +152,12 @@ snv %>%
   dplyr::filter(symbol %in% gene_list$symbol) %>%
   dplyr::rename("barcode" = "sample","snv"="mut_n") %>%
   dplyr::select(symbol,barcode,snv) %>%
-  dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+  # dplyr::inner_join(mutation_burden_class,by="barcode") %>%
   dplyr::inner_join(time_status,by="barcode") %>%
   dplyr::filter(! is.na(snv)) %>% 
   dplyr::arrange(barcode) %>%
-  unique() -> snv_merge_snv_data
+  unique() %>%
+  dplyr::mutate(snv = ifelse(snv >0, 1,snv))-> snv_merge_snv_data
 
 snv_merge_snv_data %>% 
   dplyr::select(barcode,PFS.time) %>%
@@ -183,6 +193,10 @@ mthy %>%
   dplyr::filter(! is.na(methy)) %>% 
   dplyr::arrange(barcode) -> genelist_methy_mutaion_class  
 
+genelist_methy_mutaion_class %>%
+  dplyr::select(cancer_types,barcode) %>%
+  unique() -> genelist_methy_mutaion_class.cancer_info
+
 genelist_methy_mutaion_class %>% 
   dplyr::select(barcode,PFS.time) %>%
   unique() %>% .$PFS.time -> methy_time
@@ -212,6 +226,11 @@ cnv_merge_snv_data %>% .$barcode %>% unique() -> cnv_samples
 gene_list_expr %>% .$barcode %>% unique() -> expr_samples
 # snv_merge_snv_data %>% .$barcode %>% unique() -> snv_samples
 intersect(methy_samples,cnv_samples) %>% intersect(expr_samples) -> samples.intersect
+
+genelist_methy_mutaion_class %>% 
+  dplyr::filter(barcode %in% samples.intersect) %>%
+  dplyr::select(cancer_types,barcode) %>%
+  unique() -> combined.cancer_info
 
 genelist_methy_mutaion_class %>% 
   dplyr::filter(barcode %in% samples.intersect) %>%
@@ -282,3 +301,4 @@ tumor_purity %>%
 
 save.image(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
 load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
+
