@@ -35,49 +35,46 @@ results %>%
   readr::write_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_methy_CC_20.rds.gz"),compress = "gz")
 
 # get best K for cluster results  -----------------------------------------
-load("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
-
-result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/methy/")
-pdf(file.path(result_path,"Get_best_clutser_20.pdf"))
-par(mfrow=c(2,2))
-for (i in 2:20) {
-  C <- i
-  W <- results[[C]][['consensusMatrix']]
-  group <- results[[i]][['consensusClass']]
-  # Figure 1
-  displayClustersWithHeatmap(W, group)
-  
-  # Figure 2
-  
-  group_statistic <- group %>% table()
-  less_than_10<- names(group_statistic[group_statistic<10])
-  all_clusters <- names(group_statistic)
-  more_than_10 <- setdiff(all_clusters,less_than_10)
-  data.frame(sample = names(group),group=group,time = expr_time,status = expr_status) %>%
-    dplyr::as.tbl() %>%
-    dplyr::filter(group %in% more_than_10)-> group_survival_data
-  color_list = rainbow(length(more_than_10))
-  if (length(more_than_10)>=2) {
-    fn_survival(group_survival_data,paste("Methy Survival for",C,"Clusters",sep=""),color_list)
-  }else{
-    print("Too small groups")
-  }
-  
-  
-  # Figure 3
-  group_survival_data %>%
-    dplyr::rename("barcode" = "sample") %>%
-    dplyr::left_join(mutation_burden_class,by="barcode") %>%
-    dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) -> group_cluster_mutation
-  comp_mat <- combn(more_than_10,2)
-  comp_list <- list()
-  for (col in 1:ncol(comp_mat)) {
-    comp_list[[col]] <- comp_mat[,col]
-  }
-  fn_mutation_burden(group_cluster_mutation,color_list,comp_list)
-  
-  # Figure 4
-  fn_mutation_burden_all(group_cluster_mutation,color_list,comp_list)
-  
-}
-dev.off()
+# load("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
+# 
+# result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/methy/")
+# for (i in 2:20) {
+#   C <- i
+#   W <- results[[C]][['consensusMatrix']]
+#   group <- results[[i]][['consensusClass']]
+#   # Figure 1
+#   displayClustersWithHeatmap(W, group)
+#   
+#   # Figure 2
+#   
+#   group_statistic <- group %>% table()
+#   less_than_10<- names(group_statistic[group_statistic<10])
+#   all_clusters <- names(group_statistic)
+#   more_than_10 <- setdiff(all_clusters,less_than_10)
+#   data.frame(sample = names(group),group=group,time = expr_time,status = expr_status) %>%
+#     dplyr::as.tbl() %>%
+#     dplyr::filter(group %in% more_than_10)-> group_survival_data
+#   color_list = rainbow(length(more_than_10))
+#   if (length(more_than_10)>=2) {
+#     fn_survival(group_survival_data,paste("Methy Survival for",C,"Clusters",sep=""),color_list)
+#   }else{
+#     print("Too small groups")
+#   }
+#   
+#   
+#   # Figure 3
+#   group_survival_data %>%
+#     dplyr::rename("barcode" = "sample") %>%
+#     dplyr::left_join(mutation_burden_class,by="barcode") %>%
+#     dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) -> group_cluster_mutation
+#   comp_mat <- combn(more_than_10,2)
+#   comp_list <- list()
+#   for (col in 1:ncol(comp_mat)) {
+#     comp_list[[col]] <- comp_mat[,col]
+#   }
+#   fn_mutation_burden(group_cluster_mutation,color_list,comp_list)
+#   
+#   # Figure 4
+#   fn_mutation_burden_all(group_cluster_mutation,color_list,comp_list)
+#   
+# }
