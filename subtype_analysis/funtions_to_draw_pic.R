@@ -1,4 +1,4 @@
-fn_survival <- function(data,title,color){
+fn_survival <- function(data,title,color,sur_name){
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   diff <- survdiff(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   kmp <- 1 - pchisq(diff$chisq, df = length(levels(as.factor(data$group))) - 1)
@@ -14,6 +14,7 @@ fn_survival <- function(data,title,color){
       )
     ) -> legend
   survminer::ggsurvplot(fit,pval=F, #pval.method = T,
+                        data = data,
                         surv.median.line = "hv",
                         title = paste(title,", p =", signif(kmp, 2)), # change it when doing diff data
                         xlab = "Survival in days",
@@ -37,10 +38,11 @@ fn_survival <- function(data,title,color){
     scale_color_manual(
       values = color,
       labels = legend$label
-    ) 
+    )
+  ggsave(filename =sur_name, path = result_path,device = "png")
 }
 
-fn_mutation_burden <- function(data,color,comp_list){
+fn_mutation_burden <- function(data,color,comp_list,m_name){
   data %>%
     dplyr::mutate(sm_count = log2(sm_count)) %>%
     ggpubr::ggboxplot(x = "group", y = "sm_count",
@@ -64,9 +66,10 @@ fn_mutation_burden <- function(data,color,comp_list){
           strip.text = element_text(size = 12)) +
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
     ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
+  ggsave(filename =m_name, path = result_path,device = "png")
 }
 
-fn_mutation_burden_all <- function(data,color,comp_list){
+fn_mutation_burden_all <- function(data,color,comp_list,m_a_name){
   data %>%
     dplyr::mutate(sm_count = log2(sm_count)) %>%
     ggpubr::ggboxplot(x = "group", y = "sm_count",
@@ -90,4 +93,5 @@ fn_mutation_burden_all <- function(data,color,comp_list){
           strip.text = element_text(size = 12)) +
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
     ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
+  ggsave(filename =m_a_name, path = result_path,device = "png")
 }
