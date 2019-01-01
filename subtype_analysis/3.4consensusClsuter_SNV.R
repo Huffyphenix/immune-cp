@@ -30,7 +30,7 @@ dc = sweep(d,1, apply(d,1,median,na.rm=T)) ## median center genes
 # same as above but with pre-computed distance matrix, useful for large datasets (>1,000's of items)
 setwd("/project/huff/huff/github/immune-cp/subtype_analysis/ConsensusClusterResult")
 dt = as.dist(1-cor(dc,method="pearson"))
-results = ConsensusClusterPlus(dt,maxK=10,reps=100,pItem=0.8,pFeature=1,title="SNV_CC",distance="pearson",clusterAlg="hc",seed=1262118388.71279)
+results = ConsensusClusterPlus(dt,maxK=10,reps=100,pItem=0.8,pFeature=1,title="SNV_CC",distance="binary",clusterAlg="hc",seed=1262118388.71279)
 
 results %>%
   readr::write_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_SNV_CC_10.rds.gz"),compress = "gz")
