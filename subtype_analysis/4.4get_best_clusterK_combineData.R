@@ -25,6 +25,7 @@ W <- results$distanceMatrix
 # pdf(file.path(result_path,"Get_best_clutser_20.pdf"))
 for (i in 2:20) {
   C <- i
+  print(C)
   group = spectralClustering(W,C)
   # Figure 1
   # displayClusters(W, group)
@@ -34,7 +35,7 @@ for (i in 2:20) {
   less_than_10<- names(group_statistic[group_statistic<10])
   all_clusters <- names(group_statistic)
   more_than_10 <- setdiff(all_clusters,less_than_10)
-  data.frame(sample = names(group),group=group,time = time.combine,status = status.combine) %>%
+  data.frame(sample = colnames(W),group=group,time = time.combine,status = status.combine) %>%
     dplyr::as.tbl() %>%
     dplyr::filter(group %in% more_than_10) %>%
     dplyr::rename("barcode"="sample") %>%
