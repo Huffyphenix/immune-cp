@@ -1,8 +1,8 @@
-fn_survival <- function(data,title,color,sur_name){
+fn_survival <- function(data,title,color,sur_name,result_path){
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   diff <- survdiff(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   kmp <- 1 - pchisq(diff$chisq, df = length(levels(as.factor(data$group))) - 1)
-  legend <- data.frame(group=paste("C",unique(data$group),sep=""),n=fit$n)
+  legend <- data.frame(group=paste("C",sort(unique(data$group)),sep=""),n=fit$n)
   legend %>%
     dplyr::mutate(
       label = purrr::map2(
@@ -39,18 +39,17 @@ fn_survival <- function(data,title,color,sur_name){
       values = color,
       labels = legend$label
     )
-  ggsave(filename =sur_name, path = result_path,device = "png")
+  ggsave(filename =sur_name, path = result_path,device = "tiff")
 }
 
-fn_mutation_burden <- function(data,color,comp_list,m_name){
+fn_mutation_burden <- function(data,group,value,color,xlab,comp_list,m_name,result_path,w=7,h=10){
   data %>%
-    dplyr::mutate(sm_count = log2(sm_count)) %>%
-    ggpubr::ggboxplot(x = "group", y = "sm_count",
-                      color = "group" #add = "jitter",#, palette = "npg"
+    ggpubr::ggboxplot(x = group, y = value,
+                      color = group #add = "jitter",#, palette = "npg"
     ) +
     # geom_point(aes(x=as.numeric(group)+b,y=sm_count,color=group),alpha = 0.5) +
-    scale_x_discrete(breaks = c(1:10),
-                     labels = paste("C",c(1:10),sep="")
+    scale_x_discrete(#breaks = c(1:10),
+                     labels = c(1:3)
                      # expand = c(0.2,0.2,0.2)
     ) +
     facet_wrap(~ cancer_types, strip.position = "bottom", scales = "free") +
@@ -58,26 +57,25 @@ fn_mutation_burden <- function(data,color,comp_list,m_name){
       values = color
     )+
     # ylim(4,12) +
-    ylab("log2(Mutation burden)") +
-    xlab("Clusters") +
+    ylab(xlab) +
+    xlab("Group") +
     theme(legend.position = "none",
-          axis.title.x = element_blank(),
+          # axis.title.x = element_blank(),
           strip.background = element_rect(fill = "white",colour = "white"),
-          strip.text = element_text(size = 12)) +
+          strip.text = element_text(size = 8)) +
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
     ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
-  ggsave(filename =m_name, path = result_path,device = "png")
+  ggsave(filename =m_name, path = result_path,device = "pdf",width = w,height = h)
 }
 
-fn_mutation_burden_all <- function(data,color,comp_list,m_a_name){
+fn_mutation_burden_all <- function(data,group,value,color,xlab,comp_list,m_a_name,result_path,w=4,h=4){
   data %>%
-    dplyr::mutate(sm_count = log2(sm_count)) %>%
-    ggpubr::ggboxplot(x = "group", y = "sm_count",
-                      color = "group" #add = "jitter",#, palette = "npg"
+    ggpubr::ggboxplot(x = group, y = value,
+                      color = group #add = "jitter",#, palette = "npg"
     ) +
     # geom_point(aes(x=as.numeric(group)+b,y=sm_count,color=group),alpha = 0.5) +
-    scale_x_discrete(breaks = c(1:10),
-                     labels = paste("C",c(1:10),sep="")
+    scale_x_discrete(#breaks = c(1:10),
+                     labels = c(1:3)
                      # expand = c(0.2,0.2,0.2)
     ) +
     # facet_wrap(~ cancer_types, strip.position = "bottom", scales = "free") +
@@ -85,13 +83,13 @@ fn_mutation_burden_all <- function(data,color,comp_list,m_a_name){
       values = color
     )+
     # ylim(4,12) +
-    ylab("log2(Mutation burden)") +
-    xlab("Clusters") +
+    ylab(xlab) +
+    xlab("Group") +
     theme(legend.position = "none",
           axis.title.x = element_blank(),
           strip.background = element_rect(fill = "white",colour = "white"),
           strip.text = element_text(size = 12)) +
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
     ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
-  ggsave(filename =m_a_name, path = result_path,device = "png")
+  ggsave(filename =m_a_name, path = result_path,device = "pdf",width = w,height = h)
 }
