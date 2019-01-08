@@ -4,6 +4,8 @@ library(ComplexHeatmap)
 # data path ---------------------------------------------------------------
 
 result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/combine/Get_best_clutser_20")
+data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
+
 load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
 
 # cluster K ---------------------------------------------------------------
@@ -117,7 +119,7 @@ M_label %>%
   dplyr::rename("cluster" = "group","barcode"="sample") %>%
   dplyr::mutate(group = ifelse(cluster %in% c(1,3,5,6), "Group1","Group2")) %>%
   dplyr::mutate(group = ifelse(cluster == 2, "Group3", group)) %>%
-  dplyr::select(barcode,cluster,group) -> C6_into_Group3_by_survival
+  dplyr::select(barcode,cluster,group,cancer_types) -> C6_into_Group3_by_survival
 
 C6_into_Group3_by_survival %>%
   dplyr::inner_join(time_status,by="barcode") %>%
@@ -136,6 +138,29 @@ color_list = rainbow(6)[2:4]
 sur_name <- paste("Combined_Survival_for",3,"Groups.png",sep="_")
 fn_survival(C6_into_Group3_by_survival.PFS,"3 Group PFS",color_list,sur_name,res_path)
 
+# cluster with groups for each cancers
+color_list = rainbow(6)[2:4]
+C6_into_Group3_by_survival.PFS %>%
+  dplyr::group_by(cancer_types,group) %>%
+  dplyr::mutate(n=n()) %>%
+  dplyr::select(cancer_types,group,n) %>%
+  dplyr::ungroup() %>%
+  unique() %>%
+  dplyr::arrange(cancer_types) %>%
+  dplyr::select(cancer_types) %>%
+  table() %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  dplyr::filter(Freq >=2) %>%
+  .$. %>% as.character() -> cancers_do_survival
+for(cancer in cancers_do_survival){
+  sur_name <- paste("Combined_Survival_for",cancer,3,"Groups.png",sep="_")
+  
+  C6_into_Group3_by_survival.PFS %>%
+    dplyr::filter(cancer_types == cancer) %>%
+    fn_survival("3 Group PFS",color_list,sur_name,res_path)
+  
+}
 
 # mutation burden ---------------------------------------------------------
 
@@ -234,3 +259,81 @@ ggsave(filename =p_name, path = res_path,device = "pdf",width = 6,height = 6)
 p_a_name <- paste("Combined_all_PathwayScore_for",3,"Groups.pdf",sep="_")
 ggsave(filename =p_a_name, path = res_path,device = "pdf",width = 6,height = 15)
 
+# virus related pathways score ----------------------------------------
+TCGA_virus <- readr::read_rds(file.path("/project/huff/huff/data/TCGA/virus_level","TCGA_virus_level.rds.gz")) %>%
+  dplyr::select(-Provenance)
+
+group_cluster_mutation %>%
+  dplyr::select(barcode,cluster,cancer_types,group) %>%
+  dplyr::left_join(TCGA_virus,by="barcode") %>%
+  tidyr::gather(-c("barcode","cluster","cancer_types","group"),key=virus,value=virus_levels) %>% 
+  tidyr::drop_na(virus_levels) %>%
+  # dplyr::mutate(virus_levels=ifelse(is.na(virus_levels),0,virus_levels)) %>%
+  dplyr::mutate(virus_levels=as.numeric(virus_levels)) -> virus_for_groups
+
+virus_for_groups %>%
+  dplyr::group_by(group,virus) %>%
+  dplyr::mutate(n=n(),y=max(virus_levels)) %>%
+  dplyr::mutate(groupx = substr(as.character(group),6,6)) %>%
+  dplyr::select(groupx,virus,n,y) %>%
+  unique() -> virus.text
+
+virus_for_groups %>%
+  ggpubr::ggboxplot(x = "group", y = "virus_levels",
+                    color = "group" #add = "jitter",#, palette = "npg"
+  ) +
+  geom_text(aes(x=group,y=y,label = n),data = virus.text) +
+  # geom_point(aes(x=as.numeric(group)+b,y=sm_count,color=group),alpha = 0.5) +
+  scale_x_discrete(#breaks = c(1:3),
+    labels = c(1:3)
+    # expand = c(0.2,0.2,0.2)
+  ) +
+  # facet_grid(cancer_types~ virus, scales = "free") +
+  facet_wrap(~ virus, strip.position = "bottom", scales = "free") +
+  scale_color_manual(
+    values = color_list
+  )+
+  # ylim(4,12) +
+  ylab("Virus Level") +
+  xlab("Group") +
+  theme(strip.background = element_rect(fill = "white",colour = "white"),
+        legend.position = "none",
+        text = element_text(size = 5),
+        strip.text = element_text(size = 8)) +
+  # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
+  ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
+
+v_name <- paste("Combined_all_virus_levels_for",3,"Groups.pdf",sep="_")
+ggsave(filename =v_name, path = res_path,device = "pdf",width = 6,height = 6)
+
+virus_for_groups %>% dplyr::filter(virus_levels>0) %>% .$cancer_types %>% table() %>% as.data.frame() %>% dplyr::as.tbl() %>%
+  dplyr::filter(Freq > 5) %>% .$. %>% as.character()-> index
+
+virus_for_groups %>%
+  dplyr::filter(virus %in% c("EBV","HPV")) %>%
+  dplyr::filter(cancer_types %in% index) %>%
+  ggpubr::ggboxplot(x = "group", y = "virus_levels",
+                    color = "group" #add = "jitter",#, palette = "npg"
+  ) +
+  # geom_text(aes(x=group,y=y,label = n),data = virus.text) +
+  # geom_point(aes(x=as.numeric(group)+b,y=sm_count,color=group),alpha = 0.5) +
+  scale_x_discrete(#breaks = c(1:3),
+    labels = c(1:3)
+    # expand = c(0.2,0.2,0.2)
+  ) +
+  facet_grid(cancer_types~ virus, scales = "free") +
+  # facet_wrap(~ virus, strip.position = "bottom", scales = "free") +
+  scale_color_manual(
+    values = color_list
+  )+
+  # ylim(4,12) +
+  ylab("Virus Level") +
+  xlab("Group") +
+  theme(strip.background = element_rect(fill = "white",colour = "white"),
+        legend.position = "none",
+        text = element_text(size = 5),
+        strip.text = element_text(size = 8)) +
+  # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
+  ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
+v_a_name <- paste("Combined_virus_levels_for",3,"Groups.pdf",sep="_")
+ggsave(filename =v_a_name, path = res_path,device = "pdf",width = 6,height = 12)
