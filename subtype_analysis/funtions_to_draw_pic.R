@@ -1,4 +1,6 @@
 fn_survival <- function(data,title,color,sur_name,result_path){
+  library(survival)
+  library(survminer)
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   diff <- survdiff(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   kmp <- 1 - pchisq(diff$chisq, df = length(levels(as.factor(data$group))) - 1)
@@ -39,7 +41,7 @@ fn_survival <- function(data,title,color,sur_name,result_path){
       values = color,
       labels = legend$label
     )
-  ggsave(filename =sur_name, path = result_path,device = "tiff")
+  ggsave(filename =sur_name, path = result_path,device = "png")
 }
 
 fn_mutation_burden <- function(data,group,value,color,xlab,comp_list,m_name,result_path,w=7,h=10){
