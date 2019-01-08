@@ -1,0 +1,468 @@
+ls
+ll
+l
+ll
+mv code/ ye_circadian_code
+l
+ll
+ls
+cd ye_circadian_code/
+l
+ll
+c d../
+l
+ll
+cd ../
+ls
+ll
+cd ye_circadian_code/
+l
+ll
+cd ../
+ls
+ll
+vim README.md
+l
+ls
+git status
+cd ../
+ls
+ll
+l
+ll
+cd 01_expr/
+ls
+ll
+cd 01_expr/
+l
+cd ../
+ls
+l
+cd 01_expr/
+l
+cd ../
+ls
+ll
+cp /home/cliu18/liucj/projects/6.autophagy/02_autophagy_expr/fig_01_expr_pattern.pdf .
+ll
+l
+ll
+l
+cd ../
+ls
+cd ye_circadian_code/
+l
+cd ../
+ls
+cd 01_expr/
+ls
+cd 01_expr/
+l
+cd ../
+ls
+ls
+ll
+l
+exit
+ls
+ll
+cd 01_expr/
+l
+ll
+cd /extraspace/liucj/projects/6.autophagy/02_autophagy_expr
+ls
+cd ../
+ls
+cd ye_circadian_code/
+ls
+cd
+ls
+cd 01_expr/
+l
+git status
+git add -A
+cd ../
+ls
+cd 01_expr/
+ls
+ll
+cd 01_expr/
+l
+cd 01_expr/
+ls
+cd 01_expr/
+l
+cd 01_expr/
+ls
+ll
+mkdir 03_mutation
+l
+cd 03_mutation/
+l
+ll
+cd ../
+ls
+ll */*R
+ll
+grep 01_expr/*R
+grep NA 01_expr/*R
+grep is.na 01_expr/*R
+ps xf
+killparallel slave
+ps xf
+killparallel slave
+ls
+l
+mkdir 04_ccle
+l
+cd 04_ccle/
+l
+top
+ps xf
+top
+l
+cd ll
+ll
+git status
+git add -A
+cd ../
+ls
+ll
+mkdir 05_actionable_genes
+ll
+rm 05_actionable_genes/
+l
+ll
+rm 05_actionable_genes/
+mkdir 05_actionable_genes
+l
+ll
+mkdir 06_methylation
+ll
+mkdir 07_mirna
+ll
+mkdir 08_network
+ll
+ps xf
+ll
+git status
+ll
+git add -A
+ll
+cd
+ls
+ll
+rm 06_methylation
+rm 07_mirna/
+rm 08_network/
+ls
+ll
+mkdir 06_methylation 07_mirna/ 08_network/
+l
+lll
+ll
+mkdir 09_metastasis
+mv 09_metastasis 09_otherpathway
+l
+ll
+cd 09_otherpathway/
+l
+ll
+cd 05_actionable_genes/
+l
+ll
+cd 04_ccle/
+l
+ll
+cd 05_actionable_genes/
+l
+ll
+cd 06_methylation/
+l
+cd 07_mirna/
+l
+ll
+cd
+ls
+ll
+rm fig_01_expr_pattern.pdf 
+l
+ll
+git status
+git add -A
+git status
+git commit -m "ccle gds"
+git push origin master
+ps xf
+ll
+cd 09_otherpathway/
+l
+ll
+cd ../
+ls
+ll
+cd 04_ccle/
+ls
+ll
+cd cd 05_actionable_genes/
+ls
+cd 05_actionable_genes/
+l
+ll
+mv rppa_protein_name.rds 01_expr/
+cd 01_expr/
+;
+cd ../
+ls
+cd 01_expr/
+l
+cd ../
+ls
+ll
+cd 01_expr/
+l
+cd ../
+ls
+ll
+cd 01_expr/
+l
+cd ../
+ls
+ll
+cd 01_expr/
+ls
+ll
+cd 01_expr/
+l
+ll
+cd 04_ccle/
+l
+ll
+cd 05_actionable_genes/
+l
+ll
+cd 06_methylation/
+l
+ll
+cd 07_mirna/
+ls
+ll
+cd 07_mirna/
+l
+ll
+cd ../
+ls
+ll
+cd ../
+ls
+ll
+cd ye_circadian_code/
+ls
+l
+find . -name "*.R"
+find . -name "*.R"|xargs grep before
+exit
+ls
+cd synapse/
+ls
+cd 03_mutation/
+l
+ll
+find . -name "*R"
+find . -name "*R"|xargs grep geom_bar
+find . -name "*R"|xargs grep -A 3 -B 3 geom_bar
+ps xf
+ls
+cd 02_cnv/
+sl
+ll
+find . -name "*R"
+find . -name "*R"|xargs grep .predictive
+find . -name "*R"|xargs grep predicate
+ls
+ls
+cd 03_mutation/
+l
+ps xf
+l
+cd 01_expr/
+cd /home/cliu18/liucj/projects/6.autophagy/02_autophagy_expr
+ls
+ll
+cd 01_expr/
+ls
+cd 01_expr/
+l
+cd 01_expr/
+ls
+ll
+cd 01_expr/
+ls
+ll
+cd 01_expr/
+l
+ps xf
+top
+ls
+ll
+cd 01_expr/
+ls
+cd 01_expr/
+ls
+ll
+cd 01_expr/
+l
+cd ../
+ls
+cd ../
+ls
+ll
+cd synapse/
+l
+ll
+cd
+ls
+ll
+cp ye_circadian_code/C5.biased.mRNA.GSEA.run.r 01_expr/.
+ll
+cp ye_circadian_code/GSEA.1.0.r 01_expr/.
+cd 01_expr/
+l
+cd ../
+ls
+ll
+cd synapse/
+l
+cd synapse/
+l
+mv synapse/ /home/cliu18/liucj/projects/6.autophagy/
+l
+ll
+cd ../
+ls
+cd 01_expr/
+ls
+cd 01_expr/
+ls
+ll
+exit
+cd
+ls
+mkdir 12_merge_summary
+l
+ll
+ls
+mv ye_circadian_code/ /home/cliu18/liucj/github/
+ll
+cd ../
+ls
+ll
+mkdir try_error
+ll
+mv try_error/ 00_try_error
+l
+cd 00_try_error/
+ls
+ll
+mkdir 13_afh_vs_afl
+l
+ll
+cd 13_afh_vs_afl/
+l
+cd ../
+ls
+c d13
+ls
+cd 13_afh_vs_afl/
+ls
+cd 01_expr/
+sl
+ls
+ll
+cd ../
+ls
+ll
+cd ../
+ls
+cd 01_expr/
+l
+find . -type f -name "*R"
+find . -type f -name "*R"|xargs grep rlang
+find . -type f -name "*R"|xargs grep grid
+find . -type f -name "*R"|xargs grep -i latex
+cd ..
+ls
+la
+rm .ftpconfig
+cd ../
+l
+cat .cj_command 
+find . -type f -name "*R"|xargs grep -i guides
+find . -type f -name "*R"|xargs grep -i start
+find . -type f -name "*R"|xargs grep -i *
+find . -type f -name "*R"|xargs grep -i "*"
+ls
+ll
+l
+ls
+cd 13_afh_vs_afl/
+ls
+cd ../
+ls
+ll
+cd ../
+ls
+ll
+cd 01_expr/
+l
+ll
+cd 13_afh_vs_afl/
+l
+ll
+cd ../
+ls
+ll
+cd 13_afh_vs_afl/
+l
+ll
+cd ../
+ls
+ll
+cd 13_afh_vs_afl/
+ls
+cd 13_afh_vs_afl/
+ls
+cd 13_afh_vs_afl/
+ls
+cd ../
+ls
+ll
+cd 13_afh_vs_afl/
+l
+find . -name "*R"
+find . -name "*R" -type f
+find . -name "*R" -type f|xargs grep -i expand
+find . -name "*R" -type f|xargs grep -i expand -A 2
+find . -name "*R" -type f|xargs grep -i expand -B 2
+find . -name "*R" -type f|xargs grep -i expand -B 5
+find . -name "*R" -type f|xargs grep -i expand -B 7
+find . -name "*R" -type f|xargs grep -i expand -B 10
+l
+ll
+cd 13_afh_vs_afl/
+l
+cd ../l
+ll
+cd 13_afh_vs_afl/
+ls
+ll
+cd ../
+l
+find . -name "*R" -type f | xargs grep -i ggrepel 
+find . -name "*R" -type f | xargs grep -i ggrepel  -A 10
+ls
+l
+find . -name "*R" -type f |xargs grep -i reorder
+les ./13_afh_vs_afl/03_stemness.R
+ls
+ll

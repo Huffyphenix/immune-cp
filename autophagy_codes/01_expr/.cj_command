@@ -1,0 +1,401 @@
+ls
+ll
+cd ll
+ll /extraspace/TCGA/TCGA_exp_DataPortal
+ll /extraspace/TCGA/TCGA_exp_DataPortal/mRNA_exp/
+ll /home/yye1/Circadian/expression/tumor.normal.sample.calculate_morethan_10pairs.txt
+ll /home/yye1/Circadian/expression/../circadian.genes.txt
+ll
+cd /home/yye1/Circadian/expression/
+ll
+cd /extraspace/TCGA/TCGA_exp_DataPortal/mRNA_exp/
+ls
+ll
+cd ../
+ls
+ll
+l
+cd ../
+ls
+cd ../../
+ls
+ll
+mv 03_a_atg_gene_list.R 03_a_expr_gene_list.R 
+ll
+mv 03_a_expr_gene_list.R 03_a_gene_expr.R
+ll
+l
+cd ../
+s
+ls
+ll
+cat 03_b_stage_gene_expr.R 
+ls
+ll
+cd ../
+ls
+ll
+cat 01_b_rppa_rds.R 
+ls
+cd ../
+ls
+ll
+grep has_name *
+l
+ll
+ls
+ll
+cd ../
+ll
+mv 03_gene_list_detailed.R 03_test_a_gene_expr.R
+l
+ll
+mv 04_use_all_samples.R 03_test_b_all_samples.R
+ll
+les 03_test_a_gene_expr.R
+git status
+ll
+git add *
+git commit -m "heatmap"
+git push origin master
+ls 
+git status
+git add -A
+git status
+git commit -m "rename"
+git push origin master
+l
+top
+ps xf
+ps xf|grep yyel|wc -l
+ps aux|grep yyel|wc -l
+ps aux
+w
+ls
+ll
+cd ../.../
+l
+cd ../../
+ls
+ll
+mv 03_test_e_stage_normal. 03_test_e_stage_normal.R
+ll
+les  /extraspace/yye1/analysis/Hypoxia/PSM/summary/All.signatures.summary.csv
+l
+cd ../
+ls
+ll /extraspace/yuxiang/Project_circRNA/
+ll
+ll /extraspace/yuxiang/Project_circRNA/
+ll
+cd 
+ls
+ll
+gzip rppa_protein_name.rds 
+ll
+cd ../
+ls
+ll
+R
+ls
+gunzip rppa_protein_name.rds.gz 
+l
+ll
+cd ../
+l
+ll
+R
+ll
+cd ../
+l
+ll
+rm rppa_protein_name.rds
+gunzip rppa_protein_name.rds.gz 
+ll
+cd ../
+ls
+ll
+mv 01_b_rppa_protein_symbol.R
+mv rppa_protein_symbol.R 01_b_rppa_protein_symbol.R
+ll
+mv 01_b_rppa_protein_symbol.R 01_b_rppa_protein_symbol_rds.R
+ll
+cd ../../
+ls
+ll
+cd ../
+ls
+ll
+Rscript 03_h_coca.R
+bg 1
+ps xf
+top
+ll
+Rscript 03_h_coca.R
+ps xf
+top
+R
+ll
+Rscript 03_h_coca.R
+ll
+cd ConsensusClusterResult/
+l
+rm ConsensusClusterResult/
+ll
+R
+ll
+Rscript ll
+ll
+rm 03_h_1_coca.R
+ll
+les 03_h_coca_1.R
+Rscript 03_h_coca_1.R &
+ps xf
+ll
+l
+top
+ps xf
+ll
+Rscript 03_h_coca_2.R &
+Rscript 03_h_coca_3.R &
+ps xf
+ll
+ps xf
+l
+nohup Rscript 03_h_coca_4.R &
+ps xf
+ll
+ps xf
+R
+ls
+cat nohup.out 
+ps xf
+top
+ps xf
+top
+ls
+ll
+ls
+ll
+cat nohup.out 
+Rscript 03_h_coca_1.R &
+ps xf
+Rscript 03_h_coca_2.R &
+ps xf
+kill 18208
+ps xf
+Rscript 03_h_coca_3.R &
+ps xf
+top
+top
+ps x
+top
+ps xf
+top
+ll
+qps xf
+ps xf
+top
+free
+ps xf
+nohup Rscript 03_h_coca_cc.R &
+ps xf
+l
+les nohup.out 
+ps xf
+top
+ps xf
+top
+l
+ll
+cd
+l
+ll
+cat nohup.out 
+l
+ps xf
+top
+ll
+cd ../
+ls
+ll
+ls
+ll
+cat nohup.out 
+ll
+cd cnv_matrix/
+l
+ll
+ls
+ll
+cd cj/
+l
+rm cj/
+ls
+ll
+rm expr_matrix cnv_matrix methy_matrix
+ps xf
+ll
+Rscript 03_h_coca_cc.R &
+ps xf
+top
+ps xf
+kill 32005
+ps xf
+ll
+rm nohup.out 
+l
+nohup Rscript 03_h_coca_cc.R &
+ps xf
+ll
+les nohup.out 
+top
+ps xf
+l
+ll
+nohup Rscript 03_h_coca_cc.R &
+ps xf
+cat nohup.out 
+top
+ls
+ll
+cd cj/
+l
+ll
+ps xf
+top
+ll
+cat nohup.out 
+ps xf
+top
+ps xf
+ls
+ll
+l
+mkdir coca_clust_trial
+ll
+cd coca_clust_trial/
+ll
+Rscript 03_h_coca_snf.R > nohup.snf.out &
+ps xf
+ll
+ps xf
+lll
+ll
+ps xf
+kill 78206 78197 78188 78179 78170 78160
+ps xf
+top
+ll
+les nohup.snf.out 
+ll
+cd cj/
+l
+rm cj/
+ls
+ll
+ps xf
+top
+ps xf
+ll
+cd coca_clust_trial/
+l
+cd ../
+ls
+cd coca_clust_trial/
+ls
+cd coca_clust_trial/
+;s
+ls
+ll
+cd ConsensusClusterplus/
+l
+cat nohup.out 
+R
+l
+cat nohup.out 
+ps xf
+ll
+cd coca_clust_trial
+ls
+cd ../
+ls
+ll
+rm C5.biased.mRNA.GSEA.run.r 
+ll
+rm nohup.*
+ll
+ll coca_clust_trial/
+ll ConsensusClusterplus/
+rm ConsensusClusterplus/
+ls
+ll
+rm Rplots.pdf 
+ls
+ll
+R
+ll
+rm rppa_protein_name.rds 
+ll
+rm coca_clust_trial/
+ll
+cd ../
+ls
+ll
+les /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/same.samples.to.PSM/BLCA.mRNA.expression.gct
+les /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/c5.all.v5.2.symbols.gmt
+ll  /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/
+ll  /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/*gmt
+cp /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/*gmt /home/cliu18/liucj/projects/6.autophagy/GSEA
+ll /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/
+ll /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/oncogenic.signatures/
+les  /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/oncogenic.signatures/significant.oncogene.gsea.in.hypoxic.normoxic.tumor.csv
+cd /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/GSEA/oncogenic.signatures/
+ls
+nohup Rscript 03_j_gsea.R &
+les nohup.out 
+R
+rm nohup.out 
+nohup Rscript 03_j_gsea.R &
+les nohup.out 
+rm nohup.out 
+nohup Rscript 03_j_gsea.R &
+les nohup.out 
+ps xf
+ll
+les nohup.out 
+l
+ps xf
+les nohup.out 
+cd "/extraspace/liucj/projects/6.autophagy/02_autophagy_expr/03_a_gene_expr"
+ls
+ll
+rm nohup.out 
+l
+nohup Rscript 01_b_rppa_expr_l4_rds.R &
+ps xf
+top
+l
+gitr
+ls
+ll
+cat nohup.out 
+ll
+rm nohup.out 
+l
+nohup Rscript 01_b_rppa_expr_l4_rds.R &
+p xf
+ps xf
+top
+ps xf
+ll
+cat nohup.out 
+ll
+ps xf
+l
+grep expand *
+ll
+cd ../
+ls
+ll
+cd ../

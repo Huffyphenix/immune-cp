@@ -1,0 +1,26 @@
+ls
+ll
+les /extraspace/yye1/share_data/CCLE/CCLE_Expression_2012-09-29.res
+wc -l /extraspace/yye1/share_data/CCLE/CCLE_Expression_2012-09-29.res
+les /extraspace/yye1/share_data/CCLE/CCLE_Expression_2012-09-29.res
+les /extraspace/yye1/share_data/CCLE/CCLE_Expression_2012-09-29.title.txt
+les /extraspace/yye1/CCLE/CCLE_Expression_09292016.txt
+ll ~/Circadian/Drug/
+ll /home/yye1/Circadian/Drug/
+cd /extraspace/yye1/share_data/CCLE/
+ls
+ll
+cd ../
+ls
+ll
+mv 01_ccle_a_rds.R 01_ccle_a_drug_rds.R
+mv 02_ccle_a_gene_list.R 02_ccle_a_drug.R
+ll
+cat 01_ccle_b_drug_target.R 
+ll
+mv 01_ccle_b_drug_target.R 01_ccle_b_drug_target_rds.R
+ll
+exit
+ls
+ll
+cd ../

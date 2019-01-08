@@ -1,0 +1,22 @@
+# Autophagy flux TAE.
+
+## Use TCGA RPPA data.
+
+- Use p62 RPPA data to categorize patient sample.
+- Use BECN1 to categorize patient samples.
+- Use the ration of p62 / becn1, as p62 increase and becn1 decrease represent the low autophagy flux.
+- Intersect the result of three method, whether they have a high overlaps.
+
+
+## Use mRNA expression data 
+
+1. The Guideline paper (Klionsky, Autophagy, 2016) list some of marker genes. Use this marker genes as the score index.
+2. Try use upstream genes TOR/MTOR, AMPK phosphoralation data.
+
+# Finally, use p62 protein alone indicate autophagy flux
+
+The paper Bjørkøy, Methods in Enzymology, 2009 put the p62 alone can be indicator of the autophagy flux. This method was cited about 500 times, and the nature and GD used this method.
+
+The whole project from Tumor vs. Normal moved to the AFH (Autophagy Flux High) vs. AFL patient samples. 
+
+All new scripts are in the [`13_afh_vs_afl`](../13_afh_vs_afl).

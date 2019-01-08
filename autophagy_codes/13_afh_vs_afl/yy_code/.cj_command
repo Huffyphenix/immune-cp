@@ -1,0 +1,52 @@
+l
+cd ../
+ls
+ll
+cd ../
+ll
+lwd
+lsd
+les /extraspace/TCGA/TCGA_exp_DataPortal/mRNA_exp/ACC_mRNA_each_exp_20160513
+ps xf
+top
+l
+ll
+ll /home/yye1/
+l
+ll
+ll /tmp/
+cp /tmp/GIPW_function_omega.R .
+l
+ll
+lsd
+cd
+grep sampleTCGA *
+ll
+grep -i sampleTCGA *
+ps xf
+kill 30572
+ps xf
+kill 30749
+ps xf
+kill 30865
+ps xf
+ll
+top
+ps xf
+l
+cdl
+lsd
+l
+ll
+cd ../
+l
+grep -i hypo *
+l
+ll
+l
+ll
+l
+ll
+l
+ll
+cd ../

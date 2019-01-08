@@ -1,0 +1,14 @@
+Parsed with column specification:
+cols(
+  .default = col_double(),
+  Sample_ID = col_character(),
+  Cancer_Type = col_character(),
+  Sample_Type = col_character(),
+  SetID = col_integer()
+)
+See spec(...) for full column specifications.
+# A tibble: 1 x 3
+            names cancer_types        protein_expr
+            <chr>        <chr>              <list>
+1 TCGA-ACC-L4.csv          ACC <tibble [218 x 48]>
+Initialising 40 core cluster.

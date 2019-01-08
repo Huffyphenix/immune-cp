@@ -1,0 +1,30 @@
+l
+ll
+cd ../
+ls
+l
+Rscript 02_snv_b_onco.R 
+bg 1
+ps xf
+ll
+ps xf
+cat 02_snv_b_onco.R 
+Rscript 02_snv_b_onco.R 
+bg 1
+jls
+ll
+ls
+l
+Rscript 02_snv_b_onco.R &
+ps xf
+ls
+ll
+R
+ps xf
+top
+ps xf
+kill 102170
+git
+gir
+ls
+cd ../

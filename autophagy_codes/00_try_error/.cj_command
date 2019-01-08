@@ -1,0 +1,10 @@
+ls
+cd 00
+top
+ps xf
+ll
+ls
+lll
+cat ~/.profile
+grep -i gsl ~/.profile
+gitr

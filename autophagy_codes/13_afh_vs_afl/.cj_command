@@ -1,0 +1,172 @@
+ls
+ll
+cd ../
+ls
+ll
+cd
+ls
+ll
+ls
+ll
+l
+ll
+mkdir yy_code
+ls
+cd yy_code/
+l
+cd ../
+ls
+ll
+mv PSM.* yy_code/
+ls
+ll
+mv check_balance.r cal.r yy_code/
+ls
+ll
+cd yy_code/
+l
+cd ../
+ls
+ll
+ls
+l
+mv 01_clinical.R 
+l
+mv 01_clinical.R 02_clinical.R
+ls
+ll
+l
+ll
+ls
+ls
+cd yy_code/
+cd yy_code/
+l
+ll
+ll /extraspace/yye1/analysis/Hypoxia/PSM
+ll /extraspace/yye1/analysis/Hypoxia/PSM/
+ll /extraspace/yye1/analysis/Hypoxia/PSM/mRNA
+ll /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/TGCT_myclusters
+ll
+ll /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/TGCT_myclusters
+ll /extraspace/yye1/analysis/Hypoxia/PSM/mRNA/
+ls
+ll
+nohup Rscript 04_propensity_score.R &
+l
+les nohup.out 
+ll
+les nohup.out 
+ps xf
+cat nohup.out 
+rm nohup.out 
+nohup Rscript 04_propensity_score.R &
+les nohup.out 
+ll
+les nohup.out 
+rm nohup.out 
+nohup Rscript 04_propensity_score.R &
+ps xf
+les nohup.out 
+cat nohup.out 
+l
+cat nohup.out 
+ps xf
+cat nohup.out 
+l
+ll
+rm nohup.out 
+nohup Rscript 04_propensity_score.R &
+cat nohup.out 
+ll
+cat nohup.out 
+ll
+les nohup.out 
+ll
+les nohup.out 
+cat nohup.out 
+ls
+ll
+cat nohup.out 
+ps xf
+cat nohup.out 
+ps xf
+top
+l
+ll
+l
+cd yy_code/
+l
+ll
+ps xf
+ll
+cat nohup.out 
+ll
+l
+cat nohup.out 
+ps xf
+cat nohup.out 
+l
+ll
+rm nohup.out 
+ps xf
+nohup Rscript 04_propensity_score.R &
+ps xf
+ll
+ps xf
+ll
+les nohup.out 
+l
+ll
+cat nohup.out 
+ll
+l
+ll
+cat nohup.out 
+ll
+cat nohup.out 
+ps x
+ps xf
+top
+ll
+rm nohup.out 
+nohup Rscript 04_propensity_score.R &
+cat nohup.out 
+ps xf
+ll
+ps xf
+l
+cat nohup.out 
+ps xf
+top
+ps xf
+ll
+cat nohup.out 
+ps xf
+top
+ll
+les nohup.out 
+cat nohup.out 
+l
+cat nohup.out 
+wc -l nohup.out 
+ll
+cd ../
+ls
+ll
+cat nohup.out 
+ll
+les nohup.out
+cd
+ls
+ll
+cd ../
+ls
+ll
+l
+ll
+l
+cd ../
+ls
+ll
+cd

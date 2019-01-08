@@ -1,0 +1,16 @@
+l
+ll
+l
+cd ../
+ls
+ll
+cd 07_mirna
+ll
+ll
+leng2 /home/cliu18/liucj/github/RstudioWithGit/autophagy_codes/07_mirna/*
+ll
+l
+ll
+exit
+l
+gitr

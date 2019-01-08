@@ -1,0 +1,26 @@
+ls
+ll
+ls
+cd ../
+ls
+ll
+ps xf
+ll
+Rscript 02_cnv_b_mutual_exclusive.R
+ps xf
+Rscript 02_cnv_b_mutual_exclusive.R
+bg 1
+ps xf
+top
+ps xf
+ll
+top
+ls
+ps xf
+top
+ps xf
+l
+ll
+l
+ll
+cd

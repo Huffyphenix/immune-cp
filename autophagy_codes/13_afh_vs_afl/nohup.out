@@ -1,0 +1,3850 @@
+dummies-1.5.6 provided by Decision Patterns
+
+[1] "Number of samples: 119"
+ 0  1 
+62 57 
+[1] "----------------"
+[1] "age < 65 : 104"
+[1] "age >= 65 : 15"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:gridExtra’:
+
+    combine
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+
+Attaching package: ‘gplots’
+
+The following object is masked from ‘package:stats’:
+
+    lowess
+
+
+Attaching package: ‘formula.tools’
+
+The following object is masked from ‘package:gdata’:
+
+    env
+
+Loading required package: lattice
+Loading required package: survival
+Loading required package: Formula
+
+Attaching package: ‘Hmisc’
+
+The following object is masked from ‘package:gdata’:
+
+    combine
+
+The following object is masked from ‘package:gridExtra’:
+
+    combine
+
+The following objects are masked from ‘package:base’:
+
+    format.pval, round.POSIXt, trunc.POSIXt, units
+
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check raceAMERICAN.INDIAN.OR.ALASKA.NATIVE"
+[1] "too small sample size"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01136
+[1] "Pass!"
+[1] 1000
+[1] 2000
+[1] 3000
+[1] 4000
+[1] 5000
+[1] 6000
+[1] 7000
+[1] 8000
+[1] 9000
+[1] 10000
+[1] 11000
+[1] 12000
+[1] 13000
+[1] 14000
+[1] 15000
+[1] 16000
+[1] 17000
+[1] 18000
+[1] 19000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1] "Features with FDR < 0.05 = 0"
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.009465
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02038
+[1] "Pass!"
+[1] 1000
+[1] 2000
+[1] 3000
+[1] 4000
+[1] 5000
+[1] 6000
+[1] 7000
+[1] 8000
+[1] 9000
+[1] 10000
+[1] 11000
+[1] 12000
+[1] 13000
+[1] 14000
+[1] 15000
+[1] 16000
+[1] 17000
+[1] 18000
+[1] 19000
+[1] 20000
+[1] "Features with FDR < 0.05 = 1"
+  [,1]          [,2]       [,3]      [,4]    [,5]    [,6]  
+0 "SQSTM1|8878" "5.07e-08" "0.00102" "-9530" "19200" "9900"
+[1] "Features with FDR < 0.05 = 1"
+  [,1]          [,2]       [,3]      [,4]    [,5]    [,6]  
+0 "SQSTM1|8878" "5.07e-08" "0.00102" "-9530" "19200" "9900"
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1][1] "Number of samples: 85"
+ "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"[1]
+ "Number of samples: 85"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.005005
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.009875
+[1] "Pass!"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03043
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0255
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.04073
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01427
+[1] "Pass!"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+ 0  1 
+42 43 
+[1] 0.02488
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01984
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0675
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.5628
+[1] "Fail: standardized difference=  0.56283381044252"
+[1] "======================================="
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.001776
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0163
+[1] "Pass!"
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.00351
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.006948
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01691
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.04901
+[1] "Pass!"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+ 0  1 
+42 43 
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01882
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03223
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02137
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.04541
+[1] "Pass!"
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01099
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0001586
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+ 0  1 
+42 43 
+[1] "Number of samples: 85"
+[1][1] "----------------"
+ "----------------"
+[1][1] "age < 65 : 51"
+ "age < 65 : 51"
+[1][1] "age >= 65 : 34"
+ "age >= 65 : 34"
+[1][1] "----------------"
+ "----------------"
+[1][1] "Weighting scheme: ATT"
+ "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02736
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.06862
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1][1] "check age_at_initial_pathologic_diagnosis"
+ "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"[1]
+ "too small sample size"
+[1] "check genderFEMALE"[1]
+ "check genderFEMALE"
+[1][1] 0.008475
+ 0.003941
+[1] "Pass!"
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01414
+[1] 0.03418
+[1] "Pass!"
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.003199
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03088
+[1] "Pass!"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.006813
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03537
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02729
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.00103
+[1] "Pass!"
+[1] "Number of samples: 85"
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.008679
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01851
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.003496
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.006309
+[1] "Pass!"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01683
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0082
+[1] "Pass!"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0134
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01178
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02843
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.001687
+[1] "Pass!"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.05173
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03941
+[1] "Pass!"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "Number of samples: 85"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01178
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.000291
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01005
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.04134
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0355
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.006468
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03033
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01437
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.05817
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.005338
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.009147
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01722
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "----------------"
+[1] "too small sample size"
+[1][1] "check genderFEMALE" "age < 65 : 51"
+
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] 0.01035
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01029
+[1] "Pass!"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.007478
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01719
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03161
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.003512
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02888
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01813
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.007821
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0485
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.009776
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02803
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02762
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02192
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01517
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.016
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] "Weighting scheme: ATT"
+[1] 0.0009178
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01741
+[1] "Pass!"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02857
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.001743
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02556
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03851
+[1] "Pass!"
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 1000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 3000
+[1] 2000
+[1] 2000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 2000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 3000
+[1] 4000
+[1] 3000
+[1] 3000
+[1] 4000
+[1] 4000
+[1] 3000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 3000
+[1] 3000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 3000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 5000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 4000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 4000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 4000
+[1] 5000
+[1] 5000
+[1] 4000
+[1] 4000
+[1] 5000
+[1] 5000
+[1] 4000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 4000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 6000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 5000
+[1] 6000
+[1] 5000
+[1] 5000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 5000
+[1] 6000
+[1] 6000
+[1] 5000
+[1] 6000
+[1] 5000
+[1] 6000
+[1] 5000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 7000
+[1] 7000
+[1] 6000
+[1] 7000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 7000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 7000
+[1] 6000
+[1] 7000
+[1] 6000
+[1] 7000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 8000
+[1] 6000
+[1] 6000
+[1] 6000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 6000
+[1] 8000
+[1] 6000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 6000
+[1] 8000
+[1] 8000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 9000
+[1] 7000
+[1] 7000
+[1] 8000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 8000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 7000
+[1] 8000
+[1] 7000
+[1] 8000
+[1] 7000
+[1] 8000
+[1] 8000
+[1] 7000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 7000
+[1] 9000
+[1] 8000
+[1] 7000
+[1] 9000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 9000
+[1] 8000
+[1] 7000
+[1] 8000
+[1] 9000
+[1] 8000
+[1] 9000
+[1] 10000
+[1] 9000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 9000
+[1] 8000
+[1] 9000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 8000
+[1] 9000
+[1] 8000
+[1] 10000
+[1] 8000
+[1] 8000
+[1] 9000
+[1] 8000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 8000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 8000
+[1] 9000
+[1] 8000
+[1] 10000
+[1] 9000
+[1] 10000
+[1] 9000
+[1] 9000
+[1] 10000
+[1] 10000
+[1] 9000
+[1] 8000
+[1] 9000
+[1] 10000
+[1] 10000
+[1] 10000
+[1] 9000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 9000
+[1] 10000
+[1] 11000
+[1] 9000
+[1] 11000
+[1] 9000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 11000
+[1] 10000
+[1] 10000
+[1] 10000
+[1] 10000
+[1] 9000
+[1] 11000
+[1] 9000
+[1] 10000
+[1] 9000
+[1] 10000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 11000
+[1] 11000
+[1] 10000
+[1] 10000
+[1] 9000
+[1] 12000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 11000
+[1] 10000
+[1] 12000
+[1] 12000
+[1] 11000
+[1] 10000
+[1] 12000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 10000
+[1] 10000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 12000
+[1] 12000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 12000
+[1] 11000
+[1] 11000
+[1] 11000
+[1] 10000
+[1] 10000
+[1] 10000
+[1] 12000
+[1] 11000
+[1] 11000
+[1] 11000
+[1] 11000
+[1] 11000
+[1] 13000
+[1] 11000
+[1] 12000
+[1] 12000
+[1] 11000
+[1] 12000
+[1] 10000
+[1] 13000
+[1] 13000
+[1] 11000
+[1] 13000
+[1] 11000
+[1] 12000
+[1] 11000
+[1] 11000
+[1] 12000
+[1] 11000
+[1] 11000
+[1] 12000
+[1] 12000
+[1] 13000
+[1] 13000
+[1] 12000
+[1] 11000
+[1] 11000
+[1] 11000
+[1] 12000
+[1] 11000
+[1] 11000
+[1] 12000
+[1] 13000
+[1] 12000
+[1] 13000
+[1] 12000
+[1] 11000
+[1] 12000
+[1] 14000
+[1] 11000
+[1] 11000
+[1] 12000
+[1] 13000
+[1] 12000
+[1] 13000
+[1] 14000
+[1] 12000
+[1] 12000
+[1] 12000
+[1] 14000
+[1] 11000
+[1] 13000
+[1] 13000
+[1] 13000
+[1] 12000
+[1] 14000
+[1] 13000
+[1] 12000
+[1] 12000
+[1] 14000
+[1] 12000
+[1] 13000
+[1] 12000
+[1] 14000
+[1] 13000
+[1] 14000
+[1] 15000
+[1] 12000
+[1] 14000
+[1] 12000
+[1] 12000
+[1] 12000
+[1] 12000
+[1] 15000
+[1] 13000
+[1] 13000
+[1] 13000
+[1] 13000
+[1] 14000
+[1] 12000
+[1] 14000
+[1] 12000
+[1] 13000
+[1] 12000
+[1] 14000
+[1] 13000
+[1] 13000
+[1] 13000
+[1] 14000
+[1] 15000
+[1] 13000
+[1] 12000
+[1] 15000
+[1] 14000
+[1] 13000
+[1] 15000
+[1] 16000
+[1] 14000
+[1] 15000
+[1] 16000
+[1] 14000
+[1] 14000
+[1] 13000
+[1] 13000
+[1] 15000
+[1] 14000
+[1] 13000
+[1] 13000
+[1] 13000
+[1] 15000
+[1] 15000
+[1] 15000
+[1] 13000
+[1] 13000
+[1] 13000
+[1] 13000
+[1] 14000
+[1] 13000
+[1] 14000
+[1] 14000
+[1] 16000
+[1] 13000
+[1] 14000
+[1] 15000
+[1] 13000
+[1] 16000
+[1] 14000
+[1] 14000
+[1] 14000
+[1] 15000
+[1] 13000
+[1] 15000
+[1] 17000
+[1] 17000
+[1] 15000
+[1] 16000
+[1] 14000
+[1] 14000
+[1] 14000
+[1] 14000
+[1] 13000
+[1] 15000
+[1] 16000
+[1] 16000
+[1] 16000
+[1] 16000
+[1] 14000
+[1] 15000
+[1] 17000
+[1] 14000
+[1] 15000
+[1] 14000
+[1] 16000
+[1] 14000
+[1] 14000
+[1] 14000
+[1] 16000
+[1] 18000
+[1] 14000
+[1] 15000
+[1] 14000
+[1] 15000
+[1] 17000
+[1] 15000
+[1] 15000
+[1] 15000
+[1] 14000
+[1] 17000
+[1] 17000
+[1] 15000
+[1] 14000
+[1] 16000
+[1] 15000
+[1] 15000
+[1] 15000
+[1] 14000
+[1] 17000
+[1] 16000
+[1] 17000
+[1] 16000
+[1] 18000
+[1] 18000
+[1] 15000
+[1] 15000
+[1] 14000
+[1] 16000
+[1] 17000
+[1] 17000
+[1] 19000
+[1] 15000
+[1] 16000
+[1] 18000
+[1] 16000
+[1] 15000
+[1] 16000
+[1] 15000
+[1] 18000
+[1] 18000
+[1] 17000
+[1] 15000
+[1] 15000
+[1] 15000
+[1] 15000
+[1] 18000
+[1] 15000
+[1] 16000
+[1] 16000
+[1] 16000
+[1] 19000
+[1] 16000
+[1] 15000
+[1] 15000
+[1] 16000
+[1] 17000
+[1] 18000
+[1] 16000
+[1] 15000
+[1] 16000
+[1] 16000
+[1] 17000
+[1] 18000
+[1] 17000
+[1] 19000
+[1] 20000
+[1] 17000
+[1] 16000
+[1] 19000
+[1] 16000
+[1] 15000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 19000
+[1] 17000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01012
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.04236
+[1] "Pass!"
+[1] 19000
+[1] 18000
+[1] 16000
+[1] 17000
+[1] 16000
+[1] 16000
+[1] 17000
+[1] 20000
+[1] 16000
+[1] 18000
+[1] 16000
+[1] 16000
+[1] 16000
+[1] 16000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01588
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01053
+[1] "Pass!"
+[1] 18000
+[1] 16000
+[1] 17000
+[1] 17000
+[1] 17000
+[1] 16000
+[1] 17000
+[1] 19000
+[1] 17000
+[1] 20000
+[1] 16000
+[1] 18000
+[1] 17000
+[1] 18000
+[1] 16000
+[1] 1000
+[1] 17000
+[1] 17000
+[1] 18000
+[1] 20000
+[1] 20000
+[1] 1000
+[1] 20000
+[1] 19000
+[1] 17000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.003985
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0006549
+[1] "Pass!"
+[1] 17000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02778
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.003704
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01538
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.001901
+[1] "Pass!"
+[1] 18000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 19000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.003436
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.005141
+[1] "Pass!"
+[1] 17000
+[1] 17000
+[1] 20000
+[1] 18000
+[1] 17000
+[1] 17000
+[1] 17000
+[1] 18000
+[1] 2000
+[1] 18000
+[1] 17000
+[1] 1000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 17000
+[1] 19000
+[1] 19000
+[1] 17000
+[1] 17000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03599
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0698
+[1] "Pass!"
+[1] 1000
+[1] 1000
+[1] 2000
+[1] 17000
+[1] 18000
+[1] 18000
+[1] 18000
+[1] 18000
+[1] 17000
+[1] 17000
+[1] 3000
+[1] 19000
+[1] 18000
+[1] 20000
+[1] 2000
+[1] 18000
+[1] 18000
+[1] 1000
+[1] 1000
+[1] 2000
+[1] 18000
+[1] 2000
+[1] 19000
+[1] 20000
+[1] 18000
+[1] 18000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.007713
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01785
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03239
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03265
+[1] "Pass!"
+[1] 20000
+[1] 19000
+[1] 20000
+[1] 3000
+[1] 18000
+[1] 4000
+[1] 18000
+[1] 3000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 18000
+[1] 2000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.008341
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.006287
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.002365
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03304
+[1] "Pass!"
+[1] 18000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 2000
+[1] 18000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.001941
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.007937
+[1] "Pass!"
+[1] 19000
+[1] 18000
+[1] 18000
+[1] 18000
+[1] 1000
+[1] 3000
+[1] 3000
+[1] 20000
+[1] 19000
+[1] 18000
+[1] 19000
+[1] 19000
+[1] 19000
+[1] 5000
+[1] 3000
+[1] 1000
+[1] 18000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 1000
+[1] 18000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01198
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02171
+[1] "Pass!"
+[1] 19000
+[1] 3000
+[1] 19000
+[1] 4000
+[1] 19000
+[1] 20000
+[1] 4000
+[1] 1000
+[1] 20000
+[1] 19000
+[1] 2000
+[1] 19000
+[1] 1000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.004754
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0008407
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03758
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03477
+[1] "Pass!"
+[1] 2000
+[1] 20000
+[1] 19000
+[1] 20000
+[1] 4000
+[1] 4000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 20000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.164
+[1] "Fail: standardized difference=  0.164011311724256"
+[1] "======================================="
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.1236
+[1] "Fail: standardized difference=  0.123552010425861"
+[1] "======================================="
+[1] 19000
+[1] 4000
+[1] 4000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 19000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01226
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01188
+[1] "Pass!"
+[1] 1000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02933
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03158
+[1] "Pass!"
+[1] 3000
+[1] 20000
+[1] 6000
+[1] 2000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 19000
+[1] 19000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.003401
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.001326
+[1] "Pass!"
+[1] 5000
+[1] 19000
+[1] 3000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 2000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01327
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02439
+[1] "Pass!"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 1000
+[1] 20000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.007785
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01485
+[1] "Pass!"
+[1] 5000
+[1] 20000
+[1] 20000
+[1] 19000
+[1] 1000
+[1] 20000
+[1] 2000
+[1] 1000
+[1] 20000
+[1] 1000
+[1] 5000
+[1] 4000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.001344
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.007215
+[1] "Pass!"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] 20000
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02165
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02638
+[1] "Pass!"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 1000
+[1] 20000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03989
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03439
+[1] "Pass!"
+[1] 5000
+[1] 5000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] 20000
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01288
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03209
+[1] "Pass!"
+[1] 5000
+[1] 2000
+[1] "Features with FDR < 0.05 = 0"
+[1] 4000
+[1] "Number of samples: 85"
+[1] 2000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.189
+[1] "Fail: standardized difference=  0.188987861032513"
+[1] "======================================="
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.07336
+[1] "Pass!"
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0006305
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02693
+[1] "Pass!"
+[1] 3000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.06018
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.07032
+[1] "Pass!"
+[1] 1000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03598
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02122
+[1] "Pass!"
+[1] 7000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 2000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.07788
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.001001
+[1] "Pass!"
+[1] 20000
+[1] 1000
+[1] 3000
+[1] 20000
+[1] 5000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 20000
+[1] 6000
+[1] 1000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] 3000
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.007776
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.004104
+[1] "Pass!"
+[1] 6000
+[1] 20000
+[1] 2000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.03222
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03605
+[1] "Pass!"
+[1] 2000
+[1] 3000
+[1] 5000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 1000
+[1] 1000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 6000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.04306
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03809
+[1] "Pass!"
+[1] 20000
+[1] 20000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.005539
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01354
+[1] "Pass!"
+[1] 1000
+[1] 1000
+[1] 2000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 1000
+[1] 20000
+[1] 3000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.007917
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03074
+[1] "Pass!"
+[1] 3000
+[1] 6000
+[1] 1000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 4000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.07028
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01907
+[1] "Pass!"
+[1] 7000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 1000
+[1] 6000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 6000
+[1] 20000
+[1] 6000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01205
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02589
+[1] "Pass!"
+[1] 2000
+[1] 1000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0002045
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.05153
+[1] "Pass!"
+[1] 1000
+[1] 4000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01823
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03071
+[1] "Pass!"
+[1] 1000
+[1] 4000
+[1] 2000
+[1] 8000
+[1] 2000
+[1] 1000
+[1] 6000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 2000
+[1] 4000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02177
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.007753
+[1] "Pass!"
+[1] 3000
+[1] 4000
+[1] 7000
+[1] 7000
+[1] 3000
+[1] 5000
+[1] 1000
+[1] 2000
+[1] 1000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 2000
+[1] 3000
+[1] 7000
+[1] 1000
+[1] 3000
+[1] 5000
+[1] 4000
+[1] 2000
+[1] 7000
+[1] 1000
+[1] 2000
+[1] 7000
+[1] 1000
+[1] 3000
+[1] 2000
+[1] 1000
+[1] 8000
+[1] 1000
+[1] 7000
+[1] 5000
+[1] 2000
+[1] 7000
+[1] 5000
+[1] 8000
+[1] 3000
+[1] 3000
+[1] 2000
+[1] 3000
+[1] 6000
+[1] 1000
+[1] 9000
+[1] 4000
+[1] 4000
+[1] 5000
+[1] 2000
+[1] 6000
+[1] 3000
+[1] 2000
+[1] 4000
+[1] 4000
+[1] 3000
+[1] 8000
+[1] 8000
+[1] 3000
+[1] 3000
+[1] 2000
+[1] 4000
+[1] 2000
+[1] 3000
+[1] 6000
+[1] 5000
+[1] 4000
+[1] 8000
+[1] 9000
+[1] 2000
+[1] 3000
+[1] 3000
+[1] 2000
+[1] 8000
+[1] 7000
+[1] 2000
+[1] 5000
+[1] 3000
+[1] 9000
+[1] 7000
+[1] 8000
+[1] 3000
+[1] 8000
+[1] 4000
+[1] 5000
+[1] 4000
+[1] 2000
+[1] 6000
+[1] 9000
+[1] 5000
+[1] 3000
+[1] 7000
+[1] 4000
+[1] 3000
+[1] 10000
+[1] 6000
+[1] 4000
+[1] 5000
+[1] 10000
+[1] 5000
+[1] 8000
+[1] 4000
+[1] 3000
+[1] 4000
+[1] 9000
+[1] 9000
+[1] 3000
+[1] 5000
+[1] 6000
+[1] 4000
+[1] 8000
+[1] 3000
+[1] 4000
+[1] 6000
+[1] 3000
+[1] 4000
+[1] 6000
+[1] 3000
+[1] 4000
+[1] 9000
+[1] 8000
+[1] 3000
+[1] 4000
+[1] 5000
+[1] 10000
+[1] 5000
+[1] 6000
+[1] 7000
+[1] 9000
+[1] 10000
+[1] 11000
+[1] 9000
+[1] 9000
+[1] 7000
+[1] 4000
+[1] 6000
+[1] 4000
+[1] 5000
+[1] 9000
+[1] 7000
+[1] 5000
+[1] 7000
+[1] 4000
+[1] 5000
+[1] 5000
+[1] 11000
+[1] 4000
+[1] 10000
+[1] 6000
+[1] 5000
+[1] 6000
+[1] 10000
+[1] 4000
+[1] 9000
+[1] 5000
+[1] 4000
+[1] 4000
+[1] 5000
+[1] 7000
+[1] 11000
+[1] 7000
+[1] 10000
+[1] 12000
+[1] 8000
+[1] 5000
+[1] 4000
+[1] 5000
+[1] 10000
+[1] 8000
+[1] 10000
+[1] 6000
+[1] 6000
+[1] 8000
+[1] 5000
+[1] 10000
+[1] 10000
+[1] 11000
+[1] 5000
+[1] 7000
+[1] 10000
+[1] 8000
+[1] 6000
+[1] 5000
+[1] 5000
+[1] 6000
+[1] 12000
+[1] 8000
+[1] 6000
+[1] 6000
+[1] 11000
+[1] 9000
+[1] 7000
+[1] 12000
+[1] 7000
+[1] 6000
+[1] 13000
+[1] 5000
+[1] 11000
+[1] 5000
+[1] 5000
+[1] 9000
+[1] 11000
+[1] 6000
+[1] 11000
+[1] 6000
+[1] 8000
+[1] 6000
+[1] 5000
+[1] 9000
+[1] 6000
+[1] 11000
+[1] 11000
+[1] 7000
+[1] 7000
+[1] 10000
+[1] 9000
+[1] 12000
+[1] 6000
+[1] 13000
+[1] 11000
+[1] 8000
+[1] 6000
+[1] 10000
+[1] 14000
+[1] 11000
+[1] 7000
+[1] 12000
+[1] 12000
+[1] 7000
+[1] 6000
+[1] 6000
+[1] 7000
+[1] 7000
+[1] 9000
+[1] 8000
+[1] 7000
+[1] 8000
+[1] 6000
+[1] 10000
+[1] 6000
+[1] 7000
+[1] 6000
+[1] 7000
+[1] 12000
+[1] 12000
+[1] 9000
+[1] 13000
+[1] 11000
+[1] 12000
+[1] 7000
+[1] 6000
+[1] 14000
+[1] 13000
+[1] 11000
+[1] 7000
+[1] 15000
+[1] 8000
+[1] 8000
+[1] 12000
+[1] 7000
+[1] 13000
+[1] 10000
+[1] 9000
+[1] 7000
+[1] 11000
+[1] 8000
+[1] 12000
+[1] 7000
+[1] 8000
+[1] 7000
+[1] 8000
+[1] 12000
+[1] 8000
+[1] 13000
+[1] 12000
+[1] 13000
+[1] 8000
+[1] 10000
+[1] 9000
+[1] 9000
+[1] 7000
+[1] 7000
+[1] 14000
+[1] 8000
+[1] 12000
+[1] 7000
+[1] 15000
+[1] 8000
+[1] 10000
+[1] 16000
+[1] 8000
+[1] 7000
+[1] 14000
+[1] 14000
+[1] 13000
+[1] 8000
+[1] 12000
+[1] 13000
+[1] 9000
+[1] 9000
+[1] 8000
+[1] 11000
+[1] 8000
+[1] 9000
+[1] 10000
+[1] 13000
+[1] 13000
+[1] 9000
+[1] 8000
+[1] 15000
+[1] 9000
+[1] 8000
+[1] 13000
+[1] 14000
+[1] 9000
+[1] 9000
+[1] 13000
+[1] 17000
+[1] 9000
+[1] 15000
+[1] 8000
+[1] 8000
+[1] 13000
+[1] 10000
+[1] 14000
+[1] 11000
+[1] 14000
+[1] 8000
+[1] 10000
+[1] 9000
+[1] 9000
+[1] 13000
+[1] 11000
+[1] 8000
+[1] 9000
+[1] 16000
+[1] 10000
+[1] 15000
+[1] 10000
+[1] 14000
+[1] 16000
+[1] 9000
+[1] 10000
+[1] 14000
+[1] 10000
+[1] 9000
+[1] 18000
+[1] 16000
+[1] 11000
+[1] 15000
+[1] 12000
+[1] 9000
+[1] 10000
+[1] 9000
+[1] 10000
+[1] 10000
+[1] 14000
+[1] 14000
+[1] 14000
+[1] 10000
+[1] 15000
+[1] 11000
+[1] 9000
+[1] 14000
+[1] 9000
+[1] 11000
+[1] 9000
+[1] 10000
+[1] 12000
+[1] 11000
+[1] 14000
+[1] 10000
+[1] 15000
+[1] 15000
+[1] 9000
+[1] 17000
+[1] 10000
+[1] 12000
+[1] 11000
+[1] 17000
+[1] 16000
+[1] 19000
+[1] 17000
+[1] 10000
+[1] 11000
+[1] 15000
+[1] 16000
+[1] 11000
+[1] 12000
+[1] 15000
+[1] 10000
+[1] 10000
+[1] 12000
+[1] 11000
+[1] 10000
+[1] 11000
+[1] 11000
+[1] 13000
+[1] 11000
+[1] 16000
+[1] 12000
+[1] 15000
+[1] 15000
+[1] 10000
+[1] 18000
+[1] 10000
+[1] 16000
+[1] 12000
+[1] 10000
+[1] 11000
+[1] 15000
+[1] 11000
+[1] 17000
+[1] 18000
+[1] 12000
+[1] 10000
+[1] 16000
+[1] 13000
+[1] 15000
+[1] 20000
+[1] 11000
+[1] 16000
+[1] 13000
+[1] 13000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01187
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.08941
+[1] "Pass!"
+[1] 12000
+[1] 11000
+[1] 12000
+[1] 18000
+[1] 17000
+[1] 13000
+[1] 12000
+[1] 17000
+[1] 11000
+[1] 11000
+[1] 16000
+[1] 12000
+[1] 11000
+[1] 13000
+[1] 12000
+[1] 12000
+[1] 18000
+[1] 19000
+[1] 1000
+[1] 14000
+[1] 17000
+[1] 11000
+[1] 14000
+[1] 11000
+[1] 16000
+[1] 16000
+[1] 11000
+[1] 19000
+[1] 12000
+[1] 13000
+[1] 12000
+[1] 17000
+[1] 11000
+[1] 16000
+[1] 12000
+[1] 13000
+[1] 14000
+[1] 14000
+[1] 18000
+[1] 16000
+[1] 13000
+[1] 17000
+[1] 2000
+[1] 14000
+[1] 12000
+[1] 13000
+[1] 19000
+[1] 15000
+[1] 18000
+[1] 20000
+[1] 13000
+[1] 12000
+[1] 12000
+[1] 19000
+[1] 18000
+[1] 12000
+[1] "Features with FDR < 0.05 = 0"
+[1] 14000
+[1] 13000
+[1] 17000
+[1] 3000
+[1] 13000
+[1] 13000
+[1] 12000
+[1] 15000
+[1] 15000
+[1] 12000
+[1] 14000
+[1] 19000
+[1] 14000
+[1] 12000
+[1] 17000
+[1] 17000
+[1] 12000
+[1] 13000
+[1] 13000
+[1] 18000
+[1] 17000
+[1] 20000
+[1] 16000
+[1] 14000
+[1] 13000
+[1] 15000
+[1] 20000
+[1] 4000
+[1] 15000
+[1] 17000
+[1] 18000
+[1] 19000
+[1] 14000
+[1] 13000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 19000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.002633
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+ 0  1 
+42 43 
+[1] 0.01912
+[1] "Pass!"
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.009507
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02194
+[1] "Pass!"
+[1] 16000
+[1] 15000
+[1] 13000
+[1] 15000
+[1] 14000
+[1] 13000
+[1] 20000
+[1] 13000
+[1] 20000
+[1] 15000
+[1] 13000
+[1] 5000
+[1] 14000
+[1] 14000
+[1] 14000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.006924
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02935
+[1] "Pass!"
+[1] 18000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 17000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] 13000
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02033
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.05047
+[1] "Pass!"
+[1] 16000
+[1] 13000
+[1] 13000
+[1] 18000
+[1] 14000
+[1] 18000
+[1] 14000
+[1] 20000
+[1] 1000
+[1] 1000
+[1] 18000
+[1] 14000
+[1] 17000
+[1] 16000
+[1] 14000
+[1] 16000
+[1] 15000
+[1] 19000
+[1] 18000
+[1] 16000
+[1] 6000
+[1] "Features with FDR < 0.05 = 0"
+[1] 16000
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01391
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03703
+[1] "Pass!"
+[1] 14000
+[1] 19000
+[1] 15000
+[1] 15000
+[1] 1000
+[1] 15000
+[1] 1000
+[1] 14000
+[1] 15000
+[1] 20000
+[1] 14000
+[1] 17000
+[1] 18000
+[1] 14000
+[1] 1000
+[1] 16000
+[1] 15000
+[1] 14000
+[1] "Features with FDR < 0.05 = 1"
+[1] "Number of samples: 85"
+[1] 18000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.1186
+[1] "Fail: standardized difference=  0.118621629023357"
+[1] "======================================="
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.03925
+[1] "Pass!"
+[1] 2000
+[1] 2000
+[1] 19000
+[1] 15000
+[1] 17000
+[1] 7000
+[1] 17000
+[1] 14000
+[1] 14000
+[1] 16000
+[1] 16000
+[1] 15000
+[1] 15000
+[1] 16000
+[1] 19000
+[1] 19000
+[1] 15000
+[1] 19000
+[1] 2000
+[1] 17000
+[1] 17000
+[1] 2000
+[1] 19000
+[1] 16000
+[1] 2000
+[1] 15000
+[1] 20000
+[1] 8000
+[1] 19000
+[1] 15000
+[1] 20000
+[1] 18000
+[1] 1000
+[1] 18000
+[1] 16000
+[1] 3000
+[1] 18000
+[1] 16000
+[1] 3000
+[1] 3000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 15000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0257
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0275
+[1] "Pass!"
+[1] 17000
+[1] 17000
+[1] 15000
+[1] 16000
+[1] 19000
+[1] 17000
+[1] 15000
+[1] 17000
+[1] "Features with FDR < 0.05 = 0"
+[1] 16000
+[1] 3000
+[1] 15000
+[1] 3000
+[1] 15000
+[1] 9000
+[1] 20000
+[1] 16000
+[1] 4000
+[1] 20000
+[1] 16000
+[1] 18000
+[1] 19000
+[1] 17000
+[1] 18000
+[1] 20000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] 2000
+[1] 20000
+[1] 16000
+[1] 18000
+[1] 4000
+[1] 1000
+[1] 20000
+[1] 4000
+[1] 18000
+[1] "Features with FDR < 0.05 = 0"
+[1] 18000
+[1] 17000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 16000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.02245
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.07594
+[1] "Pass!"
+[1] 10000
+[1] 5000
+[1] 4000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 17000
+[1] 19000
+[1] 17000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01066
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.009414
+[1] "Pass!"
+[1] 16000
+[1] 16000
+[1] 4000
+[1] 16000
+[1] 17000
+[1] 2000
+[1] 18000
+[1] 20000
+[1] 17000
+[1] 20000
+[1] 20000
+[1] 19000
+[1] 19000
+[1] 16000
+[1] 16000
+[1] 3000
+[1] 19000
+[1] 5000
+[1] 19000
+[1] 17000
+[1] 19000
+[1] 6000
+[1] 5000
+[1] "Features with FDR < 0.05 = 0"
+[1] 18000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] "Features with FDR < 0.05 = 0"
+[1] 11000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0315
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0004994
+[1] "Pass!"
+[1] 17000
+[1] 5000
+[1] 5000
+[1] 18000
+[1] 1000
+[1] 17000
+[1] 3000
+[1] 1000
+[1] 18000
+[1] 4000
+[1] 17000
+[1] 1000
+[1] 6000
+[1] 18000
+[1] 7000
+[1] 17000
+[1] 18000
+[1] 20000
+[1] 20000
+[1] 12000
+[1] 6000
+[1] 17000
+[1] 20000
+[1] 4000
+[1] 20000
+[1] 19000
+[1] 18000
+[1] "Features with FDR < 0.05 = 0"
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] 19000
+[1] 18000
+[1] 6000
+[1] 17000
+[1] 2000
+[1] 2000
+[1] "Features with FDR < 0.05 = 0"
+[1] 6000
+[1] "Features with FDR < 0.05 = 0"
+[1] 5000
+[1] 2000
+[1] 17000
+[1] 20000
+[1] 18000
+[1] 7000
+[1] 8000
+[1] 19000
+[1] 18000
+[1] 7000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 5000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.007189
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.07538
+[1] "Pass!"
+[1] 19000
+[1] 18000
+[1] 13000
+[1] 3000
+[1] 3000
+[1] 7000
+[1] 7000
+[1] 20000
+[1] 19000
+[1] 6000
+[1] 20000
+[1] 8000
+[1] 19000
+[1] 18000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] 9000
+[1] 1000
+[1] 18000
+[1] 3000
+[1] 19000
+[1] 8000
+[1] 18000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] 6000
+[1] "Features with FDR < 0.05 = 0"
+[1] 4000
+[1] 20000
+[1] 14000
+[1] 4000
+[1] 19000
+[1] 18000
+[1] 8000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.07869
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.002569
+[1] "Pass!"
+[1] 7000
+[1] 8000
+[1] 19000
+[1] 2000
+[1] "Features with FDR < 0.05 = 0"
+[1] 9000
+[1] 4000
+[1] 10000
+[1] 20000
+[1] 7000
+[1] 9000
+[1] 5000
+[1] 20000
+[1] 19000
+[1] 5000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] 19000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.0164
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.0067
+[1] "Pass!"
+[1] 19000
+[1] 20000
+[1] 1000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01064
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.06856
+[1] "Pass!"
+[1] 9000
+[1] 15000
+[1] 3000
+[1] 8000
+[1] "Features with FDR < 0.05 = 0"
+[1] 9000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.04113
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.04544
+[1] "Pass!"
+[1] 5000
+[1] 20000
+[1] 10000
+[1] 11000
+[1] 8000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.009912
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01457
+[1] "Pass!"
+[1] 1000
+[1] 10000
+[1] 6000
+[1] 2000
+[1] 1000
+[1] 6000
+[1] "Features with FDR < 0.05 = 0"
+[1] 4000
+[1] 10000
+[1] 1000
+[1] 9000
+[1] 16000
+[1] 20000
+[1] 20000
+[1] 10000
+[1] 6000
+[1] 11000
+[1] 1000
+[1] 20000
+[1] 2000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.07571
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.02882
+[1] "Pass!"
+[1] 12000
+[1] 7000
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01819
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.04038
+[1] "Pass!"
+[1] 9000
+[1] 3000
+[1] 20000
+[1] 2000
+[1] 11000
+[1] "Features with FDR < 0.05 = 0"
+[1] 7000
+[1] 5000
+[1] 2000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Number of samples: 85"
+ 0  1 
+42 43 
+[1] "----------------"
+[1] "age < 65 : 51"
+[1] "age >= 65 : 34"
+[1] "----------------"
+[1] "Weighting scheme: ATT"
+[1] "check age_at_initial_pathologic_diagnosis"
+[1] "too small sample size"
+[1] "check genderFEMALE"
+[1] 0.01305
+[1] "Pass!"
+[1] "check raceBLACK.OR.AFRICAN.AMERICAN"
+[1] 0.01888
+[1] "Pass!"
+[1] 11000
+[1] 2000
+[1] 10000
+[1] 7000
+[1] 3000
+[1] 1000
+[1] 1000
+[1] 17000
+[1] 11000
+[1] 12000
+[1] 4000
+[1] 3000
+[1] 8000
+[1] 10000
+[1] 1000
+[1] 8000
+[1] 3000
+[1] 13000
+[1] 12000
+[1] 6000
+[1] 3000
+[1] 4000
+[1] 12000
+[1] 2000
+[1] 2000
+[1] 8000
+[1] 11000
+[1] 4000
+[1] 5000
+[1] 9000
+[1] 2000
+[1] 12000
+[1] 13000
+[1] 4000
+[1] 18000
+[1] 11000
+[1] 9000
+[1] 7000
+[1] 14000
+[1] 4000
+[1] 13000
+[1] 3000
+[1] 5000
+[1] 3000
+[1] 9000
+[1] 5000
+[1] 13000
+[1] 3000
+[1] 12000
+[1] 6000
+[1] 10000
+[1] 5000
+[1] 14000
+[1] 12000
+[1] 5000
+[1] 13000
+[1] 10000
+[1] 8000
+[1] 19000
+[1] 4000
+[1] 4000
+[1] 15000
+[1] 6000
+[1] 14000
+[1] 4000
+[1] 10000
+[1] 6000
+[1] 7000
+[1] 14000
+[1] 6000
+[1] 11000
+[1] 13000
+[1] 6000
+[1] 5000
+[1] 9000
+[1] 5000
+[1] 11000
+[1] 15000
+[1] 14000
+[1] 13000
+[1] 7000
+[1] 5000
+[1] 16000
+[1] 7000
+[1] 20000
+[1] 15000
+[1] 11000
+[1] 8000
+[1] 7000
+[1] "Features with FDR < 0.05 = 0"
+[1] 15000
+[1] 12000
+[1] 7000
+[1] 14000
+[1] 6000
+[1] 10000
+[1] 6000
+[1] 8000
+[1] 12000
+[1] 16000
+[1] 14000
+[1] 6000
+[1] 15000
+[1] 8000
+[1] 12000
+[1] 17000
+[1] 9000
+[1] 16000
+[1] 8000
+[1] 8000
+[1] 7000
+[1] 16000
+[1] 13000
+[1] 7000
+[1] 11000
+[1] 9000
+[1] 15000
+[1] 7000
+[1] 9000
+[1] 15000
+[1] 13000
+[1] 17000
+[1] 10000
+[1] 16000
+[1] 9000
+[1] 13000
+[1] 18000
+[1] 9000
+[1] 17000
+[1] 8000
+[1] 8000
+[1] 14000
+[1] 10000
+[1] 12000
+[1] 17000
+[1] 8000
+[1] 16000
+[1] 10000
+[1] 14000
+[1] 16000
+[1] 18000
+[1] 11000
+[1] 10000
+[1] 10000
+[1] 14000
+[1] 17000
+[1] 9000
+[1] 9000
+[1] 19000
+[1] 18000
+[1] 11000
+[1] 9000
+[1] 15000
+[1] 13000
+[1] 18000
+[1] 11000
+[1] 17000
+[1] 15000
+[1] 11000
+[1] 17000
+[1] 12000
+[1] 11000
+[1] 19000
+[1] 10000
+[1] 15000
+[1] 10000
+[1] 18000
+[1] 10000
+[1] 12000
+[1] 19000
+[1] 16000
+[1] 20000
+[1] 14000
+[1] 12000
+[1] 19000
+[1] "Features with FDR < 0.05 = 0"
+[1] 18000
+[1] 12000
+[1] 16000
+[1] 12000
+[1] 11000
+[1] 13000
+[1] 18000
+[1] 11000
+[1] 16000
+[1] 11000
+[1] 20000
+[1] 19000
+[1] 13000
+[1] 17000
+[1] "Features with FDR < 0.05 = 0"
+[1] 15000
+[1] 20000
+[1] 13000
+[1] "Features with FDR < 0.05 = 0"
+[1] 20000
+[1] 19000
+[1] 12000
+[1] 13000
+[1] 13000
+[1] 14000
+[1] 17000
+[1] 12000
+[1] "Features with FDR < 0.05 = 0"
+[1] 19000
+[1] 12000
+[1] 17000
+[1] 14000
+[1] 18000
+[1] 16000
+[1] 20000
+[1] 14000
+[1] "Features with FDR < 0.05 = 0"
+[1] 14000
+[1] 13000
+[1] 14000
+[1] 15000
+[1] 20000
+[1] 13000
+[1] 18000
+[1] 13000
+[1] 18000
+[1] 20000
+[1] 15000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Features with FDR < 0.05 = 0"
+[1] 19000
+[1] 17000
+[1] 15000
+[1] 14000
+[1] 15000
+[1] 15000
+[1] 16000
+[1] 14000
+[1] 14000
+[1] 19000
+[1] 16000
+[1] 19000
+[1] 16000
+[1] 18000
+[1] 20000
+[1] 15000
+[1] 16000
+[1] 16000
+[1] 15000
+[1] "Features with FDR < 0.05 = 0"
+[1] 17000
+[1] 15000
+[1] 20000
+[1] 17000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] 17000
+[1] "Features with FDR < 0.05 = 0"
+[1] 19000
+[1] 16000
+[1] 17000
+[1] 17000
+[1] 16000
+[1] 16000
+[1] 18000
+[1] 18000
+[1] 18000
+[1] 17000
+[1] 20000
+[1] 18000
+[1] 18000
+[1] 17000
+[1] 17000
+[1] "Features with FDR < 0.05 = 0"
+[1] 19000
+[1] 19000
+[1] 19000
+[1] 18000
+[1] 19000
+[1] 19000
+[1] 18000
+[1] 18000
+[1] 20000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Features with FDR < 0.05 = 0"
+[1] 20000
+[1] 19000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] 19000
+[1] 19000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Features with FDR < 0.05 = 0"
+[1] 20000
+[1] 20000
+[1] 20000
+[1] "Features with FDR < 0.05 = 0"
+[1] "Features with FDR < 0.05 = 0"
+[1] "Features with FDR < 0.05 = 0"
+Error in mutate_impl(.data, dots) : 
+  Evaluation error: task 1 failed - "cannot open the connection".
+Calls: %>% ... <Anonymous> -> mutate.tbl_df -> mutate_impl -> .Call
+Execution halted

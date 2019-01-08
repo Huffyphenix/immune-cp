@@ -1,0 +1,32 @@
+ls
+ll
+vim 01_appoptosis.R
+ll
+mv 01_appoptosis.R 01_apoptosis.R
+l
+touch 02_metastasis.R
+ll
+touch 03_necrosis.R
+ll
+mv 03_necrosis.R 02_necorsis.R
+ll
+mv 02_metastasis.R 03_metastasis.R
+ll
+rm 03_metastasis.R 
+l
+touch 03_inflamation.R
+mv 03_inflamation.R 04_inflammation.R
+touch 05_inmmunity.R
+ll
+mv 04_inflammation.R 03_inflammation.R
+ll
+mv 05_inmmunity.R 04_inmmunity.R
+ll
+touch 05_metastasis.R
+l
+cd ../
+ls
+ll
+mv 04_inmmunity.R 04_inmmunity_a_rds.R
+ll
+cd ../
