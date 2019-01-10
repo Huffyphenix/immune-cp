@@ -6,7 +6,9 @@ survival_path <- file.path(out_path, "c_3_survival")
 tcga_path <- "/project/huff/huff/immune_checkpoint/data/TCGA_data"
 expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 
-clinical <- readr::read_rds(path = file.path(tcga_path,"pancan34_clinical.rds.gz")) 
+# clinical <- readr::read_rds(path = file.path(tcga_path,"pancan34_clinical.rds.gz")) 
+clinical <- readr::read_rds(file.path("/project/huff/huff/data/TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
+  dplyr::rename("cancer_types" = "type")
 
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
@@ -45,8 +47,9 @@ fun_expr_survival_merge <- function(filter_expr, clinical){
     dplyr::filter(type == "01") %>% 
     dplyr::mutate(barcode = fun_barcode(barcode)) %>% 
     dplyr::select(symbol, barcode, expr)  %>% 
-    dplyr::inner_join(clinical, by = "barcode") %>% 
-    dplyr::select(symbol, barcode, expr, gender, race,time = os_days, status = os_status) %>% 
+    dplyr::rename("bcr_patient_barcode" = "barcode") %>%
+    dplyr::inner_join(clinical, by = "bcr_patient_barcode") %>% 
+    dplyr::select(symbol, bcr_patient_barcode, expr, gender, race,time = PFS.time, status = PFS) %>% 
     dplyr::filter(!is.na(time), time > 0, !is.na(status)) %>% 
     dplyr::mutate(status = plyr::revalue(status, replace = c("Alive" = 0, "Dead" = 1))) %>%
     dplyr::mutate(status = as.numeric(status)) %>% 
