@@ -11,7 +11,7 @@ expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 # snv_path <- "/home/cliu18/liucj/projects/6.autophagy/04_snv"
 
 # load cnv and gene list
-# snv <- readr::read_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv","pancan33_snv_from_syn7824274_gather.rds.gz"))
+snv_syn7824274 <- readr::read_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv","pancan33_snv_from_syn7824274_gather.rds.gz"))
 snv <- readr::read_rds(file.path(tcga_path, "pancan33_snv.rds.gz"))
 #marker_file <- readr::read_rds(file.path(expr_path_a, "rds_03_a_atg_lys_marker.rds.gz"))
 #gene_list <- readr::read_rds(file.path(expr_path_a, "rds_03_a_atg_lys_gene_list.rds.gz")) %>% 
@@ -32,8 +32,21 @@ filter_gene_list <- function(.x, gene_list) {
 snv %>%
   dplyr::mutate(filter_snv = purrr::map(snv, filter_gene_list, gene_list = gene_list)) %>%
   dplyr::select(-snv) -> gene_list_snv
-
 readr::write_rds(x = gene_list_snv, path = file.path(snv_path, ".rds_02_snv_a_gene_list.rds.gz"), compress = "gz")
+
+snv_syn7824274 %>%
+  dplyr::filter(symbol %in% gene_list$symbol) -> gene_list_snv_syn7824274
+fn_merge_data <- function(.data){
+  .data %>%
+    tidyr::gather(-symbol,key = sample, value = count) %>%
+    dplyr::left_join(gene_list_snv_syn7824274,by=c("sample","symbol")) %>%
+    dplyr::select(symbol,sample,mut_n) %>%
+    tidyr::spread(key = sample, value = mut_n) 
+}
+gene_list_snv %>%
+  dplyr::mutate(filter_snv_syn7824274 = purrr::map(filter_snv,fn_merge_data)) %>%
+  dplyr::select(-filter_snv) -> gene_list_snv_syn7824274.with_full_samples
+readr::write_rds(x = gene_list_snv_syn7824274.with_full_samples, path = file.path(snv_path, ".rds_02_snv_a_gene_list_syn7824274.with_full_samples.rds.gz"), compress = "gz")
 
 # filter out hypermutation samples -----
 burden_path <- "/project/huff/huff/data/TCGA"
@@ -62,7 +75,7 @@ fn_get_percent <- function(cancer_types, filter_snv){
     dplyr::mutate(per = sm_sample / n) %>%
     dplyr::mutate(n=n)-> .d_count
 
-  # return(.d_count)
+  return(.d_count)
     # tibble::tibble( mut_count = list(.d_count))
 }
 fn_get_hyper_mut_data_class <- function(cancer_types, filter_snv){
@@ -75,18 +88,18 @@ fn_get_hyper_mut_data_class <- function(cancer_types, filter_snv){
     dplyr::left_join(mutation_burden_class,by="barcode") %>%
     dplyr::mutate(class = ifelse(sm_count > 1000,"hyper","non-hyper")) 
 }
-gene_list_snv %>% 
-  # head(1) %>% .$filter_snv %>% .[[1]] -> filter_snv
-  plyr::mutate(res = purrr::map2(cancer_types, filter_snv, fn_get_percent)) %>%
-  dplyr::select(-filter_snv) -> gene_list_snv.count_per.filter_hypermutation
+gene_list_snv_syn7824274.with_full_samples %>% 
+  # head(1) %>% .$filter_snv_syn7824274 %>% .[[1]] -> filter_snv
+  plyr::mutate(res = purrr::map2(cancer_types, filter_snv_syn7824274, fn_get_percent)) %>%
+  dplyr::select(-filter_snv_syn7824274) -> gene_list_snv.count_per.filter_hypermutation
 
-gene_list_snv %>% 
+gene_list_snv_syn7824274.with_full_samples %>% 
   # head(1) %>% .$filter_snv %>% .[[1]] -> filter_snv
-  plyr::mutate(res = purrr::map2(cancer_types, filter_snv, fn_get_hyper_mut_data_class)) %>%
-  dplyr::select(-filter_snv) -> gene_list_snv.hypermutation_class
+  plyr::mutate(res = purrr::map2(cancer_types, filter_snv_syn7824274, fn_get_hyper_mut_data_class)) %>%
+  dplyr::select(-filter_snv_syn7824274) -> gene_list_snv.hypermutation_class
 
 gene_list_snv.hypermutation_class %>%
-  readr::write_rds(file.path(snv_path,"gene_list_snv.hypermutation_class"),compress = "gz")
+  readr::write_rds(file.path(snv_path,"gene_list_snv_syn7824274.hypermutation_class"),compress = "gz")
 # gene_list_snv.filter_hypermutation %>% 
 #   dplyr::select(cancer_types,barcode,symbol,count) %>%
 #   tidyr::nest(-cancer_types,.key="filter_snv") %>%
@@ -111,7 +124,7 @@ gene_list_snv.hypermutation_class %>%
 # parallel::stopCluster(cluster)
 
 gene_list_snv.count_per.filter_hypermutation %>% 
-  readr::write_rds(path = file.path(snv_path, "snv_gene_list_snv_count_per.filter_hypermutation.rds.gz"), compress = "gz")
+  readr::write_rds(path = file.path(snv_path, "syn7824274_snv_gene_list_snv_count_per.filter_hypermutation.rds.gz"), compress = "gz")
 
 gene_list_snv.count_per.filter_hypermutation %>% 
   tidyr::unnest() %>%
@@ -148,9 +161,9 @@ plot_ready %>%
   scale_y_discrete(limits = gene_rank$symbol) +
   scale_fill_gradient2(
     name = "Mutation Frequency (%)",
-    limit = c(0, 0.15),
-    breaks = seq(0, 0.15, 0.01),
-    label = c("0", "","","3","","","6","","", "9","","", "12","","","15"),
+    limit = c(0, 0.10),
+    breaks = seq(0, 0.1, 0.01),
+    label = c("0", "","2","","4","","6","","8", "","10"),
     high = "red",
     na.value = "white"
   ) +
