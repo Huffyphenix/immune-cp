@@ -7,7 +7,7 @@ library(ggplot2)
 
 out_path <- "/project/huff/huff/immune_checkpoint/result_20171025"
 snv_path <- file.path(out_path, "m_2_snv")
-gene_list_snv.hypermutation_class <- readr::read_rds(file.path(snv_path,"gene_list_snv.hypermutation_class"))
+gene_list_snv.hypermutation_class <- readr::read_rds(file.path(snv_path,"gene_list_snv_syn7824274.hypermutation_class"))
 
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
