@@ -1,4 +1,4 @@
-fn_survival <- function(data,title,color,sur_name,result_path){
+fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6){
   library(survival)
   library(survminer)
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
@@ -22,7 +22,7 @@ fn_survival <- function(data,title,color,sur_name,result_path){
                         xlab = "Survival in days",
                         ylab = 'Probability of survival',
                         # legend.title = "Methyla group:",
-                        legend= c(0.8,0.6),
+                        legend= c(lx,ly),
                         # ggtheme = theme_survminer(),
                         ggtheme = theme(
                           panel.border = element_blank(), panel.grid.major = element_blank(), 
@@ -41,10 +41,10 @@ fn_survival <- function(data,title,color,sur_name,result_path){
       values = color,
       labels = legend$label
     )
-  ggsave(filename =sur_name, path = result_path,device = "png")
+  ggsave(filename =sur_name, path = result_path,device = "png",height = h,width = w)
 }
 
-fn_mutation_burden <- function(data,group,value,color,xlab,comp_list,m_name,result_path,w=7,h=10){
+fn_mutation_burden <- function(data,group,facet="~ cancer_types",value,color,xlab,comp_list,m_name,result_path,w=7,h=10){
   data %>%
     ggpubr::ggboxplot(x = group, y = value,
                       color = group #add = "jitter",#, palette = "npg"
@@ -54,7 +54,7 @@ fn_mutation_burden <- function(data,group,value,color,xlab,comp_list,m_name,resu
                      labels = c(1:3)
                      # expand = c(0.2,0.2,0.2)
     ) +
-    facet_wrap(~ cancer_types, strip.position = "bottom", scales = "free") +
+    facet_wrap(as.formula(facet), strip.position = "bottom", scales = "free") +
     scale_color_manual(
       values = color
     )+
@@ -64,13 +64,16 @@ fn_mutation_burden <- function(data,group,value,color,xlab,comp_list,m_name,resu
     theme(legend.position = "none",
           # axis.title.x = element_blank(),
           strip.background = element_rect(fill = "white",colour = "white"),
+          text = element_text(size = 10, colour = "black"),
           strip.text = element_text(size = 8)) +
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
     ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
-  ggsave(filename =m_name, path = result_path,device = "pdf",width = w,height = h)
+  
+  ggsave(filename =paste(m_name,"png",sep="."), path = result_path,device = "png",width = w,height = h)
+  ggsave(filename =paste(m_name,"pdf",sep="."), path = result_path,device = "pdf",width = w,height = h)
 }
 
-fn_mutation_burden_all <- function(data,group,value,color,xlab,comp_list,m_a_name,result_path,w=4,h=4){
+fn_mutation_burden_all <- function(data,group,value,color,xlab,comp_list,m_a_name,result_path,w=4,h=3){
   data %>%
     ggpubr::ggboxplot(x = group, y = value,
                       color = group #add = "jitter",#, palette = "npg"
@@ -88,10 +91,12 @@ fn_mutation_burden_all <- function(data,group,value,color,xlab,comp_list,m_a_nam
     ylab(xlab) +
     xlab("Group") +
     theme(legend.position = "none",
-          axis.title.x = element_blank(),
+          # axis.title.x = element_blank(),
           strip.background = element_rect(fill = "white",colour = "white"),
+          text = element_text(size = 12, colour = "black"),
           strip.text = element_text(size = 12)) +
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
     ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
-  ggsave(filename =m_a_name, path = result_path,device = "pdf",width = w,height = h)
+  ggsave(filename =paste(m_a_name,"png",sep="."), path = result_path,device = "png",width = w,height = h)
+  ggsave(filename =paste(m_a_name,"pdf",sep="."), path = result_path,device = "pdf",width = w,height = h)
 }
