@@ -555,3 +555,6 @@ virus_for_groups %>%
   ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
 v_a_name <- paste("Combined_virus_levels_for",3,"Groups.pdf",sep="_")
 ggsave(filename =v_a_name, path = res_path,device = "pdf",width = 6,height = 12)
+
+save.image(file = file.path(res_path, ".rda_combined_clusters_into_group_analysis.rda"))
+load(file = file.path(res_path, ".rda_combined_clusters_into_group_analysis.rda"))
