@@ -51,7 +51,7 @@ ICP_mean_expr_in_cancers %>%
   dplyr::mutate(average_exp = log2(average_exp)) %>%
   ggplot(aes(x=cancer_types,y=average_exp)) +
   geom_violin(aes(fill=functionWithImmune),alpha=0.5) +
-  facet_wrap(~functionWithImmune,scale="free") +
+  facet_wrap(~functionWithImmune) +
   coord_flip() +
   scale_x_discrete(limits= cancer_rank$cancer_types) +
   scale_fill_manual(values = c( "#1C86EE", "#EE3B3B","#EE7600")) +
@@ -60,7 +60,8 @@ ICP_mean_expr_in_cancers %>%
   ylab("log2 (Expression)") +
   theme(
     strip.background = element_rect(colour = "black", fill = "white"),
-    strip.text = element_text(size = 12),
+    strip.text = element_text(size = 12,color = "black"),
+    axis.text = element_text(size = 10, colour = "black"),
     legend.position = "none",
     panel.background = element_blank(),
     panel.border = element_rect(fill='transparent',colour = "black"),
