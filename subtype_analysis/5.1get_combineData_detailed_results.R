@@ -45,12 +45,17 @@ cancer_info <- cnv_merge_snv_data %>%
   unique() %>%
   dplyr::filter(barcode %in% colnames(W)) %>%
   dplyr::inner_join(cancer_color,by = "cancer_types")
-M_label=cbind(group,survival_info$PFS,mutation_info$mutation_status,cancer_info$cancer_types,purity_info$purity)
-colnames(M_label)=c("barcode","spectralClustering","PFS.status","mutation_burden_class","cancer_types","TumorPurity")
+cluster_color <- data.frame(Cluster=c(1:C),color = colors()[seq(1,656,32)[2:7]])
+cluster_info <- group %>%
+  as.data.frame() %>%
+  dplyr::rename("Cluster" = "group","barcode"="sample") %>%
+  dplyr::inner_join(cluster_color,by="Cluster")
+
+M_label=cbind(cluster_info[,1:2],survival_info$PFS,mutation_info$mutation_status,cancer_info$cancer_types,purity_info$purity)
+colnames(M_label)=c("barcode","Cluster","PFS.status","mutation_burden_class","cancer_types","TumorPurity")
 rownames(M_label)=colnames(W)
 cancer_info$cancer_types %>% unique() %>% length() -> cancer_n
-M_label_colors=cbind("spectralClustering"=getColorsForGroups(M_label[,"spectralClustering"],
-                                                             colors=rainbow(C)),
+M_label_colors=cbind("Cluster"=cluster_info$color,
                      "PFS.status"=survival_info$color,
                      "mutation_burden_class"=mutation_info$color,
                      "cancer_types"=cancer_info$color,
@@ -71,8 +76,16 @@ diag(W) <- median(as.vector(W))
 W <- normalize(W)
 W <- W + t(W)
 
-M_label=data.frame(group,"PFS.status"=survival_info$PFS,"mutation_burden_class"=mutation_info$mutation_status,"cancer_types"=cancer_info$cancer_types,"TumorPurity"=as.numeric(purity_info$purity))
+M_label=data.frame(cluster_info[,1:2],"PFS.status"=survival_info$PFS,"mutation_burden_class"=mutation_info$mutation_status,"cancer_types"=cancer_info$cancer_types,"TumorPurity"=as.numeric(purity_info$purity))
 rownames(M_label)=colnames(W) # To add if the spectralClustering function
+c(W[ind,ind] %>% colnames()) %>%
+  as.data.frame() %>%
+  dplyr::rename("barcode"=".") %>%
+  dplyr::left_join(M_label,by="barcode") %>%
+  dplyr::mutate(Group = ifelse(Cluster %in% c(1,3,5,6), "Group1","Group2")) %>% # for 6 clusters
+  dplyr::mutate(Group = ifelse(Cluster == 2, "Group3", Group)) %>%
+  dplyr::arrange(Cluster,cancer_types) %>%
+  dplyr::select(barcode,Cluster,Group,cancer_types,PFS.status,mutation_burden_class,TumorPurity)-> M_label
 
 M_label_colors[,"cancer_types"] %>% unique() -> cancer_anno
 names(cancer_anno)= c(M_label$cancer_types %>% as.character() %>% unique())
@@ -83,11 +96,11 @@ names(mutaion_anno)= c(M_label$mutation_burden_class %>% as.character() %>% uniq
 M_label_colors[,"PFS.status"] %>% unique() -> survival_anno
 names(survival_anno)= c(M_label$PFS.status %>% as.character() %>%unique())
 
-M_label_colors[,"spectralClustering"] %>% unique() -> cluster_anno
-names(cluster_anno)= c(M_label$spectralClustering %>% unique())
+M_label_colors[,"Cluster"] %>% unique() -> cluster_anno
+names(cluster_anno)= c(M_label$Cluster %>% unique())
 
-col_anno <- HeatmapAnnotation(df=M_label,
-                              col = list("spectralClustering"=cluster_anno,
+col_anno <- HeatmapAnnotation(df=M_label[,-1],
+                              col = list("Cluster"=cluster_anno,
                                          "PFS.status"=survival_anno,
                                          "mutation_burden_class"=mutaion_anno,
                                          "cancer_types"=cancer_anno,
@@ -110,7 +123,10 @@ he = Heatmap(W[ind, ind],
              top_annotation = col_anno,show_heatmap_legend = F
              # heatmap_legend_param = list(title = c("Scaled Exp."))
 )
-tiff(file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/combine",paste(C,"clusters_group_heatmap.tiff",sep = "_")),width = 6,height = 6)
+png(file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/combine",paste(C,"clusters_group_heatmap.tiff",sep = "_")),width = 10,height = 10)
+png(filename = file.path(res_path,paste("clusters",C,"_group_heatmap.png",sep = "_")),
+    width = 800, height = 800, units = "px", pointsize = 12,
+    bg = "white")
 he
 dev.off()
 
