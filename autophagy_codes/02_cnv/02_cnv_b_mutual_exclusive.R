@@ -76,5 +76,5 @@ parallel::stopCluster(cluster)
 mutual_exclusive %>% 
   readr::write_rds(path = file.path(cnv_path, ".rds_02_cnv_b_mutual_exclusive.rds.gz"), compress = 'gz')
 
-save.image(file = file.path(cnv_path, ".rda_02_cnv_b_mutual_exclusive.rda"))
+save.image(file = file.path(cnv_path, ".rds_02_cnv_b_mutual_exclusive.rds.gz"))
 load(file = file.path(cnv_path, ".rd_02_cnv_b_mutual_exclusive.rda"))
