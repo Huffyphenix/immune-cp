@@ -53,8 +53,7 @@ filter_gene_list <- function(.x, gene_list) {
 
 expr_data %>%
   dplyr::mutate(filter_expr = purrr::map(expr, filter_gene_list, gene_list = gene_list)) %>%
-  dplyr::select(-expr) %>%
-  dplyr::filter(cancer_types %in% mutation_burden_class$cancer_types) -> gene_list_expr.nest
+  dplyr::select(-expr) -> gene_list_expr.nest
 
 
 gene_list_expr.nest %>%
@@ -99,14 +98,54 @@ gene_list_expr %>%
 PanCan26_gene_list_expr_matrix <- as.matrix(PanCan26_gene_list_expr_spread[,-1])
 rownames(PanCan26_gene_list_expr_matrix) <- PanCan26_gene_list_expr_spread$symbol
 
-# PanCan26_gene_list_expr_matrix %>%
-#   readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_expr_matrix.rds.gz"),compress = "gz")
+PanCan26_gene_list_expr_matrix %>%
+  readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_expr_matrix.rds.gz"),compress = "gz")
 
+# scale exression for each cancer types
+fn_scale <- function(x){
+  tmp <- x[,-c(1,2)]
+  tmp.name <- x[,c(1,2)]
+  tmp <- t(apply(tmp,1,scale))
+  tmp <- cbind(tmp.name,tmp)
+  colnames(tmp) <- colnames(x)
+  tmp
+}
+gene_list_expr.nest %>%
+  dplyr::mutate(scaled_expr = purrr::map(filter_expr,fn_scale)) %>%
+  dplyr::select(-filter_expr) -> gene_list_expr_scaled.nest
+gene_list_expr_scaled.nest %>%
+  dplyr::filter(!cancer_types %in% cancers_except) %>%    # some cancers in TCGA merged serveral cancers into one
+  tidyr::unnest() %>%
+  tidyr::gather(-cancer_types,-symbol,-entrez_id,key="barcode",value="expr") %>%
+  dplyr::mutate(T_N = ifelse(substr(barcode,14,14) == 1,"Normal","Tumor")) %>%
+  dplyr::filter(T_N == "Tumor") %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  # dplyr::select(-cancer_types) %>%
+  # dplyr::left_join(mutation_burden_class,by="barcode") %>%
+  dplyr::filter(!is.na(expr)) %>%
+  # dplyr::mutate(mutation_status = ifelse(T_N=="Normal","Normal",mutation_status)) %>%
+  # dplyr::mutate(sm_count = ifelse(T_N=="Normal",0,sm_count)) %>%
+  dplyr::inner_join(time_status,by="barcode") %>%   # samples of expr and clinical should be the same
+  dplyr::filter(! is.na(expr)) %>% 
+  dplyr::arrange(barcode) -> gene_list_expr.scaled # arrange is important for the sample corresponding between survival time and expr data. cause spread will arrange the barcode auto
+
+gene_list_expr.scaled %>%
+  dplyr::filter(T_N == "Tumor") %>%
+  dplyr::select(symbol,barcode,expr) %>%
+  dplyr::group_by(symbol,barcode) %>%
+  dplyr::mutate(expr = mean(expr)) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = barcode, value = expr) -> PanCan26_gene_list_expr_spread.scaled
+
+PanCan26_gene_list_expr_matrix.scaled <- as.matrix(PanCan26_gene_list_expr_spread.scaled[,-1])
+rownames(PanCan26_gene_list_expr_matrix.scaled ) <- PanCan26_gene_list_expr_spread.scaled $symbol
+
+PanCan26_gene_list_expr_matrix.scaled  %>%
+  readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_expr_matrix.scaled.rds.gz"),compress = "gz")
 
 # 2. prepare CNV data (raw data)------------------------------------------------------
 cnv <- readr::read_rds(file.path(tcga_path,"pancan34_cnv.rds.gz"))
-
-
 
 cnv %>%
   dplyr::filter(!cancer_types %in% cancers_except) %>%    # some cancers in TCGA merged serveral cancers into one
@@ -141,46 +180,97 @@ rownames(PanCan26_gene_list_cnv_matrix) <- PanCan26_gene_list_cnv_spread$symbol
 PanCan26_gene_list_cnv_matrix %>%
   readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_cnv_matrix.rds.gz"))
 
+# 2. prepare CNV data (GISTIC data)------------------------------------------------------
+cnv_gistic <- readr::read_tsv(file.path(tcga_path,"syn_cnv_by_genes_syn5049520.tsv"))
+
+cnv_gistic %>%
+  dplyr::filter(`Gene Symbol` %in% gene_list$symbol) %>%
+  tidyr::gather(-`Gene Symbol`,-`Locus ID`,-Cytoband,key="barcode",value="cnv") %>%
+  tidyr::drop_na(cnv) %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  dplyr::inner_join(cnv_merge_snv_data.cancer_info,by="barcode") %>%
+  dplyr::inner_join(time_status,by="barcode") %>%   # samples of expr and clinical should be the same
+  dplyr::arrange(barcode) -> gene_list_cnv_gistic
+
+gene_list_cnv_gistic %>%
+  dplyr::select(cancer_types,barcode) %>%
+  unique() -> gene_list_cnv_gistic.cancer_info
+
+gene_list_cnv_gistic %>% 
+  dplyr::select(barcode,PFS.time) %>%
+  unique() %>% .$PFS.time -> gene_list_cnv_gistic.time
+
+gene_list_cnv_gistic %>% 
+  dplyr::select(barcode,PFS) %>%
+  unique() %>% .$PFS -> gene_list_cnv_gistic.status
+
+gene_list_cnv_gistic %>%
+  dplyr::rename("symbol" = "Gene Symbol") %>%
+  dplyr::select(symbol,barcode,cnv) %>%
+  tidyr::spread(key = barcode,value=cnv) -> gene_list_cnv_gistic_spread
+
+gene_list_cnv_gistic_matrix <- as.matrix(gene_list_cnv_gistic_spread[,-1])
+rownames(gene_list_cnv_gistic_matrix) <- gene_list_cnv_gistic_spread$symbol
+
+gene_list_cnv_gistic_matrix %>%
+  readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_cnv_matrix.GISTIC.rds.gz"))
+
 # 2. prepare SNV data (raw data)------------------------------------------------------
 snv <- readr::read_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv","pancan33_snv_from_syn7824274_gather.rds.gz"))
-
+out_path <- "/project/huff/huff/immune_checkpoint/result_20171025"
+snv_path <- file.path(out_path, "m_2_snv")
+gene_list_snv_syn7824274.with_full_samples <- readr::read_rds(file.path(snv_path, ".rds_02_snv_a_gene_list_syn7824274.with_full_samples.rds.gz"))
 mutation_burden_class$cancer_types %>% unique() ->cancers_in_mutaion_burden_class
 
-snv %>%
-  # dplyr::filter(! Cancer_Types %in% cancers_except) %>%    # some cancers in TCGA merged serveral cancers into one
-  # tidyr::unnest() %>%
-  dplyr::filter(symbol %in% gene_list$symbol) %>%
-  dplyr::rename("barcode" = "sample","snv"="mut_n") %>%
-  dplyr::select(symbol,barcode,snv) %>%
-  # dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+gene_list_snv_syn7824274.with_full_samples %>%
+  dplyr::mutate(snv = purrr::map(filter_snv_syn7824274,
+                                 .f = function(x){
+                                   x %>%
+                                     tidyr::gather(-symbol,key="barcode",value="snv")
+                                 })) %>%
+  dplyr::select(-filter_snv_syn7824274) %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(snv = ifelse(is.na(snv),0,snv)) %>%
   dplyr::inner_join(time_status,by="barcode") %>%
   dplyr::filter(! is.na(snv)) %>% 
   dplyr::arrange(barcode) %>%
-  unique() %>%
-  dplyr::mutate(snv = ifelse(snv >0, 1,snv))-> snv_merge_snv_data
+  unique() -> genelist_snv_syn7824274
 
-snv_merge_snv_data %>% 
+# snv %>%
+#   # dplyr::filter(! Cancer_Types %in% cancers_except) %>%    # some cancers in TCGA merged serveral cancers into one
+#   # tidyr::unnest() %>%
+#   dplyr::filter(symbol %in% gene_list$symbol) %>%
+#   dplyr::rename("barcode" = "sample","snv"="mut_n") %>%
+#   dplyr::select(symbol,barcode,snv) %>%
+#   # dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+#   dplyr::inner_join(time_status,by="barcode") %>%
+#   dplyr::filter(! is.na(snv)) %>% 
+#   dplyr::arrange(barcode) %>%
+#   unique() %>%
+#   dplyr::mutate(snv = ifelse(snv >0, 1,snv))-> snv_merge_snv_data
+
+genelist_snv_syn7824274 %>% 
   dplyr::select(barcode,PFS.time) %>%
   unique() %>% .$PFS.time -> snv_time
 
-snv_merge_snv_data %>% 
+genelist_snv_syn7824274 %>% 
   dplyr::select(barcode,PFS) %>%
   unique() %>% .$PFS -> snv_status
 
-snv_merge_snv_data %>%
+genelist_snv_syn7824274 %>%
   dplyr::select(symbol,barcode,snv) %>%
   tidyr::spread(key = barcode,value=snv) -> PanCan26_gene_list_snv_spread
 
 PanCan26_gene_list_snv_matrix <- as.matrix(PanCan26_gene_list_snv_spread[,-1])
 rownames(PanCan26_gene_list_snv_matrix) <- PanCan26_gene_list_snv_spread$symbol
 
-# PanCan26_gene_list_snv_matrix %>%
-#   readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_snv_matrix.rds.gz"))
+PanCan26_gene_list_snv_matrix %>%
+  readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_snv_syn7824274_matrix.rds.gz"))
 
 # 3. methylation data  ----------------------------------------------------
 
 mthy <- readr::read_rds(file.path(tcga_path,"pancan33_meth.rds.gz"))
-
+# raw data =======
 mthy %>%
   dplyr::filter(!cancer_types %in% cancers_except) %>%    # some cancers in TCGA merged serveral cancers into one
   tidyr::unnest() %>%
@@ -219,6 +309,38 @@ rownames(PanCan26_gene_list_methy_matrix) <- PanCan26_gene_list_methy_spread$sym
 PanCan26_gene_list_methy_matrix %>%
   readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_methy_matrix.rds.gz"),compress = "gz")
 
+# scaled data =======
+mthy %>%
+  dplyr::filter(!cancer_types %in% cancers_except) %>%    # some cancers in TCGA merged serveral cancers into one
+  tidyr::unnest() %>%
+  dplyr::filter(symbol %in% gene_list$symbol) %>%
+  dplyr::select(-gene) %>%
+  tidyr::gather(-cancer_types,-symbol,key=barcode,value=methy) %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  # dplyr::inner_join(mutation_burden_class,by="barcode") %>%
+  dplyr::inner_join(time_status,by="barcode") %>%
+  dplyr::filter(! is.na(methy)) %>% 
+  dplyr::arrange(barcode) -> genelist_methy_mutaion_class  
+
+genelist_methy_mutaion_class %>%
+  dplyr::group_by(cancer_types,symbol) %>%
+  dplyr::mutate(methy_scaled = scale(methy)) %>%
+  dplyr::select(-methy) ->  genelist_methy_mutaion_class.scaled
+
+genelist_methy_mutaion_class.scaled %>%
+  dplyr::ungroup() %>%
+  dplyr::select(symbol,barcode,methy_scaled) %>%
+  dplyr::group_by(symbol,barcode) %>%
+  dplyr::mutate(methy_scaled = mean(methy_scaled)) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = barcode,value = methy_scaled) -> PanCan26_gene_list_methy_spread.scaled
+
+PanCan26_gene_list_methy_matrix.scaled <- as.matrix(PanCan26_gene_list_methy_spread.scaled[,-1])
+rownames(PanCan26_gene_list_methy_matrix.scaled) <- PanCan26_gene_list_methy_spread.scaled$symbol
+
+PanCan26_gene_list_methy_matrix.scaled %>%
+  readr::write_rds(file.path(data_result_path,"PanCan26_gene_list_methy_matrix.scaled.rds.gz"),compress = "gz")
 
 # data combine ------------------------------------------------------------
 genelist_methy_mutaion_class %>% .$barcode %>% unique() -> methy_samples
@@ -302,3 +424,5 @@ tumor_purity %>%
 save.image(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
 load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
 
+survival_cancer_info =c(grep("time",ls(),value = T),grep("status",ls(),value = T),grep("cancer_info",ls(),value = T))
+save(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info.rda"),list=survival_cancer_info)
