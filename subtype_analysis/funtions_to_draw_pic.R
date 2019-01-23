@@ -51,7 +51,7 @@ fn_mutation_burden <- function(data,group,facet="~ cancer_types",value,color,xla
     ) +
     # geom_point(aes(x=as.numeric(group)+b,y=sm_count,color=group),alpha = 0.5) +
     scale_x_discrete(#breaks = c(1:10),
-                     labels = c(1:3)
+                     labels = unique(data$group)
                      # expand = c(0.2,0.2,0.2)
     ) +
     facet_wrap(as.formula(facet), strip.position = "bottom", scales = "free") +
@@ -80,7 +80,7 @@ fn_mutation_burden_all <- function(data,group,value,color,xlab,comp_list,m_a_nam
     ) +
     # geom_point(aes(x=as.numeric(group)+b,y=sm_count,color=group),alpha = 0.5) +
     scale_x_discrete(#breaks = c(1:10),
-                     labels = c(1:3)
+                     labels = unique(data$group)
                      # expand = c(0.2,0.2,0.2)
     ) +
     # facet_wrap(~ cancer_types, strip.position = "bottom", scales = "free") +
