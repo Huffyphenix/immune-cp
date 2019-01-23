@@ -9,11 +9,12 @@ library(ConsensusClusterPlus)
 data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
 
 ## get from 1.data_prepare.R
-PanCan26_gene_list_snv_matrix <- readr::read_rds(file.path(data_result_path,"PanCan26_gene_list_snv_matrix.rds.gz"))
+PanCan26_gene_list_snv_matrix <- readr::read_rds(file.path(data_result_path,"PanCan26_gene_list_snv_syn7824274_matrix.rds.gz"))
 
 # reduce the dataset to the top 5,000 most variable genes, measured by median absolute deviation(mad). 绝对中位差
 d <- PanCan26_gene_list_snv_matrix
-
+index=which(is.na(d)) 
+d=data.imputation(d,fun="median")
 index=which(is.na(d)) # no NA value
 d[index]=0
 # mads=apply(d,1,mad)
@@ -28,9 +29,11 @@ dc = sweep(d,1, apply(d,1,median,na.rm=T)) ## median center genes
 # results[[2]][['consensusClass']] #  sample distribution in two clusters
 
 # same as above but with pre-computed distance matrix, useful for large datasets (>1,000's of items)
-setwd("/project/huff/huff/github/immune-cp/subtype_analysis/ConsensusClusterResult")
+# setwd("/project/huff/huff/github/immune-cp/subtype_analysis/ConsensusClusterResult")
 dt = as.dist(1-cor(dc,method="pearson"))
 results = ConsensusClusterPlus(dt,maxK=10,reps=100,pItem=0.8,pFeature=1,title="SNV_CC",distance="binary",clusterAlg="hc",seed=1262118388.71279)
 
 results %>%
-  readr::write_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_SNV_CC_10.rds.gz"),compress = "gz")
+  readr::write_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_SNV_syn7824274_CC_10.rds.gz"),compress = "gz")
+
+source("/project/huff/huff/github/immune-cp/subtype_analysis/4.3get_best_clusterK_SNV.R")
