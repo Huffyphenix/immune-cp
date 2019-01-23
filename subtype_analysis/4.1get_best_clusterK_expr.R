@@ -86,8 +86,8 @@ fn_get_figures <- function(i) {
   group_survival_data %>%
     dplyr::filter(group %in% more_than_10) %>%
     dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
-    dplyr::mutate(sm_count = log2(sm_count)) %>%
-    fn_mutation_burden(group = "group",facet="~ cancer_types",value = "sm_count",color = color_list,xlab = "log2(Mutation Burden)",comp_list = comp_list,m_name = m_name,result_path = result_path,w=12)
+    # dplyr::mutate(sm_count = log2(sm_count)) %>%
+    fn_mutation_burden(group = "group",facet="~ cancer_types",value = "sm_count",color = color_list,xlab = "Mutation Burden",comp_list = comp_list,m_name = m_name,result_path = result_path,w=12)
   
   # Figure 4. mutation burden in all samples
   print(paste(i,1,sep = "."))
@@ -95,8 +95,8 @@ fn_get_figures <- function(i) {
   group_survival_data %>%
     dplyr::filter(group %in% more_than_10) %>%
     dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
-    dplyr::mutate(sm_count = log2(sm_count)) %>%
-    fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "log2(Mutation Burden)",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
+    # dplyr::mutate(sm_count = log2(sm_count)) %>%
+    fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "Mutation Burden",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
   
   # Figure 5. cancer distrbution in each clusters
   print(paste(i,5,sep = "."))
