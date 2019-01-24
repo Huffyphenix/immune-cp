@@ -221,7 +221,7 @@ cluster_cancers_statistic %>%
     axis.title.y = element_blank(),
     axis.line.x = element_blank()
   )
-ggsave(filename =paste("Sample_composition_for",C,"Clusters-stacked.png",sep="_"), path = result_path,device = "png",height = 6,width = 12)
+ggsave(filename =paste("Sample_composition_for",C,"Clusters-stacked.png",sep="_"), path = result_path,device = "png",height = 4,width = 12)
 
 # survival ----------------------------------------------------------------
 res_path <- file.path(result_path)
