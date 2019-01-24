@@ -30,7 +30,7 @@ mutation_burden_class <- readr::read_rds(file.path("/project/huff/huff/data/TCGA
   dplyr::rename("cancer_types"="Cancer_Types")
 time_status %>%
   dplyr::full_join(mutation_burden_class,by="barcode") %>%
-  dplyr::full_join(gene_list_expr.cancer_info,by="barcode") %>%
+  dplyr::full_join(genelist_methy_mutaion_class.cancer_info,by="barcode") %>%
   dplyr::mutate(cancer_types=ifelse(is.na(cancer_types.x),cancer_types.y,cancer_types.x)) %>%
   dplyr::select(-cancer_types.x,-cancer_types.y) %>%
   dplyr::rename("time"="PFS.time","status"="PFS")-> clinical_data

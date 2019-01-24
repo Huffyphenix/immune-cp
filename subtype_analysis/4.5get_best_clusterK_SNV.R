@@ -20,7 +20,7 @@ load(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info
 # get best K for cluster results  -----------------------------------------
 source("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
 
-result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/CNV_gistic/Get_best_clutser_20")
+result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/snv_syn7824274/Get_best_clutser_20")
 # pdf(file.path(result_path,"Get_best_clutser_20.pdf"))
 
 
@@ -30,7 +30,7 @@ mutation_burden_class <- readr::read_rds(file.path("/project/huff/huff/data/TCGA
   dplyr::rename("cancer_types"="Cancer_Types")
 time_status %>%
   dplyr::full_join(mutation_burden_class,by="barcode") %>%
-  dplyr::full_join(gene_list_cnv_gistic.cancer_info,by="barcode") %>%
+  dplyr::full_join(genelist_snv_syn7824274.cancer_info,by="barcode") %>%
   dplyr::mutate(cancer_types=ifelse(is.na(cancer_types.x),cancer_types.y,cancer_types.x)) %>%
   dplyr::select(-cancer_types.x,-cancer_types.y) %>%
   dplyr::rename("time"="PFS.time","status"="PFS")-> clinical_data
@@ -63,8 +63,8 @@ fn_get_figures <- function(i) {
     dplyr::left_join(clinical_data,by="barcode") -> group_survival_data
   
   color_list = color_20[1:length(more_than_10)]
-  title <- paste("CNV Survival for",C,"Clusters",sep=" ")
-  sur_name <-  paste("CNV_Survival_for",C,"Clusters.png",sep="_")
+  title <- paste("SNV Survival for",C,"Clusters",sep=" ")
+  sur_name <-  paste("SNV_Survival_for",C,"Clusters.png",sep="_")
   if (length(more_than_10)>=2) {
     group_survival_data %>%
       dplyr::filter(group %in% more_than_10) %>%
@@ -79,7 +79,7 @@ fn_get_figures <- function(i) {
   print(paste(i,4,sep = "."))
   comp_mat <- combn(more_than_10,2)
   comp_list <- list()
-  m_name <-  paste("CNV_mutation_for",C,"Clusters",sep="_")
+  m_name <-  paste("SNV_mutation_for",C,"Clusters",sep="_")
   for (col in 1:ncol(comp_mat)) {
     comp_list[[col]] <- comp_mat[,col]
   }
@@ -91,7 +91,7 @@ fn_get_figures <- function(i) {
   
   # Figure 4. mutation burden in all samples
   print(paste(i,1,sep = "."))
-  m_a_name <-  paste("CNV_all_mutation_for",C,"Clusters",sep="_")
+  m_a_name <-  paste("SNV_all_mutation_for",C,"Clusters",sep="_")
   group_survival_data %>%
     dplyr::filter(group %in% more_than_10) %>%
     dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
