@@ -248,6 +248,9 @@ gene_list_snv_syn7824274.with_full_samples %>%
 #   dplyr::arrange(barcode) %>%
 #   unique() %>%
 #   dplyr::mutate(snv = ifelse(snv >0, 1,snv))-> snv_merge_snv_data
+genelist_snv_syn7824274 %>%
+  dplyr::select(cancer_types,barcode) %>%
+  unique() ->genelist_snv_syn7824274.cancer_info
 
 genelist_snv_syn7824274 %>% 
   dplyr::select(barcode,PFS.time) %>%
