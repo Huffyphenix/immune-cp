@@ -141,6 +141,88 @@ he
 dev.off()
 
 
+# sample distribution in cancers ------------------------------------------
+data.frame(barcode = names(group),group=group) %>%
+  dplyr::as.tbl() %>%
+  dplyr::left_join(genelist_methy_mutaion_class.cancer_info,by="barcode") -> group_cancer_data
+group_cancer_data %>%
+  dplyr::group_by(cancer_types,group) %>%
+  dplyr::mutate(n = n()) %>%
+  dplyr::select(group,cancer_types,n) %>%
+  unique()  %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(n_a = sum(n)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(`Sample Composition (%)` = 100*n/n_a) %>%
+  dplyr::mutate(tcga = "tcga") %>%
+  dplyr::group_by(tcga) %>%
+  dplyr::mutate(all_n = sum(n_a)) %>%
+  dplyr::mutate(all_ratio = 100*n_a/all_n) -> cluster_cancers_statistic
+
+cluster_cancers_statistic %>%
+  dplyr::mutate(group=as.character(group)) %>%
+  ggplot(aes(x=group,y=cancer_types,fill = `Sample Composition (%)`)) +
+  geom_tile(color = "grey") +
+  geom_text(aes(label = n)) +
+  scale_x_discrete(limit = as.character(c(1:20))) +
+  scale_fill_gradient2(
+    limit = c(0, 100),
+    breaks = seq(0, 100, 25),
+    label = c("0", "25","50","75","100"),
+    high = "red",
+    na.value = "white"
+  ) +
+  labs(x = "Cluster", y = "Cancer Types") +
+  theme(
+    # panel.border = element_blank(), 
+    # panel.grid.major = element_blank(), 
+    # panel.grid.minor = element_blank(), 
+    axis.line = element_line(colour = "black", size = 0.5),
+    panel.background = element_rect(fill = "white"),
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    legend.text = element_text(size = 12, colour = "black"),
+    axis.text = element_text(size = 12, colour = "black"),
+    legend.title = element_text(angle=90),
+    axis.title = element_text(size = 12,color = "black")
+  ) +
+  guides(fill = guide_colorbar(title.position = "left"))
+ggsave(filename =paste("Sample_composition_for",C,"Clusters-heatmap.png",sep="_"), path = result_path,device = "png",height = 6,width = 6)
+
+cluster_cancers_statistic %>%
+  dplyr::mutate(group=as.character(group)) %>%
+  ggplot(aes(x=cancer_types,y=`Sample Composition (%)`,width=n_a)) +
+  geom_bar(aes(fill=group),stat="identity",color= "grey")+
+  facet_wrap(~cancer_types,nrow = 1) +
+  scale_fill_manual(
+    name = "Clusters",
+    breaks = as.character(c(1:20)),
+    values = c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", "#A52A2A", "#FF4040", "#98F5FF", "#53868B", "#EEAD0E", "#458B00", "#EEA2AD", "#E066FF", "#EE3A8C", "#00FF00", "#FFFF00", "#5CACEE", "#8B6914", "#FF7F24")
+  ) +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black", size = 0.5),
+    panel.background = element_rect(fill = "white"),
+    legend.position = "bottom",
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    legend.text = element_text(size = 10, colour = "black"),
+    axis.text = element_text(size = 10,color = "black"),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 8, colour = "black"),
+    # axis.line = element_blank(),
+    # axis.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.line.x = element_blank()
+  )
+ggsave(filename =paste("Sample_composition_for",C,"Clusters-stacked.png",sep="_"), path = result_path,device = "png",height = 6,width = 12)
+
 # survival ----------------------------------------------------------------
 res_path <- file.path(result_path)
 M_label %>%
