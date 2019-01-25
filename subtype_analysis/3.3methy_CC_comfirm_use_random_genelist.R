@@ -44,7 +44,7 @@ genelist_methy_mutaion_class.cancer_info %>%
 set.seed(464134343)
 seed.pool <- sample(10000:100000, size = 10)
 
-for (i in seed.pool) {
+for (i in 1:10) {
   # get a random gene list with 67 population ----
   set.seed(seed.pool[i])
   genelist <- gene_pool[sample(1:length(gene_pool), size = 67)]
