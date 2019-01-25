@@ -8,6 +8,8 @@ result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/s
 data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
 
 load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
+load(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info.rda"))
+
 source("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
 
 # cluster K ---------------------------------------------------------------
@@ -64,6 +66,91 @@ M_label_colors=cbind("Cluster"=cluster_info$color,
                                                              max(purity_info$purity[purity_info$purity>0])),
                                                            c("white","grey100","grey0"))(purity_info$purity)
 )
+# sample distribution in cancers ------------------------------------------
+data.frame(barcode = group$sample,group=group$group) %>%
+  dplyr::as.tbl() %>%
+  dplyr::left_join(combined.cancer_info,by="barcode") -> group_cancer_data
+group_cancer_data %>%
+  dplyr::mutate(Group = ifelse(group %in% c(1,3,5,6), "Group1","Group2")) %>% # for 6 clusters
+  dplyr::mutate(Group = ifelse(group == 2, "Group3", Group)) %>%
+  dplyr::group_by(cancer_types,Group) %>%
+  dplyr::mutate(n = n()) %>%
+  dplyr::select(Group,cancer_types,n) %>%
+  unique()  %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(n_a = sum(n)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(`Sample Composition (%)` = 100*n/n_a) %>%
+  dplyr::mutate(tcga = "tcga") %>%
+  dplyr::group_by(tcga) %>%
+  dplyr::mutate(all_n = sum(n_a)) %>%
+  dplyr::mutate(all_ratio = 100*n_a/all_n) -> cluster_cancers_statistic
+
+cluster_cancers_statistic %>%
+  dplyr::mutate(group=as.character(Group)) %>%
+  ggplot(aes(x=Group,y=cancer_types,fill = `Sample Composition (%)`)) +
+  geom_tile(color = "grey") +
+  geom_text(aes(label = n)) +
+  # scale_x_discrete(limit = as.character(c(1:6))) +
+  scale_fill_gradient2(
+    limit = c(0, 100),
+    breaks = seq(0, 100, 25),
+    label = c("0", "25","50","75","100"),
+    high = "red",
+    na.value = "white"
+  ) +
+  labs(x = "Cluster", y = "Cancer Types") +
+  theme(
+    # panel.border = element_blank(), 
+    # panel.grid.major = element_blank(), 
+    # panel.grid.minor = element_blank(), 
+    axis.line = element_line(colour = "black", size = 0.5),
+    panel.background = element_rect(fill = "white"),
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    legend.text = element_text(size = 12, colour = "black"),
+    axis.text = element_text(size = 12, colour = "black"),
+    legend.title = element_text(angle=90),
+    axis.title = element_text(size = 12,color = "black")
+  ) +
+  guides(fill = guide_colorbar(title.position = "left"))
+out_path <- "/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/combine/cluster_6_to3group/"
+ggsave(filename =paste("Sample_composition_for",C,"Clusters-heatmap.png",sep="_"), path = out_path,device = "png",height = 6,width = 6)
+ggsave(filename =paste("Sample_composition_for",3,"Group-heatmap.png",sep="_"), path = out_path,device = "png",height = 6,width = 6)
+
+cluster_cancers_statistic %>%
+  dplyr::mutate(Group=as.character(Group)) %>%
+  ggplot(aes(x=cancer_types,y=`Sample Composition (%)`,width=n_a)) +
+  geom_bar(aes(fill=Group),stat="identity",color= "grey")+
+  facet_wrap(~cancer_types,nrow = 1) +
+  scale_fill_manual(
+    name = "Groups",
+    # breaks = as.character(paste("Groups",1:3,sep="")),
+    values = c("#CD2626", "#CD9B1D", "#00B2EE")
+  ) +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black", size = 0.5),
+    panel.background = element_rect(fill = "white"),
+    legend.position = "bottom",
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    legend.text = element_text(size = 10, colour = "black"),
+    axis.text = element_text(size = 10,color = "black"),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 8, colour = "black"),
+    # axis.line = element_blank(),
+    # axis.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.line.x = element_blank()
+  )
+ggsave(filename =paste("Sample_composition_for",C,"Clusters-stacked.png",sep="_"), path = out_path,device = "png",height = 4,width = 12)
 
 
 # complex heatmap prepare -------------------------------------------------
