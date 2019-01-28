@@ -4,6 +4,7 @@ library(magrittr)
 library(CancerSubtypes)
 library(ConsensusClusterPlus)
 library(SNFtool)
+library(ggplot2)
 # load data ---------------------------------------------------------------
 data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
 
