@@ -15,7 +15,7 @@ data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
 ## get from 1.data_prepare.R
 load(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info.rda"))
 
-# results <- readr::read_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_CNV_gistic_CC_20.rds.gz"))
+results <- readr::read_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_CNV_gistic_CC_20.rds.gz"))
 
 # get best K for cluster results  -----------------------------------------
 source("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
@@ -38,6 +38,7 @@ time_status %>%
 color_20 <- c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", "#A52A2A", "#FF4040", "#98F5FF", "#53868B", "#EEAD0E", "#458B00", "#EEA2AD", "#E066FF", "#EE3A8C", "#00FF00", "#FFFF00", "#5CACEE", "#8B6914", "#FF7F24")
 
 # fn_get_figures <- function(i) {
+for(i in 2:20) {
   print(paste(i,1,sep = "."))
   C <- i
   W <- results[[C]][['consensusMatrix']]
@@ -77,6 +78,7 @@ color_20 <- c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", 
   
   # Figure 3. mutation burden in each cancers
   print(paste(i,4,sep = "."))
+  if (length(more_than_10)>=2) {
   comp_mat <- combn(more_than_10,2)
   comp_list <- list()
   m_name <-  paste("CNV_mutation_for",C,"Clusters",sep="_")
@@ -97,7 +99,9 @@ color_20 <- c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", 
     dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
     # dplyr::mutate(sm_count = log2(sm_count)) %>%
     fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "Mutation Burden",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
-  
+  } else{
+    print("Too small groups for mutation burden analysis")
+  }
   # Figure 5. cancer distrbution in each clusters
   print(paste(i,5,sep = "."))
   group_survival_data %>%
@@ -140,7 +144,7 @@ color_20 <- c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", 
   ggsave(filename =paste("Sample_composition_for",C,"Clusters.png",sep="_"), path = result_path,device = "png",height = 6,width = 4)
   print(paste(i,6,sep = "."))
   # return(1)
-# }
+}
 
 # cluster <- multidplyr::create_cluster(5)
 # tibble::tibble(k = 2:20) %>% 

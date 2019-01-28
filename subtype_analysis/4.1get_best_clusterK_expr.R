@@ -36,8 +36,7 @@ time_status %>%
   dplyr::rename("time"="PFS.time","status"="PFS")-> clinical_data
 
 color_20 <- c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", "#A52A2A", "#FF4040", "#98F5FF", "#53868B", "#EEAD0E", "#458B00", "#EEA2AD", "#E066FF", "#EE3A8C", "#00FF00", "#FFFF00", "#5CACEE", "#8B6914", "#FF7F24")
-
-fn_get_figures <- function(i) {
+for(i in 2:20) {
   print(paste(i,1,sep = "."))
   C <- i
   W <- results[[C]][['consensusMatrix']]
@@ -139,22 +138,22 @@ fn_get_figures <- function(i) {
     guides(fill = guide_colorbar(title.position = "left"))
   ggsave(filename =paste("Sample_composition_for",C,"Clusters.png",sep="_"), path = result_path,device = "png",height = 6,width = 4)
   print(paste(i,6,sep = "."))
-  return(1)
+  # return(1)
 }
 
-cluster <- multidplyr::create_cluster(5)
-tibble::tibble(k = 2:20) %>% 
-  multidplyr::partition(cluster = cluster) %>%
-  multidplyr::cluster_library("magrittr") %>%
-  multidplyr::cluster_library("SNFtool") %>%
-  multidplyr::cluster_library("ggplot2") %>%
-  multidplyr::cluster_assign_value("fn_get_figures", fn_get_figures)  %>%
-  multidplyr::cluster_assign_value("results", results)  %>%
-  multidplyr::cluster_assign_value("clinical_data", clinical_data)  %>%
-  multidplyr::cluster_assign_value("color_20", color_20)  %>%
-  multidplyr::cluster_assign_value("result_path", result_path)  %>%
-  multidplyr::cluster_assign_value("fn_survival", fn_survival)  %>%
-  multidplyr::cluster_assign_value("fn_mutation_burden", fn_mutation_burden)  %>%
-  multidplyr::cluster_assign_value("fn_mutation_burden_all", fn_mutation_burden_all)  %>%
-  dplyr::mutate(a = purrr::walk(.x = k, .f = fn_get_figures)) 
-parallel::stopCluster(cluster)
+# cluster <- multidplyr::create_cluster(5)
+# tibble::tibble(k = 2:20) %>% 
+#   multidplyr::partition(cluster = cluster) %>%
+#   multidplyr::cluster_library("magrittr") %>%
+#   multidplyr::cluster_library("SNFtool") %>%
+#   multidplyr::cluster_library("ggplot2") %>%
+#   multidplyr::cluster_assign_value("fn_get_figures", fn_get_figures)  %>%
+#   multidplyr::cluster_assign_value("results", results)  %>%
+#   multidplyr::cluster_assign_value("clinical_data", clinical_data)  %>%
+#   multidplyr::cluster_assign_value("color_20", color_20)  %>%
+#   multidplyr::cluster_assign_value("result_path", result_path)  %>%
+#   multidplyr::cluster_assign_value("fn_survival", fn_survival)  %>%
+#   multidplyr::cluster_assign_value("fn_mutation_burden", fn_mutation_burden)  %>%
+#   multidplyr::cluster_assign_value("fn_mutation_burden_all", fn_mutation_burden_all)  %>%
+#   dplyr::mutate(a = purrr::walk(.x = k, .f = fn_get_figures)) 
+# parallel::stopCluster(cluster)
