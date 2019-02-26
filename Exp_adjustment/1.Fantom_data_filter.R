@@ -96,5 +96,7 @@ ICP_fantom_gene.exp.ImmuneCell %>%
 ICP_fantom_gene.exp.cell_line %>%
   dplyr::filter(!is.na(`Characteristics[Tissue]`)) %>%
   tidyr::spread(key=`Characteristics[Tissue]`,value=gene_mean_exp) %>%
-  dplyr::inner_join(ICP_fantom_gene.exp.ImmuneCell.simple,by="hgnc_id")
+  dplyr::inner_join(ICP_fantom_gene.exp.ImmuneCell.simple,by="hgnc_id") -> ICP_fantom.gene_exp.cell_line.Immune_cell.combine
 
+ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
+  readr::write_rds(file.path(immune_path,"genelist_data","ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rds.gz"),compress = "gz")
