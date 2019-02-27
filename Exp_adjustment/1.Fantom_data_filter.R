@@ -1,4 +1,6 @@
-
+## Data source : FANTOM 5, Update of the FANTOM web resource: high resolution transcriptome of diverse cell types in mammals
+## https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5210666/
+## /project/huff/huff/data/FANTOM5/extra/matrix.hg38_fair_new_CAGE_peaks_phase1and2_tpm_ann.osc.txt
 # FANTOM 5 data filter and classification ---------------------------------
 
 library(magrittr)
@@ -100,3 +102,5 @@ ICP_fantom_gene.exp.cell_line %>%
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
   readr::write_rds(file.path(immune_path,"genelist_data","ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rds.gz"),compress = "gz")
+
+all_cancer_TIL <- readr::read_rds("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")
