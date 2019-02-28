@@ -17,7 +17,7 @@ xCell_TCGA_RSEM <- readr::read_tsv(file.path(xcell_path,"xCell_TCGA_RSEM.txt")) 
 
 xCell_immune_type <- readr::read_tsv(file.path(xcell_path,"cell_type_classification.13059_2017_1349_MOESM1_ESM.txt")) %>%
   dplyr::select(`Full name`,`Cell types`,Subgroup) %>%
-  dplyr::filter(Subgroup %in% c("Lymphocytes","Myeloid"))
+  dplyr::filter(Subgroup %in% c("Lymphoid","Myeloid"))
 
 TCGA_purity <- readr::read_tsv(file.path(purity_path,"ncomms9971-s2.txt")) %>%
   dplyr::select(`Sample ID`,`CPE`) %>%
