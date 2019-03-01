@@ -60,15 +60,35 @@ xCell_TCGA_RSEM.immune_stroma.score %>%
 
 xCell_TCGA_RSEM.immune_stroma.ratio %>%
   readr::write_rds(file.path(immune_path,"genelist_data","xCell_TCGA_RSEM.immune_stroma.ratio.rds.gz"))
+
 # TCGA samples dont included in cCell data --------------------------------
 # library(xCell)
 # exprMatrix = read.table(expr_file,header=TRUE,row.names=1, as.is=TRUE)
 # xCellAnalysis(exprMatrix)
-TCGA_purity %>%
-  dplyr::filter(!`Sample ID` %in% xCell_TCGA_RSEM.immune_stroma.ratio$`Sample ID`) -> TCGA_sample_with_no_xCell_data
 
-all_TCGA_exp <- readr::read_rds(file.path(tcga_path,"pancan33_expr.rds.gz"))
+### Importantly, xCell performs best with heterogenous dataset. Thus it is recommended to use all data combined in one run, and not break down to pieces (especially not cases and control in different runs).
+### So there is no need to run samples not in the xCell data set.
+# TCGA_purity %>%
+#   dplyr::filter(!`Sample ID` %in% xCell_TCGA_RSEM.immune_stroma.ratio$`Sample ID`) -> TCGA_sample_with_no_xCell_data
+# 
+# all_TCGA_exp <- readr::read_rds(file.path(tcga_path,"pancan33_expr.rds.gz"))
+# 
+# fn_get_subset_samples <- function(.x){
+#   .x %>%
+#     dplyr::select(-entrez_id) %>%
+#     dplyr::filter(!symbol =="?") %>%
+#     tidyr::gather(-symbol,key="barcode",value="exp_tmp") %>%
+#     dplyr::mutate(barcode = substr(barcode,1,15)) %>%
+#     dplyr::group_by(symbol,barcode) %>%
+#     dplyr::mutate(exp = mean(exp_tmp)) %>%
+#     dplyr::select(symbol,barcode,exp) %>%
+#     unique() %>%
+#     dplyr::filter(barcode %in% TCGA_sample_with_no_xCell_data$`Sample ID`)
+# }
+# all_TCGA_exp %>%
+#   head(1) %>%
+#   dplyr::mutate(purrr::map(expr,fn_get_subset_samples)) %>%
+#   dplyr::select(-expr,-cancer_types) %>%
+#   tidyr::unnest() %>%
+#   tidyr::spread(key=barcode,value=exp) -> noxCell_smaple_exp.matrix
 
-all_TCGA_exp %>%
-  
-  dplyr::filter()
