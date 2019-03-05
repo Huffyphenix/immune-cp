@@ -106,7 +106,7 @@ gene_list_expr %>%
   multidplyr::cluster_assign_value("TCGA_tissue",TCGA_tissue) %>%
   multidplyr::cluster_assign_value("TCGA_Fantom_share_tissue",TCGA_Fantom_share_tissue) %>%
   multidplyr::cluster_assign_value("ICP_fantom.gene_exp.cell_line.Immune_cell.combine",ICP_fantom.gene_exp.cell_line.Immune_cell.combine) %>%
-  multidplyr::cluster_assign_value("xCell_TCGA_RSEM.immune_stroma.ratio",xCell_TCGA_RSEM.immune_stroma.ratio) %ta>%
+  multidplyr::cluster_assign_value("xCell_TCGA_RSEM.immune_stroma.ratio",xCell_TCGA_RSEM.immune_stroma.ratio) %>%
   dplyr::mutate(adjust_exp = purrr::map2(cancer_types,filter_expr,fn_adjust_exp)) %>%
   collect() %>%
   dplyr::as_tibble() %>%
