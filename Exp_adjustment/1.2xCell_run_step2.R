@@ -39,4 +39,4 @@ smaple_exp.matrix %>%
 on.exit(parallel::stopCluster(cluster))
 
 Pan21_xCell_results %>%
-  readr::write_rds(file.path(xcell_path,"Pan21_xCell_results.rds.gz",compress = "gz"))
+  readr::write_rds(file.path(xcell_path,"Pan21_xCell_results.rds.gz"),compress = "gz")
