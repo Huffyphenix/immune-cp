@@ -116,4 +116,4 @@ on.exit(parallel::stopCluster(cluster))
 
   
 gene_list_adjust_expr %>%
-  readr::write_tsv(file.path(gene_list_path,"pancan21.ICP.exp_adjust.by_cell_ratio.rds.gz"),compress="gz")
+  readr::write_rds(file.path(gene_list_path,"pancan21.ICP.exp_adjust.by_cell_ratio.rds.gz"),compress="gz")
