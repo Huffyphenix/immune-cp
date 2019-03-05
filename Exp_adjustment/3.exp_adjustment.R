@@ -2,9 +2,6 @@
 # Ultilize of FANTOM 5 data and tumor purity data to adjust ICP expression in TCGA ---------------------------------
 
 library(magrittr)
-library(org.Hs.eg.db)
-library(clusterProfiler)
-
 # data path ---------------------------------------------------------------
 
 immune_path <- "/project/huff/huff/immune_checkpoint"
@@ -43,7 +40,10 @@ ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
 # function to adjust expression ----------------------------------------------------------------
 fn_adjust_exp <- function(.cancer,.x){
   TCGA_tissue %>%
-    dplyr::filter(TCGA_Cancer %in% .cancer) -> .tissue
+    dplyr::filter(TCGA_Cancer %in% .cancer) %>%
+    unique() -> .tissue
+  print(.cancer)
+  print(.tissue$Tissues)
   if(is.na(grep(.tissue$Tissues,TCGA_Fantom_share_tissue))){
     return(tibble::tibble())
   }else{
@@ -106,8 +106,8 @@ gene_list_expr %>%
   multidplyr::cluster_assign_value("TCGA_tissue",TCGA_tissue) %>%
   multidplyr::cluster_assign_value("TCGA_Fantom_share_tissue",TCGA_Fantom_share_tissue) %>%
   multidplyr::cluster_assign_value("ICP_fantom.gene_exp.cell_line.Immune_cell.combine",ICP_fantom.gene_exp.cell_line.Immune_cell.combine) %>%
-  multidplyr::cluster_assign_value("xCell_TCGA_RSEM.immune_stroma.ratio",xCell_TCGA_RSEM.immune_stroma.ratio) %>%
-  dplyr::mutate(adjust_exp = purrr::map(filter_expr,fn_adjust_exp)) %>%
+  multidplyr::cluster_assign_value("xCell_TCGA_RSEM.immune_stroma.ratio",xCell_TCGA_RSEM.immune_stroma.ratio) %ta>%
+  dplyr::mutate(adjust_exp = purrr::map2(cancer_types,filter_expr,fn_adjust_exp)) %>%
   collect() %>%
   dplyr::as_tibble() %>%
   dplyr::ungroup() %>%
