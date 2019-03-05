@@ -21,7 +21,7 @@ TCGA_tissue <- readr::read_tsv("/project/huff/huff/data/TCGA/TCGA_cancer_tissue_
 # gene list
 gene_list <- read.table(file.path(gene_list_path, "all.entrez_id-gene_id"),header=T)
 # xCell data
-xCell_TCGA_RSEM.immune_stroma.ratio <- readr::read_rds(file.path(immune_path,"genelist_data","xCell_TCGA_RSEM.immune_stroma.ratio.rds.gz")) %>%
+xCell_TCGA_RSEM.immune_stroma.ratio <- readr::read_rds(file.path(immune_path,"genelist_data","Pancan21.tcga.xCell.immune_stroma.ratio.rds.gz")) %>%
   dplyr::select(-barcode) %>%
   dplyr::rename("barcode" = "Sample ID")
 # tcga expression data
@@ -60,6 +60,7 @@ fn_adjust_exp <- function(.cancer,.x){
       dplyr::inner_join(.fantom.exp,by="symbol") %>%
       dplyr::inner_join(xCell_TCGA_RSEM.immune_stroma.ratio,by="barcode") %>%
       dplyr::rename("T_X"="CPE","I_X"="Immune_ratio","S_X"="Stromal_ratio") %>%
+      dplyr::mutate(S_X=S_X+other_Stromal_ratio) %>%   # hold the assumption that little difference od genes' expression in stromal and other stroma cell.
       dplyr::select(symbol,barcode,exp,"I_F","S_F","T_F","T_X","I_X","S_X")-> .tmp_data
     
     .tmp_data %>%
@@ -89,7 +90,8 @@ fn_adjust_calculate <- function(.x){
 
 # Running exp adjustment --------------------------------------------------
 
-
+library(multidplyr)
+library(parallel)
 cl<-21
 cluster <- create_cluster(cores = cl)
 
@@ -101,6 +103,10 @@ gene_list_expr %>%
   multidplyr::cluster_library("stringr") %>%
   multidplyr::cluster_assign_value("fn_adjust_exp",fn_adjust_exp) %>%
   multidplyr::cluster_assign_value("fn_adjust_calculate",fn_adjust_calculate) %>%
+  multidplyr::cluster_assign_value("TCGA_tissue",TCGA_tissue) %>%
+  multidplyr::cluster_assign_value("TCGA_Fantom_share_tissue",TCGA_Fantom_share_tissue) %>%
+  multidplyr::cluster_assign_value("ICP_fantom.gene_exp.cell_line.Immune_cell.combine",ICP_fantom.gene_exp.cell_line.Immune_cell.combine) %>%
+  multidplyr::cluster_assign_value("xCell_TCGA_RSEM.immune_stroma.ratio",xCell_TCGA_RSEM.immune_stroma.ratio) %>%
   dplyr::mutate(adjust_exp = purrr::map(filter_expr,fn_adjust_exp)) %>%
   collect() %>%
   dplyr::as_tibble() %>%
@@ -110,4 +116,4 @@ on.exit(parallel::stopCluster(cluster))
 
   
 gene_list_adjust_expr %>%
-  readr::write_tsv(file.path(gene_list_path,"pancan21.ICP.exp_adjust.rds.gz"),compress="gz")
+  readr::write_tsv(file.path(gene_list_path,"pancan21.ICP.exp_adjust.by_cell_ratio.rds.gz"),compress="gz")
