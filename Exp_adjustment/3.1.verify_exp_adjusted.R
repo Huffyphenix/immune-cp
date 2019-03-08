@@ -232,3 +232,7 @@ tcgaExp_cellE_correlation %>%
   )
 ggsave(filename = paste("tcgaExp_cellE_correlation","pdf",sep="."),device = "pdf",path = file.path(immune_path,"result_20171025/Exp_adjustment/verify_adjusted_exp","correlation"),width = 8,height = 10)
 ggsave(filename = paste("tcgaExp_cellE_correlation","png",sep="."),device = "png",path = file.path(immune_path,"result_20171025/Exp_adjustment/verify_adjusted_exp","correlation"),width = 8,height = 10)
+
+tcgaExp_cellE_correlation %>%
+  rbind(tcgaExp_cellE_correlation.total) %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/Exp_adjustment/verify_adjusted_exp","correlation","tcgaExp_cellE_correlation.tsv"))
