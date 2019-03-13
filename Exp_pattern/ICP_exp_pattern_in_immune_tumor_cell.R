@@ -206,7 +206,7 @@ ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
     axis.ticks = element_blank(),
     axis.text.x = element_text(vjust = 0.5, hjust = 1, size = 10, angle = 90),
     axis.title = element_blank(),
-    axis.text = element_text(colour = "black"),
+    axis.text = element_text(colour = "black")
   ) -> p2
 
 ggarrange(p1,
