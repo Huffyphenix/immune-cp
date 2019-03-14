@@ -112,7 +112,7 @@ ICP_exp_pattern_in_immune_tumor_cell %>%
   dplyr::arrange(symbol) %>%
   readr::write_tsv(file.path(result_path,"ICP_exp_pattern_in_immune_tumor_cell.tsv"))
 
-# global exp pattern ------------------------------------------------------
+# detailed tissue exp pattern ------------------------------------------------------
 
 fn_exp_detailed_pantern_classify <- function(.n,.x){
   print(.n)
