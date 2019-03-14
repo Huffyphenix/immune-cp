@@ -38,6 +38,8 @@ xCell_Fantom_cellname_adjust <- readr::read_tsv(file.path(xcell_path,"xCell_Fant
   dplyr::mutate(Type = ifelse(is.na(Fantom5_cellname),"Other stromal",Type)) %>% # cell in xCell but not in fantom5 are calss into other stromal.
   dplyr::select(`Cell types`,Type) %>%
   unique()
+xCell_Fantom_cellname_adjust %>% dplyr::inner_join(xCell_cell_type,by="Cell types") %>% 
+  readr::write_tsv(file.path(xcell_path,"cell_type_to_class_xCell_score.tsv"))
 
 TCGA_purity <- readr::read_tsv(file.path(purity_path,"ncomms9971-s2.txt")) %>%
   dplyr::select(`Cancer type`,`Sample ID`,`CPE`) %>%
