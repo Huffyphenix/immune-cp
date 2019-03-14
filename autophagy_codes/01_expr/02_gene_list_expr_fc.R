@@ -342,8 +342,7 @@ readr::write_rds(
   compress = "gz"
 )
 
-save.image(file = file.path(out_path, "rda_00_gene_expr.rda"))
-load(file = file.path(out_path, "rda_00_gene_expr.rda"))
+
 
 ###cancer counts
 ggplot(
@@ -456,3 +455,6 @@ ggsave(
   height = 10,
   path = out_path
 )
+
+save.image(file = file.path(out_path, "rda_00_gene_expr.rda"))
+load(file = file.path(out_path, "rda_00_gene_expr.rda"))
