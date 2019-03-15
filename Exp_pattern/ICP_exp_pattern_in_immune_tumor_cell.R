@@ -158,10 +158,29 @@ ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
 TCGA_tissue <- readr::read_tsv("/project/huff/huff/data/TCGA/TCGA_cancer_tissue_classification.txt")
 TCGA_tissue$Tissues %>% unique()
 
+ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+fn_site_color <- function(.x){
+  # print(.n)
+  if(.x=="Mainly_Tumor"){
+    "red"
+  }else if(.x=="Mainly_Immune"){
+    "Blue"
+  }else if(.x=="Both"){
+    c("#9A32CD")
+  }else{
+    "grey"
+  }
+}
+ICP_expr_pattern %>%
+  dplyr::filter(!is.na(`Exp site`)) %>%
+  dplyr::mutate(site_col = purrr::map(`Exp site`,fn_site_color)) %>%
+  tidyr::unnest() %>%
+  dplyr::arrange(`Exp site`,symbol) -> gene_rank
+
 ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
   dplyr::filter(`Characteristics[Tissue]` %in% c(TCGA_tissue$Tissues %>% unique())) %>%
   ggplot(aes(x=`Characteristics[Tissue]`,y=symbol)) +
-  geom_tile(aes(fill=log2FC),color = "grey") +
+  geom_tile(aes(fill=log2FC),color = "grey",size=1,width = 0.9) +
   scale_fill_gradient2(
     name = "log2 (I/T)",
     low = "blue",
@@ -169,12 +188,12 @@ ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
     mid="white",
     midpoint = 0 
   ) +
+  scale_y_discrete(limits = gene_rank$symbol) +
   # guides(fill = guide_colorbar(title.position = "left")) +
-  theme_bw() +
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
-    axis.text.y = element_text(size = 10),
+    axis.text.y = element_text(size = 10,colour = gene_rank$site_col),
     axis.text.x = element_text(vjust = 0.5, hjust = 1, size = 12, angle = 90),
     axis.title = element_blank(),
     legend.position = "top",
@@ -186,7 +205,7 @@ ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
     axis.text = element_text(colour = "black"),
     strip.background = element_rect(fill = "white",colour = "black"),
     strip.text = element_text(size = 12)
-  ) -> p1
+  ) -> p1;p1
   
 ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
   dplyr::rename("Tissues"="Characteristics[Tissue]") %>%
@@ -206,7 +225,8 @@ ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
     axis.ticks = element_blank(),
     axis.text.x = element_text(vjust = 0.5, hjust = 1, size = 10, angle = 90),
     axis.title = element_blank(),
-    axis.text = element_text(colour = "black")
+    axis.text = element_text(colour = "black"),
+    plot.margin = unit(c(0,1,1,1),"cm")
   ) -> p2
 
 ggarrange(p1,
@@ -216,3 +236,7 @@ ggarrange(p1,
 
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma.detailed_tissue.png"),device = "png",height = 12,width = 6)
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma.detailed_tissue.pdf"),device = "pdf",height = 12,width = 6)
+
+
+save.image(file.path(result_path,"FANTOM5.ICP_exp.pattern.rda"))
+load(file.path(result_path,"FANTOM5.ICP_exp.pattern.rda"))
