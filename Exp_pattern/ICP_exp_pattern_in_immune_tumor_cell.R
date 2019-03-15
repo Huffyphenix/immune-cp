@@ -13,6 +13,10 @@ result_path <- file.path(immune_path,"result_20171025","ICP_exp_patthern")
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine <-
   readr::read_rds(file.path(immune_path,"genelist_data","ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rds.gz"))
 
+
+TCGA_tissue <- readr::read_tsv("/project/huff/huff/data/TCGA/TCGA_cancer_tissue_classification.txt")
+TCGA_tissue$Tissues %>% unique()
+
 is_outlier <- function(x) {
   return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
 }
@@ -28,6 +32,7 @@ max_3 <- function(.x){
   return(res)
 }
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
+  # dplyr::filter(`Characteristics[Tissue]` %in% c("PrimaryCell",TCGA_tissue$Tissues)) %>%
   dplyr::mutate(Group = ifelse(Group=="Stromal Cell","Stromal",Group)) %>%
   dplyr::mutate(Group = ifelse(Group=="Immune Cell","Immune",Group)) %>%
   dplyr::mutate(Group = ifelse(Group=="Tumor Cell","Tumor",Group)) %>%
@@ -38,7 +43,7 @@ ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
   geom_violin(aes(fill=Group),alpha = 0.4) +
   geom_jitter(aes(color=Group),size=1,width = 0.1,height = 0) +
   facet_wrap(~symbol,scale="free_y") +
-  geom_text(aes(label = outlier), na.rm = TRUE, nudge_x = -0.25, nudge_y = 0.25,size=4) +
+  geom_text(aes(label = outlier), na.rm = TRUE, nudge_x = -0.25, nudge_y = 0.25,size=3) +
   scale_color_manual(
     values = c("#3CB371", "#CDCD00", "#FF3030"),
     breaks = c("Immune", "Stromal", "Tumor")
@@ -46,7 +51,7 @@ ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
   scale_fill_manual(
     values = c("#FF3030")
   ) +
-  theme_bw() +
+  # theme_bw() +
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
@@ -64,10 +69,11 @@ ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
     strip.text = element_text(size = 12)
 )
 
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma.png"),device = "png",height = 10,width = 15)  
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma.pdf"),device = "pdf",height = 10,width = 15)  
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-TCGA.tissue.png"),device = "png",height = 10,width = 15)  
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-TCGA.tissue.pdf"),device = "pdf",height = 10,width = 15)  
 
-
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.png"),device = "png",height = 10,width = 15)  
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.pdf"),device = "pdf",height = 10,width = 15)
 
 # global exp pattern ------------------------------------------------------
 
@@ -155,8 +161,6 @@ ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
 
 # plot 
 # classification of tcga cancers
-TCGA_tissue <- readr::read_tsv("/project/huff/huff/data/TCGA/TCGA_cancer_tissue_classification.txt")
-TCGA_tissue$Tissues %>% unique()
 
 ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
 fn_site_color <- function(.x){
@@ -180,7 +184,7 @@ ICP_expr_pattern %>%
 ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
   dplyr::filter(`Characteristics[Tissue]` %in% c(TCGA_tissue$Tissues %>% unique())) %>%
   ggplot(aes(x=`Characteristics[Tissue]`,y=symbol)) +
-  geom_tile(aes(fill=log2FC),color = "grey",size=1,width = 0.9) +
+  geom_tile(aes(fill=log2FC),color = "grey",size=0.5,width = 0.9) +
   scale_fill_gradient2(
     name = "log2 (I/T)",
     low = "blue",
