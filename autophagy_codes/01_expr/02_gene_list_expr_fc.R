@@ -399,11 +399,11 @@ gene_list_fc_pvalue_simplified_filter %>%
   dplyr::inner_join(gene_rank,by="symbol") %>%
   dplyr::mutate(fun = "functionWithImmune") %>%
   ggplot(aes(y=symbol,x=fun)) +
-  geom_tile(aes(fill = functionWithImmune),color="grey") +
+  geom_tile(aes(fill = functionWithImmune),color="grey",size=1) +
   scale_y_discrete(limit = gene_rank$symbol) +
   scale_fill_manual(
     name = "Immune Checkpoint",
-    values = c("#CD4F39", "#1874CD", "#CD8500")
+    values = c("#1C86EE", "#EE3B3B", "#EE7600")
   ) +
   theme(
     panel.background = element_rect(colour = "black", fill = "white"),
@@ -435,7 +435,7 @@ p3 + theme(axis.text.x = element_blank(),
            plot.margin=unit(c(0,0,-0,0), "cm")) -> p1.1
 ggarrange(NULL,p1.1,NULL,p2.1,p3.1,p4.1,
           ncol = 3, nrow = 2,  align = "hv", 
-          widths = c(3, 12, 5), heights = c(1, 4),
+          widths = c(2, 12, 5), heights = c(1, 5),
           legend = "top",
           common.legend = TRUE) -> p
 
