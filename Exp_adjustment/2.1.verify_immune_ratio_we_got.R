@@ -14,8 +14,8 @@ xCell_TCGA_RSEM.immune_stroma.ratio <- readr::read_rds(file.path(immune_path,"ge
   dplyr::select(-barcode) %>%
   dplyr::rename("barcode" = "Sample ID")
 
-# TIMER data
-TIMER_immunity <- readr::read_tsv(file.path(immunity_path,"immuneEstimation.txt")) %>%
+#  data
+_immunity <- readr::read_tsv(file.path(immunity_path,"immuneEstimation.txt")) %>%
   dplyr::mutate(TIL = B_cell+CD4_Tcell+CD8_Tcell+Neutrophil+Macrophage+Dendritic)
 
 # purity data
@@ -25,7 +25,7 @@ TCGA_purity <- readr::read_tsv(file.path(purity_path,"ncomms9971-s2.txt")) %>%
 
 # data combination ----
 
-TIMER_immunity %>%
+_immunity %>%
   dplyr::inner_join(xCell_TCGA_RSEM.immune_stroma.ratio,by="barcode") -> immunity_combine_xCell.immnue.ratio
 
 
@@ -91,7 +91,7 @@ immunity_combine_xCell.immnue.ratio %>%
   dplyr::mutate(cor = purrr::map(data,fn_correlation)) %>%
   dplyr::select(-data) %>%
   tidyr::unnest() %>%
-  dplyr::ungroup() -> correlation_TIMER.our_results
+  dplyr::ungroup() -> correlation_.our_results
 
 immunity_combine_xCell.immnue.ratio %>%
   dplyr::mutate(`Cancer type` = "Total") %>%
@@ -100,12 +100,12 @@ immunity_combine_xCell.immnue.ratio %>%
   dplyr::mutate(cor = purrr::map(data,fn_correlation)) %>%
   dplyr::select(-data) %>%
   tidyr::unnest() %>%
-  dplyr::ungroup() -> Total.correlation_TIMER.our_results
+  dplyr::ungroup() -> Total.correlation_.our_results
 # draw plot -----
 library(ggplot2)
 CPCOLS <- c("red", "white", "#1C86EE")
-Total.correlation_TIMER.our_results %>%
-  rbind(correlation_TIMER.our_results) %>%
+Total.correlation_.our_results %>%
+  rbind(correlation_.our_results) %>%
   ggplot(aes(y=`Cancer type`,x=y)) +
   geom_tile(aes(fill=estimate),colour = "white") +
   scale_fill_gradient2(
@@ -117,7 +117,7 @@ Total.correlation_TIMER.our_results %>%
   ) +
   guides(fill=guide_colorbar(title.position="left",
                              title.theme = element_text(angle = 90))) +
-  scale_y_discrete(limit = c(sort(correlation_TIMER.our_results$`Cancer type` %>% unique()),"Total")) +
+  scale_y_discrete(limit = c(sort(correlation_.our_results$`Cancer type` %>% unique()),"Total")) +
   theme_bw() +
   theme(
     axis.text.y = element_text(size = 10),
@@ -131,12 +131,12 @@ Total.correlation_TIMER.our_results %>%
     axis.text = element_text(colour = "black")
   ) -> p
 p
-ggsave(file.path(immune_path,"result_20171025/Exp_adjustment/verify_immune_ratio","TIMER","heatmap_correlation.TIMER.ourImmuneRatio.pdf"),device = "pdf",height = 6,width = 4)
-ggsave(file.path(immune_path,"result_20171025/Exp_adjustment/verify_immune_ratio","TIMER","heatmap_correlation.TIMER.ourImmuneRatio.png"),device = "png",height = 6,width = 4)
+ggsave(file.path(immune_path,"result_20171025/Exp_adjustment/verify_immune_ratio","","heatmap_correlation..ourImmuneRatio.pdf"),device = "pdf",height = 6,width = 4)
+ggsave(file.path(immune_path,"result_20171025/Exp_adjustment/verify_immune_ratio","","heatmap_correlation..ourImmuneRatio.png"),device = "png",height = 6,width = 4)
 
-Total.correlation_TIMER.our_results %>%
-  rbind(correlation_TIMER.our_results) %>%
-  readr::write_tsv(file.path(immune_path,"result_20171025/Exp_adjustment/verify_immune_ratio","TIMER","person.correlation_TIMER.our_results"))
+Total.correlation_.our_results %>%
+  rbind(correlation_.our_results) %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/Exp_adjustment/verify_immune_ratio","","person.correlation_.our_results"))
 
 # survival and immune ratio -----------------------------------------------
 # sigle factor survival analysis ,OS
@@ -249,7 +249,7 @@ OS_75.25_ImmuneRatio_survival %>% readr::write_tsv(file.path(immune_path,"result
 
 
 # IR between relapse or not, other form to represent PFS survival ---------
-# logistic regression, refer to TIMER method
+# logistic regression, refer to  method
 
 # prepare data
 time_status %>%
@@ -342,7 +342,7 @@ ggsave(filename = "immuneratio_with_relapse(PFS status)_logistic_regression.sig.
 ggsave(filename = "immuneratio_with_relapse(PFS status)_logistic_regression.sig.pdf",device = "pdf", path = file.path(immune_path,"result_20171025/Exp_adjustment/verify_immune_ratio","relapse"), width = 6, height = 5)
 
 # cox model ---------------------------------------------------------------
-# refer to TIMER method
+# refer to  method
 fn_cox <- function(.x){
   covariates <- c("Immune_ratio","CPE", "Stromal_ratio",  "other_Stromal_ratio", "Age", "Stage_n")
   univ_formulas <- sapply(covariates,
