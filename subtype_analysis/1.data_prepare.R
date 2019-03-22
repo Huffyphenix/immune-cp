@@ -16,8 +16,9 @@ mutation_burden_class <- readr::read_rds(file.path(burden_path,"classfication_of
   dplyr::rename("cancer_types"="Cancer_Types")
 mutation_burden_class$cancer_types %>% unique() ->cancers_in_mutaion_burden_class
 cancers_except <- c("COADREAD","GBMLGG","KIPAN","STES","CESC")
+
 # 4. clinical data --------------------------------------------------------
-clinical <- readr::read_rds(file.path("/project/huff/huff/data/survival","TCGA_pancan_cancer_cell_survival_time.rds.gz"))
+clinical <- readr::read_rds(file.path("/project/huff/huff/data//TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz"))
 
 # fn_merge <- function(cli,cancer){
 #   print(cancer)
