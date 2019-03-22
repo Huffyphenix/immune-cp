@@ -4,17 +4,22 @@ fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6)
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   diff <- survdiff(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
   kmp <- 1 - pchisq(diff$chisq, df = length(levels(as.factor(data$group))) - 1)
-  legend <- data.frame(group=paste("C",sort(unique(data$group)),sep=""),n=fit$n)
-  legend %>%
-    dplyr::mutate(
-      label = purrr::map2(
-        .x = group,
-        .y = n,
-        .f = function(.x,.y){
-          latex2exp::TeX(glue::glue("<<.x>>, n = <<.y>>", .open = "<<", .close = ">>"))
-        }
-      )
-    ) -> legend
+  # legend <- data.frame(group=paste("C",sort(unique(data$group)),sep=""),n=fit$n)
+  # legend %>%
+  #   dplyr::mutate(
+  #     label = purrr::map2(
+  #       .x = group,
+  #       .y = n,
+  #       .f = function(.x,.y){
+  #         latex2exp::TeX(glue::glue("<<.x>>, n = <<.y>>", .open = "<<", .close = ">>"))
+  #       }
+  #     )
+  #   ) -> legend
+  tibble::tibble(group = group, color = color) %>%
+    dplyr::inner_join(data,by="group") %>%
+    dplyr::mutate(group = paste(group,sep="")) %>%
+    dplyr::select(group,color) %>%
+    unique() -> color_paired
   survminer::ggsurvplot(fit,pval=F, #pval.method = T,
                         data = data,
                         surv.median.line = "hv",
@@ -36,12 +41,14 @@ fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6)
                           legend.title = element_blank(),
                           axis.title = element_text(size = 12,color = "black")
                         )
-  ) +
+   ) +
     scale_color_manual(
-      values = color,
-      labels = legend$label
+      values = color_paired$color,
+      labels = color_paired$group
     )
-  ggsave(filename =sur_name, path = result_path,device = "png",height = h,width = w)
+  ggsave(filename =paste(sur_name,signif(kmp, 2),"png",sep="."), path = result_path,device = "png",height = h,width = w)
+  ggsave(filename =paste(sur_name,signif(kmp, 2),"pdf",sep="."), path = result_path,device = "pdf",height = h,width = w)
+  
 }
 
 fn_mutation_burden <- function(data,group,facet="~ cancer_types",value,color,xlab,comp_list,m_name,result_path,w=7,h=10){
