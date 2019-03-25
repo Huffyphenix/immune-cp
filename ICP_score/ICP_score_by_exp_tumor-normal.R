@@ -25,9 +25,6 @@ tumor_class_by_T_N.by_peak %>%
   dplyr::mutate(hot_per = Immunity_hot/(Immunity_hot+Immunity_cold)) -> tumor_class_by_T_N.by_peak.immunityScore
 
 
-
-
-
 # survival analysis -------------------------------------------------------
 clinical_tcga <- readr::read_rds(file.path("/project/huff/huff/TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
   tidyr::unnest() %>%
@@ -80,6 +77,33 @@ tumor_class_by_T_N.only_paired.immunityScore %>%
   )
 ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,height = 6)
 ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
+
+
+cancer_color %>%
+  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.immunityScore$cancer_types)) -> cancer21_color
+
+tumor_class_by_T_N.only_paired.immunityScore %>%
+  dplyr::filter(!is.na(hot_per)) %>%
+  ggdensity(x="hot_per",fill = "cancer_types",alpha = 0.5,palette = "jco")+
+  facet_wrap(~cancer_types) +
+  geom_vline(data=tumor_class_by_T_N.by_max.immunityScore.peak,aes(xintercept = peak.x),linetype = "dotted") +
+  # geom_text(data=immune_lanscape_immunity.peak,aes(x=peak.x+0.2,y=peak.y+2,label=paste("(",signif(peak.x,2),",",signif(peak.y,2),")",sep=""))) +
+  scale_fill_manual(
+    values = cancer21_color$color,
+    limits = cancer21_color$cancer_types
+  ) +
+  ggtitle("Density of Immune Activity Score in each cancers") +
+  ylab("Density") +
+  xlab("Immune Activity Score") +
+  theme(
+    legend.position = "none",
+    legend.key = element_rect(fill = "white", colour = "black"),
+    axis.text = element_text(colour = "black",size = 12),
+    strip.background = element_rect(fill="white",color="black"),
+    strip.text = element_text(color="black",size=12)
+  )
+ggsave(file.path(res_path,"score_distribution_in_cancers.png"),device = "png",height = 6,width = 8)
+ggsave(file.path(res_path,"score_distribution_in_cancers.pdf"),device = "pdf",height = 6,width = 8)
 
 ##### all sample together survival -----------------------------------
 # 1.only paired sample score survival -----
