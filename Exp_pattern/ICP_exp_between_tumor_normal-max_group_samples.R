@@ -120,10 +120,13 @@ gene_list_expr.T_N.by_max %>%
   tidyr::unnest() -> tumor_class_by_T_N.by_max
 
 tumor_class_by_T_N.by_max %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.by_max-gene_details"))
+
+tumor_class_by_T_N.by_max %>%
   tidyr::separate(c_p,c("cancer_types","barcode"),"_") %>%
   dplyr::group_by(barcode,sample_status) %>%
   dplyr::mutate(n=n()) %>%
-  dplyr::select(cancer_types,barcode,sample_status,n,description) %>%
+  dplyr::select(cancer_types,barcode,sample_status,n) %>%
   unique() %>%
   dplyr::ungroup() %>%
   tidyr::spread(key="sample_status",value="n") %>%
@@ -133,3 +136,7 @@ tumor_class_by_T_N.by_max.class %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.by_max"))
 
 
+# score -------------------------------------------------------------------
+
+
+tumor_class_by_T_N.by_max.class 
