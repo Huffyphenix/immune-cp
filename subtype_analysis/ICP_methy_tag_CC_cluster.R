@@ -1,5 +1,9 @@
 library(magrittr)
-
+library(methods)
+library(magrittr)
+# library(CancerSubtypes)
+library(ConsensusClusterPlus)
+library(SNFtool)
 ### methylation data path
 basic_path <- "/home/huff/project"
 ICP_methy_path <- file.path(basic_path,"TCGA_survival/data/ICP_methy_pancan")
