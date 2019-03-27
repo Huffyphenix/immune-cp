@@ -49,5 +49,5 @@ dt = as.dist(1-cor(dc,method="pearson"))
 results = ConsensusClusterPlus(dt,maxK=20,reps=100,pItem=0.8,pFeature=1,title="methy_CC",distance="pearson",clusterAlg="hc",seed=1262118388.71279)
 
 results %>%
-  readr::write_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_methy_alltag_CC_20.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(data_result_path,"genelist_methy_alltag_CC_20.rds.gz"),compress = "gz")
 
