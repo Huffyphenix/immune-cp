@@ -3,6 +3,7 @@ library(magrittr)
 library(ggplot2)
 library(ggpubr)
 # immune infitration of each cancers --------------------------------------
+basic_path <- "/home/huff/project"
 
 
 # data path ---------------------------------------------------------------
@@ -487,5 +488,4 @@ ggsave(file.path(result_path,"Immunity.48.812-830.e14.Leukocyte_Fraction_Tumor-s
 ggsave(file.path(result_path,"Immunity.48.812-830.e14.Leukocyte_Fraction_Tumor-samples(with paired normal samples)_each_cancers.png"),device = "png",width = 10,height = 8)
 
 save.image(file.path(result_path,"Immunity_diff_in_cancers.rda"))
-
-  
+load(file.path(result_path,"Immunity_diff_in_cancers.rda"))
