@@ -15,12 +15,12 @@ data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
 ## get from 1.data_prepare.R
 load(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info.rda"))
 
-results <- readr::read_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_CNV_gistic_CC_20.rds.gz"))
+results <- readr::read_rds(file.path("/project/huff/huff/immune_checkpoint/genelist_data","genelist_CNV_CC_20.rds.gz"))
 
 # get best K for cluster results  -----------------------------------------
 source("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
 
-result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/CNV_gistic/Get_best_clutser_20")
+result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/CNV/Get_best_clutser_20")
 # pdf(file.path(result_path,"Get_best_clutser_20.pdf"))
 
 

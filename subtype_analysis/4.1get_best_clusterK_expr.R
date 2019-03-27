@@ -72,6 +72,27 @@ for(i in 2:20) {
     print("Too small groups")
   }
   
+  group_survival_data %>%
+    dplyr::group_by(cancer_types,group) %>%
+    dplyr::mutate(n=n()) %>%
+    dplyr::select(cancer_types,group,n) %>%
+    dplyr::ungroup() %>%
+    unique() %>%
+    dplyr::arrange(cancer_types) %>%
+    dplyr::select(cancer_types) %>%
+    table() %>%
+    as.data.frame() %>%
+    dplyr::as.tbl() %>%
+    dplyr::filter(Freq >=2) %>%
+    .$. %>% as.character() -> cancers_do_survival
+  for(cancer in cancers_do_survival){
+    sur_name <- paste("Survival_for",cancer,C,"Groups.png",sep="_")
+    title <- paste("Expr Survival for",C,"Clusters",sep=" ")
+    
+    group_survival_data %>%
+      dplyr::filter(cancer_types == cancer) %>%
+      fn_survival(title,color_list,sur_name,file.path(result_path,paste(C,"Cluster_cancer_survival"),3,4)
+    }
   print(paste(i,3,sep = "."))
   
   # Figure 3. mutation burden in each cancers
@@ -90,12 +111,12 @@ for(i in 2:20) {
   
   # Figure 4. mutation burden in all samples
   print(paste(i,1,sep = "."))
-  m_a_name <-  paste("Expr_all_mutation_for",C,"Clusters",sep="_")
-  group_survival_data %>%
-    dplyr::filter(group %in% more_than_10) %>%
-    dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
-    # dplyr::mutate(sm_count = log2(sm_count)) %>%
-    fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "Mutation Burden",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
+  # m_a_name <-  paste("Expr_all_mutation_for",C,"Clusters",sep="_")
+  # group_survival_data %>%
+  #   dplyr::filter(group %in% more_than_10) %>%
+  #   dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
+  #   # dplyr::mutate(sm_count = log2(sm_count)) %>%
+  #   fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "Mutation Burden",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
   
   # Figure 5. cancer distrbution in each clusters
   print(paste(i,5,sep = "."))
