@@ -1,7 +1,7 @@
 library(magrittr)
 library(methods)
 library(magrittr)
-# library(CancerSubtypes)
+library(CancerSubtypes)
 library(ConsensusClusterPlus)
 library(SNFtool)
 ### methylation data path
@@ -10,48 +10,49 @@ ICP_methy_path <- file.path(basic_path,"TCGA_survival/data/ICP_methy_pancan")
 
 data_result_path <- file.path(basic_path,"immune_checkpoint/genelist_data")
 ### load methylation data
-# ICP_methy <- readr::read_rds(file.path(ICP_methy_path,"ICP_methy_450_pancan.rds.gz"))
+ICP_methy <- readr::read_rds(file.path(ICP_methy_path,"ICP_methy_450_pancan.rds.gz"))
 
 ### methylation data process
-# fn_data_process <- function(.x){
-#   .x %>%
-#     dplyr::select(-symbol) %>%
-#     tidyr::gather(-tag_symbol,key="barcode",value="methy") 
-# }
-# 
-# ICP_methy %>%
-#   dplyr::mutate(gather = purrr::map(methy,fn_data_process)) %>%
-#   dplyr::select(-methy) -> ICP_methy.gather
-# 
-# ICP_methy.gather %>%
-#   tidyr::unnest() %>%
-#   dplyr::select(tag_symbol,barcode,methy) %>%
-#   dplyr::group_by(tag_symbol,barcode) %>%
-#   dplyr::mutate(methy = mean(methy)) %>%
-#   unique() %>%
-#   dplyr::ungroup() %>%
-#   tidyr::spread(key = barcode,value = methy) -> PanCan_ICP_methy.spread
-# 
-# PanCan_ICP_methy.spread[1:10,1:2]
-# 
-# PanCan_ICP_methy_matrix <- as.matrix(PanCan_ICP_methy.spread[,-1])
-# rownames(PanCan_ICP_methy_matrix) <- PanCan_ICP_methy.spread$tag_symbol
-# PanCan_ICP_methy_matrix %>%
-#   readr::write_rds(file.path(data_result_path,"PanCan_ICP_methy_matrix.alltag.rds.gz"),compress = "gz")
+fn_data_process <- function(.x){
+  .x %>%
+    dplyr::select(-symbol) %>%
+    tidyr::gather(-tag_symbol,key="barcode",value="methy")
+}
+
+ICP_methy %>%
+  dplyr::mutate(gather = purrr::map(methy,fn_data_process)) %>%
+  dplyr::select(-methy) -> ICP_methy.gather
+
+ICP_methy.gather %>%
+  tidyr::unnest() %>%
+  dplyr::select(tag_symbol,barcode,methy) %>%
+  dplyr::group_by(tag_symbol,barcode) %>%
+  dplyr::mutate(methy = mean(methy)) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = barcode,value = methy) -> PanCan_ICP_methy.spread
+
+PanCan_ICP_methy.spread[1:10,1:2]
+
+PanCan_ICP_methy_matrix <- as.matrix(PanCan_ICP_methy.spread[,-1])
+rownames(PanCan_ICP_methy_matrix) <- PanCan_ICP_methy.spread$tag_symbol
+PanCan_ICP_methy_matrix %>%
+  readr::write_rds(file.path(data_result_path,"PanCan_ICP_methy_matrix.alltag.rds.gz"),compress = "gz")
 
 ### do cluster analysis
 
 # reduce the dataset to the top 5,000 most variable genes, measured by median absolute deviation(mad). 绝对中位差
-d <- readr::read_rds(file.path(data_result_path,"PanCan_ICP_methy_matrix.alltag.rds.gz"))
-
-index=which(is.na(d))
-d=data.imputation(d,fun="median")
-
-dc = sweep(d,1, apply(d,1,median,na.rm=T)) ## median center genes
-
-dt = as.dist(1-cor(dc,method="pearson"))
-results = ConsensusClusterPlus(dt,maxK=20,reps=100,pItem=0.8,pFeature=1,title="methy_CC",distance="pearson",clusterAlg="hc",seed=1262118388.71279)
-
-results %>%
-  readr::write_rds(file.path(data_result_path,"genelist_methy_alltag_CC_20.rds.gz"),compress = "gz")
+# d <- readr::read_rds(file.path(data_result_path,"PanCan_ICP_methy_matrix.alltag.rds.gz"))
+# 
+# index=which(is.na(d))
+# d[index] <- 0
+# # d=data.imputation(d,fun="median")
+# 
+# dc = sweep(d,1, apply(d,1,median,na.rm=T)) ## median center genes
+# 
+# dt = as.dist(1-cor(dc,method="pearson"))
+# results = ConsensusClusterPlus(dt,maxK=20,reps=100,pItem=0.8,pFeature=1,title="methy_CC",distance="pearson",clusterAlg="hc",seed=1262118388.71279)
+# 
+# results %>%
+#   readr::write_rds(file.path(data_result_path,"genelist_methy_alltag_CC_20.rds.gz"),compress = "gz")
 
