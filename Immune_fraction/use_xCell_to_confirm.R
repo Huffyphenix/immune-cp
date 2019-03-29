@@ -257,7 +257,8 @@ xCell_data.peak.compareTN.paired %>%
   dplyr::filter(Relationship_between_T.N!="Not Applicable") -> xCell_data.peak.compareTN.paired.peak.x
 
 xCell_data.peak.compareTN.paired.peak.x %>%
-  dplyr::mutate(n = ifelse(Relationship_between_T.N=="N>T",1,-1)) %>%
+  dplyr::mutate(n = ifelse(cell_set=="Immune_Cell" & Relationship_between_T.N=="N>T",1,-1)) %>%
+  dplyr::mutate(n = ifelse(cell_set=="Stromal_Cell" & Relationship_between_T.N=="T>N",1,n)) %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::mutate(N = sum(n)) %>%
   dplyr::select(cancer_types,N) %>%
