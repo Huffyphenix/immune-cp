@@ -20,7 +20,7 @@ fn_data_process <- function(.x){
 }
 
 ICP_methy %>%
-  head(2) %>%
+  # head(2) %>%
   dplyr::mutate(gather = purrr::map(methy,fn_data_process)) %>%
   dplyr::select(-methy) -> ICP_methy.gather
 
@@ -34,15 +34,16 @@ ICP_methy.gather.unnest %>%
   dplyr::mutate(methy = as.numeric(methy)) %>%
   dplyr::group_by(cancer_types,tag_symbol) %>%
   dplyr::mutate(methy_scaled = scale(methy)) %>%
-  dplyr::select(-methy) ->  ICP_methy.gather.unnest.scaled
+  dplyr::select(-methy) %>%
+  dplyr::ungroup() ->  ICP_methy.gather.unnest.scaled
 
 ICP_methy.gather.unnest.scaled %>%
-  dplyr::select(tag_symbol,barcode,methy) %>%
+  dplyr::select(tag_symbol,barcode,methy_scaled) %>%
   dplyr::group_by(tag_symbol,barcode) %>%
-  dplyr::mutate(methy = mean(methy)) %>%
+  dplyr::mutate(methy_scaled = mean(methy_scaled)) %>%
   unique() %>%
   dplyr::ungroup() %>%
-  tidyr::spread(key = barcode,value = methy) -> PanCan_ICP_methy.spread
+  tidyr::spread(key = barcode,value = methy_scaled) -> PanCan_ICP_methy.spread
 
 PanCan_ICP_methy.spread[1:10,1:2]
 
