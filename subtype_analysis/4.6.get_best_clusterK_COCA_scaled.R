@@ -7,13 +7,13 @@ library(ComplexHeatmap)
 library(magrittr)
 
 # get best K for cluster results  -----------------------------------------
-source("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
+basic_path <- "/home/huff/project"
+source(file.path(basic_path,"github/immune-cp/subtype_analysis/funtions_to_draw_pic.R"))
 
-result_path <- file.path("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis")
-result_path <- file.path(result_path,"coca_scaled/Get_best_clutser_20")
-data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
+result_path <- file.path(result_path,"immune_checkpoint/result_20171025/subtype_analysis/coca_scaled-methyalltag/Get_best_clutser_20")
+data_result_path <- file.path(basic_path,"immune_checkpoint/genelist_data")
 
-results <- readr::read_rds(path = file.path(data_result_path, ".nonscale_data.recode.combined.ConsensusClusterplus.rds.gz"))
+results <- readr::read_rds(path = file.path(data_result_path, ".recode.combined.ConsensusClusterplus-exp-cnv-methyalltags.rds.gz"))
 
 load(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info.rda"))
 
@@ -64,7 +64,7 @@ for(i in 2:20){
   if (length(more_than_10)>=2) {
     group_survival_data %>%
       dplyr::filter(group %in% more_than_10) %>%
-      fn_survival(title,color_list,sur_name,result_path,3,4)
+      fn_survival(title,color_list,more_than_10,sur_name,result_path,3,4)
   }else{
     print("Too small groups")
   }
@@ -84,8 +84,8 @@ for(i in 2:20){
     group_survival_data %>%
       dplyr::filter(group %in% more_than_10) %>%
       dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
-      # dplyr::mutate(sm_count = log2(sm_count)) %>%
-      fn_mutation_burden(group = "group",facet="~ cancer_types",value = "sm_count",color = color_list,xlab = "Mutation Burden",comp_list = comp_list,m_name = m_name,result_path = result_path,w=12)
+      dplyr::mutate(sm_count = log2(sm_count)) %>%
+      fn_mutation_burden(group = "group",facet="~ cancer_types",value = "sm_count",color = color_list,xlab = "log2(Mutation Burden)",comp_list = comp_list,m_name = m_name,result_path = result_path,w=12)
     
     # Figure 4. mutation burden in all samples
     print(paste(i,1,sep = "."))
@@ -93,8 +93,8 @@ for(i in 2:20){
     group_survival_data %>%
       dplyr::filter(group %in% more_than_10) %>%
       dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
-      # dplyr::mutate(sm_count = log2(sm_count)) %>%
-      fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "Mutation Burden",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
+      dplyr::mutate(sm_count = log2(sm_count)) %>%
+      fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "log2(Mutation Burden)",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
   } else{
     print("Too small groups")
   }
