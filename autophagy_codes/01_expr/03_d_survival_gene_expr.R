@@ -9,6 +9,21 @@ expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 # clinical <- readr::read_rds(path = file.path(tcga_path,"pancan34_clinical.rds.gz")) 
 clinical <- readr::read_rds(file.path("/project/huff/huff/data/TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
   dplyr::rename("cancer_types" = "type")
+clinical.os <- clinical_tcga <- readr::read_rds(file.path("/home/huff/project","TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+  tidyr::unnest() %>%
+  dplyr::select(-cancer_types) %>%
+  unique() %>%
+  dplyr::mutate(OS=as.numeric(OS),Status=as.numeric(Status),Age=as.numeric(Age)) %>%
+  dplyr::group_by(barcode) %>%
+  dplyr::mutate(OS= max(OS)) %>%
+  dplyr::mutate(Status =  max(Status)) %>%
+  dplyr::ungroup() %>%
+  dplyr::rename("bcr_patient_barcode"="barcode")
+clinical %>%
+  tidyr::unnest() %>%
+  dplyr::full_join(clinical.os,by="bcr_patient_barcode") %>%
+  dplyr::select(cancer_types,bcr_patient_barcode,PFS,PFS.time,OS,Status) %>%
+  tidyr::nest(-cancer_types) -> clinical
 
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
@@ -50,7 +65,7 @@ fun_expr_survival_merge <- function(filter_expr, clinical){
     dplyr::select(symbol, barcode, expr)  %>% 
     dplyr::rename("bcr_patient_barcode" = "barcode") %>%
     dplyr::inner_join(clinical, by = "bcr_patient_barcode") %>% 
-    dplyr::select(symbol, bcr_patient_barcode, expr, time = PFS.time, status = PFS) %>%  #gender, race,
+    dplyr::select(symbol, bcr_patient_barcode, expr, time = OS, status = Status) %>%  #gender, race,
     dplyr::filter(!is.na(time), time > 0, !is.na(status)) %>% 
     dplyr::mutate(time=time/365) %>% 
     # dplyr::mutate(status = plyr::revalue(status, replace = c("Alive" = 0, "Dead" = 1))) %>%
@@ -63,6 +78,7 @@ fun_expr_survival_merge <- function(filter_expr, clinical){
 } 
 
 fun_draw_survival <- function(symbol, p.value, cancer_types, expr_clinical_ready){
+  print(symbol)
   gene <- symbol
   p_val <- signif(p.value, digits = 3)
   fig_name <- paste(cancer_types, gene, p_val, sep = ".")
@@ -83,9 +99,10 @@ fun_draw_survival <- function(symbol, p.value, cancer_types, expr_clinical_ready
                xlab = "Survival in years",
                ylab = 'Probability of survival',
                ggtheme = theme(
-                 panel.border = element_blank(), 
-                 panel.grid.major = element_blank(), 
-                 panel.grid.minor = element_blank(), 
+                 panel.border = element_blank(),
+                 panel.grid.major = element_blank(),
+                 panel.grid.minor = element_blank(),
+                 legend.position = c(0.8,0.6),
                  axis.line = element_line(colour = "black", size = 0.5), 
                  panel.background = element_rect(fill = "white"),
                  legend.key = element_blank(),
@@ -96,11 +113,11 @@ fun_draw_survival <- function(symbol, p.value, cancer_types, expr_clinical_ready
                  axis.title = element_text(size = 12,color = "black")
                ))[[1]] +
       scale_color_manual(
-        values = c("red4","dodgerblue4"),
+        values = c("red3","dodgerblue2"),
         labels = paste(c("High","Low"),",n =",fit_x$n,sep="")
       )
-    ggsave(filename = paste(fig_name,"pdf",sep="."), device = "pdf", path = file.path(survival_path, "survival"), width = 4, height = 3)
-    ggsave(filename = paste(fig_name,"png",sep="."), device = "png", path = file.path(survival_path, "survival"), width = 4, height = 3)
+    ggsave(filename = paste(fig_name,"pdf",sep="."), device = "pdf", path = file.path(survival_path, "OS_survival"), width = 4, height = 3)
+    ggsave(filename = paste(fig_name,"png",sep="."), device = "png", path = file.path(survival_path, "OS_survival"), width = 4, height = 3)
   }
 }
 fun_clinical_test <- function(expr_clinical_ready, cancer_types){
@@ -187,79 +204,79 @@ expr_clinical %>%
   #dplyr::select(-PARTITION_ID) %>% 
   tidyr::unnest(diff_pval) -> expr_clinical_pval
 expr_clinical_pval %>%
-  readr::write_csv(file.path(survival_path,"PFS_c_3_survival_genelist_pval.csv"))
+  readr::write_csv(file.path(survival_path,"OS_c_3_survival_genelist_pval.csv"))
 
 expr_clinical_pval %>%
   dplyr::filter(p.value <= 0.05 | kmp <= 0.05) -> expr_clinical_sig_pval
 expr_clinical_sig_pval %>%
-  readr::write_csv(file.path(survival_path,"PFS_c_3_survival_genelist_sig_pval.csv"))
+  readr::write_csv(file.path(survival_path,"OS_c_3_survival_genelist_sig_pval.csv"))
 # on.exit(parallel::stopCluster(cluster))
 #---------------------------------------------------------------------------------------------
 
-fun_rank_cancer <- function(pattern){
-  pattern %>% 
-    dplyr::summarise_if(.predicate = is.numeric, dplyr::funs(sum(., na.rm = T))) %>%
-    tidyr::gather(key = cancer_types, value = rank) %>%
-    dplyr::arrange(dplyr::desc(rank))
-} #get cancer rank
-fun_rank_gene <- function(pattern){
-  pattern %>% 
-    dplyr::rowwise() %>%
-    dplyr::do(
-      symbol = .$symbol,
-      rank =  unlist(.[-1], use.names = F) %>% sum(na.rm = T)
-    ) %>%
-    dplyr::ungroup() %>%
-    tidyr::unnest() %>%
-    dplyr::arrange(rank)
-} # get gene rank
-
-expr_clinical_sig_pval %>% 
-  dplyr::select(cancer_types, symbol) %>% 
-  dplyr::mutate(n = 1) %>% 
-  tidyr::spread(key = cancer_types, value = n) -> pattern
-
-cancer_rank <- pattern %>% fun_rank_cancer()
-gene_rank <- 
-  pattern %>% 
-  fun_rank_gene() %>% 
-  dplyr::left_join(gene_list, by = "symbol") %>% 
-  dplyr::filter( rank >= 5) %>% 
-  dplyr::mutate(color = plyr::revalue(status, replace = c('a' = "#e41a1c", "l" = "#377eb8", "i" = "#4daf4a", "p" = "#984ea3"))) %>% 
-  dplyr::arrange(color, rank)
-
-expr_clinical_sig_pval %>% 
-  ggplot(aes(x = cancer_types, y = symbol, color = status)) +
-  geom_point(aes(size = -log10(p.value))) +
-  scale_x_discrete(limit = cancer_rank$cancer_types) +
-  scale_y_discrete(limit = gene_rank$symbol) +
-  scale_size_continuous(name = "P-value") +
-  theme(
-    panel.background = element_rect(colour = "black", fill = "white"),
-    panel.grid = element_line(colour = "grey", linetype = "dashed"),
-    panel.grid.major = element_line(
-      colour = "grey",
-      linetype = "dashed",
-      size = 0.2
-    ),
-    
-    axis.title = element_blank(),
-    axis.ticks = element_line(color = "black"),
-    axis.text.y = element_text(color = gene_rank$color),
-    
-    legend.text = element_text(size = 12),
-    legend.title = element_text(size = 14),
-    legend.key = element_rect(fill = "white", colour = "black")
-  ) +
-  ggthemes::scale_color_gdocs(name = "Surivival Worse")-> p
-ggsave(
-  filename = "fig_03_d_survival_sig_genes_serminar.pdf",
-  plot = p,
-  device = "pdf",
-  width = 14,
-  height = 9,
-  path = survival_path
-)
+# fun_rank_cancer <- function(pattern){
+#   pattern %>% 
+#     dplyr::summarise_if(.predicate = is.numeric, dplyr::funs(sum(., na.rm = T))) %>%
+#     tidyr::gather(key = cancer_types, value = rank) %>%
+#     dplyr::arrange(dplyr::desc(rank))
+# } #get cancer rank
+# fun_rank_gene <- function(pattern){
+#   pattern %>% 
+#     dplyr::rowwise() %>%
+#     dplyr::do(
+#       symbol = .$symbol,
+#       rank =  unlist(.[-1], use.names = F) %>% sum(na.rm = T)
+#     ) %>%
+#     dplyr::ungroup() %>%
+#     tidyr::unnest() %>%
+#     dplyr::arrange(rank)
+# } # get gene rank
+# 
+# expr_clinical_sig_pval %>% 
+#   dplyr::select(cancer_types, symbol) %>% 
+#   dplyr::mutate(n = 1) %>% 
+#   tidyr::spread(key = cancer_types, value = n) -> pattern
+# 
+# cancer_rank <- pattern %>% fun_rank_cancer()
+# gene_rank <- 
+#   pattern %>% 
+#   fun_rank_gene() %>% 
+#   dplyr::left_join(gene_list, by = "symbol") %>% 
+#   dplyr::filter( rank >= 5) %>% 
+#   dplyr::mutate(color = plyr::revalue(status, replace = c('a' = "#e41a1c", "l" = "#377eb8", "i" = "#4daf4a", "p" = "#984ea3"))) %>% 
+#   dplyr::arrange(color, rank)
+# 
+# expr_clinical_sig_pval %>% 
+#   ggplot(aes(x = cancer_types, y = symbol, color = status)) +
+#   geom_point(aes(size = -log10(p.value))) +
+#   scale_x_discrete(limit = cancer_rank$cancer_types) +
+#   scale_y_discrete(limit = gene_rank$symbol) +
+#   scale_size_continuous(name = "P-value") +
+#   theme(
+#     panel.background = element_rect(colour = "black", fill = "white"),
+#     panel.grid = element_line(colour = "grey", linetype = "dashed"),
+#     panel.grid.major = element_line(
+#       colour = "grey",
+#       linetype = "dashed",
+#       size = 0.2
+#     ),
+#     
+#     axis.title = element_blank(),
+#     axis.ticks = element_line(color = "black"),
+#     axis.text.y = element_text(color = gene_rank$color),
+#     
+#     legend.text = element_text(size = 12),
+#     legend.title = element_text(size = 14),
+#     legend.key = element_rect(fill = "white", colour = "black")
+#   ) +
+#   ggthemes::scale_color_gdocs(name = "Surivival Worse")-> p
+# ggsave(
+#   filename = "fig_03_d_survival_sig_genes_serminar.pdf",
+#   plot = p,
+#   device = "pdf",
+#   width = 14,
+#   height = 9,
+#   path = survival_path
+# )
 
 
 
