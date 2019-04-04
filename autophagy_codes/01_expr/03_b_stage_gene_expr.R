@@ -122,12 +122,12 @@ expr_stage_sig_pval %>%
 
 expr_stage_sig_pval %>%
   dplyr::select(cancer_types,symbol,p.value,fdr) %>%
-  readr::write_csv(file.path(stage_path,"03_b_stage_gene_expr.csv"))
+  readr::write_tsv(file.path(stage_path,"03_b_stage_gene_expr.csv"))
 
 expr_stage_sig_pval %>%
   dplyr::select(cancer_types,symbol,p.value,fdr) %>%
   dplyr::filter(fdr<=0.05) %>%
-  readr::write_csv(file.path(stage_path,"03_b_stage_gene_fdr0.05.csv"))
+  readr::write_tsv(file.path(stage_path,"03_b_stage_gene_fdr0.05.csv"))
 
 # expr_stage_sig_pval <- readr::read_rds(path = file.path(stage_path, ".rds_03_b_stage_gene_expr.rds.gz"))
 #--------------------------------------------------------
