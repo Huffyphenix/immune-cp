@@ -1,9 +1,10 @@
 library(magrittr)
 library(ggplot2)
-out_path <- "/project/huff/huff/immune_checkpoint/result_20171025"
+basic_path <- "/home/huff/project/immune_checkpoint"
+out_path <- file.path(basic_path,"result_20171025")
 subtype_path <- file.path(out_path, "c_2_subtype/")
-tcga_path <- "/project/huff/huff/immune_checkpoint/data/TCGA_data"
-expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
+tcga_path <- file.path(basic_path,"data/TCGA_data")
+expr_path <- file.path(basic_path,"expr_rds")
 
 clinical_subtype <- 
   readr::read_rds(path = file.path(tcga_path,"pancan34_clinical_subtype.rds.gz")) %>% 
