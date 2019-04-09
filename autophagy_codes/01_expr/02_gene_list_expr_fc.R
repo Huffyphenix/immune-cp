@@ -13,7 +13,7 @@ expr_path<-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
 gene_list$symbol<-as.character(gene_list$symbol)
-ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
 fn_site_color <- function(.n,.x){
   print(.n)
   if(.x=="Mainly_Tumor"){

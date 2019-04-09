@@ -7,24 +7,26 @@ library(ComplexHeatmap)
 library(magrittr)
 
 # data path ---------------------------------------------------------------
-
-data_result_path <- "/project/huff/huff/immune_checkpoint/genelist_data"
-result_path <- file.path(paste("/project/huff/huff/immune_checkpoint/result_20171025/subtype_analysis/coca_scaled/cluster",C,sep="_"))
-
-load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
-source("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
-
-# load COCA result
-results <- readr::read_rds(path = file.path(data_result_path, ".nonscale_data.recode.combined.ConsensusClusterplus.rds.gz"))
+basic_path <- "/home/huff/project/immune_checkpoint/result_20171025"
+data_result_path <- file.path(basic_path,"genelist_data")
 
 # best K we got from 4.6.get_best_clusterL_COCA_scaled.R
 C = 6
+result_path <- file.path(basic_path,paste("subtype_analysis/coca_scaled/cluster",C,sep="_"))
+
+load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
+source("/project/huff/huff/github/immune-cp/subtype_analysis/.rda_IMK_mutationburden_cancerSubtype_analysis.rdafuntions_to_draw_pic.R")
+
+# load COCA result
+results <- readr::read_rds(path = file.path(data_result_path, ".recode.combined.ConsensusClusterplus-exp-cnv-methyalltags.rds.gz"))
+
+
 
 W <- results[[C]][['consensusMatrix']]
 group <- results[[C]][['consensusClass']]
 W <- matrix(W,nrow = length(group),dimnames = list(names(group),names(group)))
 
-clinical_tcga <- readr::read_rds(file.path("/project/huff/huff/TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-cancer_types) %>%
   unique() %>%

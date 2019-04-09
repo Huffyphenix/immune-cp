@@ -3,10 +3,13 @@
 library(magrittr)
 
 # data path ---------------------------------------------------------------
-xcell_path <- "/project/huff/huff/data/TCGA/immune_infiltration/xCell"
-purity_path <- "/project/huff/huff/data/TCGA_tumor_purity_from_ncomms9971"
-immune_path <- "/project/huff/huff/immune_checkpoint"
-tcga_path <- file.path(immune_path,"/data/TCGA_data")
+basic_path <- "/home/huff/project"
+
+xcell_path <- file.path(basic_path,"data/TCGA/immune_infiltration/xCell")
+
+purity_path <- file.path(basic_path,"data/TCGA_tumor_purity_from_ncomms9971")
+immune_path <- file.path(basic_path,"immune_checkpoint")
+tcga_path <- file.path(immune_path,"data/TCGA_data")
 
 
 # load data ---------------------------------------------------------------
@@ -38,7 +41,7 @@ fn_get_subset_samples <- function(.cancer,.x){
     t() %>%
     as.data.frame()-> .x.fiter
   rownames(.x.fiter) <- t(.x.t["symbol",])
-  .x.fiter <- .x.fiter[-1,]
+  .x.fiter <- .x.fiter[,-1]
   
   print(.cancer)
   .x.fiter
@@ -46,6 +49,7 @@ fn_get_subset_samples <- function(.cancer,.x){
 
 
 all_TCGA_exp %>%
+  # head(1) %>%
   dplyr::mutate(expr_filter=purrr::map2(cancer_types,expr,.f=fn_get_subset_samples)) %>%
   dplyr::select(-expr) -> smaple_exp.matrix
 

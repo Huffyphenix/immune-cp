@@ -27,26 +27,36 @@ ICP_methy %>%
 ICP_methy.gather %>%
   tidyr::unnest() %>%
   dplyr::filter(! is.na(methy)) %>%
-  dplyr::filter(substr(barcode,14,14)!=1) -> ICP_methy.gather.unnest  # only tumor samles are included.
+  dplyr::filter(substr(barcode,14,14)!=1) -> ICP_methy.gather.unnest
 
-ICP_methy.gather %>%
-  readr::write_rds(file.path(data_result_path,"PanCan_ICP_methy_gather.alltag.rds.gz"),compress = "gz")
-
+# scaled by cancer types
 ICP_methy.gather.unnest %>%
   dplyr::mutate(methy = as.numeric(methy)) %>%
-  dplyr::select(tag_symbol,barcode,methy) %>%
+  dplyr::group_by(cancer_types,tag_symbol) %>%
+  dplyr::mutate(methy_scaled = scale(methy)) %>%
+  dplyr::select(-methy) %>%
+  dplyr::ungroup() ->  ICP_methy.gather.unnest.scaled
+
+ICP_methy.gather.unnest.scaled %>%
+  dplyr::select(tag_symbol,barcode,methy_scaled) %>%
   dplyr::group_by(tag_symbol,barcode) %>%
-  dplyr::mutate(methy = mean(methy)) %>%
+  dplyr::mutate(methy_scaled = mean(methy_scaled)) %>%
   unique() %>%
   dplyr::ungroup() %>%
-  tidyr::spread(key = barcode,value = methy) -> PanCan_ICP_methy.spread
+  tidyr::spread(key = barcode,value = methy_scaled) -> PanCan_ICP_methy.spread
 
 PanCan_ICP_methy.spread[1:10,1:2]
 
 PanCan_ICP_methy_matrix <- as.matrix(PanCan_ICP_methy.spread[,-1])
 rownames(PanCan_ICP_methy_matrix) <- PanCan_ICP_methy.spread$tag_symbol
 PanCan_ICP_methy_matrix %>%
-  readr::write_rds(file.path(data_result_path,"PanCan_ICP_methy_matrix.alltag.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(data_result_path,"PanCan_ICP_methy_matrix.alltag-scaled.rds.gz"),compress = "gz")
+
+# memary controling
+rm(PanCan_ICP_methy.spread)
+rm(ICP_methy.gather.unnest.scaled)
+rm(ICP_methy.gather.unnest)
+rm(ICP_methy)
 
 ### do cluster analysis
 
@@ -64,5 +74,5 @@ dt = as.dist(1-cor(dc,method="pearson"))
 results = ConsensusClusterPlus(dt,maxK=20,reps=100,pItem=0.8,pFeature=1,title="methy_CC",distance="pearson",clusterAlg="hc",seed=1262118388.71279)
 
 results %>%
-  readr::write_rds(file.path(data_result_path,"genelist_methy_alltag_CC_20.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(data_result_path,"genelist_methy_alltag-scaled_CC_20.rds.gz"),compress = "gz")
 

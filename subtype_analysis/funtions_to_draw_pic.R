@@ -1,4 +1,4 @@
-fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6){
+fn_survival <- function(data,title,color,group,sur_name,result_path,h,w,lx=0.8,ly=0.6){
   library(survival)
   library(survminer)
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
@@ -17,7 +17,10 @@ fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6)
   #   ) -> legend
   tibble::tibble(group = group, color = color) %>%
     dplyr::inner_join(data,by="group") %>%
-    dplyr::mutate(group = paste(group,sep="")) %>%
+    dplyr::group_by(group) %>%
+    dplyr::mutate(n = n()) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group = paste(group," ,n=",n,sep="")) %>%
     dplyr::select(group,color) %>%
     unique() -> color_paired
   survminer::ggsurvplot(fit,pval=F, #pval.method = T,
@@ -41,7 +44,7 @@ fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6)
                           legend.title = element_blank(),
                           axis.title = element_text(size = 12,color = "black")
                         )
-   ) +
+   )[[1]] +
     scale_color_manual(
       values = color_paired$color,
       labels = color_paired$group
@@ -110,7 +113,7 @@ fn_mutation_burden_all <- function(data,group,value,color,xlab,comp_list,m_a_nam
           text = element_text(size = 12, colour = "black"),
           strip.text = element_text(size = 12))
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
-    # ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
+    ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
   ggsave(filename =paste(m_a_name,"png",sep="."), path = result_path,device = "png",width = w,height = h)
   ggsave(filename =paste(m_a_name,"pdf",sep="."), path = result_path,device = "pdf",width = w,height = h)
 }
