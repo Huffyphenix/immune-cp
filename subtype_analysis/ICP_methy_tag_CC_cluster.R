@@ -20,6 +20,7 @@ fn_data_process <- function(.x){
 }
 
 ICP_methy %>%
+  head(2) %>%
   dplyr::mutate(gather = purrr::map(methy,fn_data_process)) %>%
   dplyr::select(-methy) -> ICP_methy.gather
 
