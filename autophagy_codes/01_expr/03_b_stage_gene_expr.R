@@ -258,7 +258,7 @@ fun_draw_boxplot_filter <- function(cancer_types, merged_clean, symbol, p.value,
     dplyr::mutate( expr = log2(expr)) %>% 
     dplyr::arrange(stage)
     
-  p_list <- ggpubr::compare_means(expr ~ stage, data = d, method = "t.test")
+  # p_list <- ggpubr::compare_means(expr ~ stage, data = d, method = "t.test")
   
   d %>% 
     dplyr::filter(expr != "-Inf") %>%
