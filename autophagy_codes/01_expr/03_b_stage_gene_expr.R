@@ -1,15 +1,27 @@
 library(magrittr)
 library(ggplot2)
-out_path <- "/project/huff/huff/immune_checkpoint/result_20171025"
+basic_path <- "/home/huff/project/immune_checkpoint"
+out_path <- file.path(basic_path,"result_20171025")
 stage_path <- file.path(out_path, "c_1_stage")
-tcga_path <- "/project/huff/huff/immune_checkpoint/data/TCGA_data"
-expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
+tcga_path <- file.path(basic_path,"data/TCGA_data")
+expr_path <- file.path(out_path,"expr_rds")
 
 
 clinical_stage <- 
   readr::read_rds(path = file.path(tcga_path,"pancan34_clinical_stage.rds.gz")) %>% 
   dplyr::filter(n >= 40) %>% 
   dplyr::select(-n)
+
+
+clinical_tcga <- readr::read_rds(file.path("/home/huff/project","TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+  tidyr::unnest() %>%
+  dplyr::select(-cancer_types) %>%
+  unique() %>%
+  dplyr::mutate(OS=as.numeric(OS),Status=as.numeric(Status),Age=as.numeric(Age)) %>%
+  dplyr::group_by(barcode) %>%
+  dplyr::mutate(OS= max(OS)) %>%
+  dplyr::mutate(Status =  max(Status)) %>%
+  dplyr::ungroup()
 
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
@@ -217,6 +229,7 @@ readr::write_rds(
 )
 #-------------------------------------
 library("ggthemes","ggpubr")
+library(export)
 fun_draw_boxplot <- function(cancer_types, merged_clean, symbol, p.value, fdr){
   # print(cancer_types)
   p_val <- signif(-log10(p.value), digits = 3)
@@ -237,7 +250,7 @@ fun_draw_boxplot <- function(cancer_types, merged_clean, symbol, p.value, fdr){
 fun_draw_boxplot_filter <- function(cancer_types, merged_clean, symbol, p.value, fdr){
   p_val <- signif(-log10(p.value), digits = 3)
   gene <- symbol
-  fig_name <- paste(cancer_types, gene, p_val, "pdf", sep = ".")
+  fig_name <- paste(cancer_types, gene, p_val, sep = "_")
   comp_list <- list(c("Stage I", "Stage II"), c("Stage II", "Stage III"), c("Stage III", "Stage IV"))
   
   d <- merged_clean %>% 
@@ -247,21 +260,34 @@ fun_draw_boxplot_filter <- function(cancer_types, merged_clean, symbol, p.value,
     
   p_list <- ggpubr::compare_means(expr ~ stage, data = d, method = "t.test")
   
-  if(p_list %>% .$p %>% .[3] < 0.05){
+  d %>% 
+    dplyr::filter(expr != "-Inf") %>%
+    dplyr::filter(stage == "Stage I") %>%
+    dplyr::select(expr) %>%
+    max() ->max_exp
+  # if(p_list %>% .$p %>% .[3] < 0.05){
     d %>% 
-      ggpubr::ggboxplot(x = "stage", y = "expr",  color = "stage", pallete = "jco"  ) +
+      ggpubr::ggviolin(x = "stage", y = "expr",  fill = "stage", pallete = "jco", alpha = 0.5) +
       ggpubr::stat_compare_means(comparisons = comp_list, method = "t.test") + 
-      ggpubr::stat_compare_means(method = "anova", label.y = 14) +
-      labs(x  = "", y = "Expression (log2 RSEM)", title = paste(gene, "expression subtype change in", cancer_types)) +
-      ggthemes::scale_color_gdocs() -> p
-      ggsave(filename = fig_name, plot = p, path = file.path(stage_path, "boxplot_stageI_vs_IV"), width = 6, height = 6,  device = "pdf")
-  } else{
-    print(fig_name)
-  }
+      ggpubr::stat_compare_means(method = "anova",label.y = max_exp+3) +
+      labs(x  = "", y = "Expression (log2 RSEM)", title = paste(cancer_types, gene, sep=", ")) +
+      theme(legend.position = "none") +
+      ggthemes::scale_fill_gdocs() -> p
+    
+      ggsave(filename = paste(fig_name,".pdf",sep=""), plot = p, path = file.path(stage_path, "boxplot_20190410"), width = 4, height = 3,  device = "pdf")
+      ggsave(filename = paste(fig_name,".png",sep=""), plot = p, path = file.path(stage_path, "boxplot_20190410"), width = 4, height = 3,  device = "pdf")
+      
+      export::graph2ppt( x=p, file = file.path(stage_path, "boxplot_20190410",paste(fig_name,".pptx",sep="")),width = 4, height = 3)
+  # } else{
+    # print(fig_name)
+  # }
 }
 
 
-expr_stage_sig_pval %>% dplyr::select(-order)%>% purrr::pwalk(.f = fun_draw_boxplot)
+expr_stage_sig_pval %>%
+  dplyr::select(-order)%>%
+  dplyr::filter(fdr<=0.05) %>%
+  purrr::pwalk(.f = fun_draw_boxplot_filter)
 # expr_stage_sig_pval %>% purrr::pwalk(.f = fun_draw_boxplot_filter)
 
 
