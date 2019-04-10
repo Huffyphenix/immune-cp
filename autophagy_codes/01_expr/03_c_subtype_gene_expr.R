@@ -4,13 +4,13 @@ basic_path <- "/home/huff/project/immune_checkpoint"
 out_path <- file.path(basic_path,"result_20171025")
 subtype_path <- file.path(out_path, "c_2_subtype/")
 tcga_path <- file.path(basic_path,"data/TCGA_data")
-expr_path <- file.path(basic_path,"expr_rds")
+expr_path <- file.path(out_path,"expr_rds")
 
 clinical_subtype <- 
   readr::read_rds(path = file.path(tcga_path,"pancan34_clinical_subtype.rds.gz")) %>% 
   dplyr::select(-n)
 
-gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
+gene_list_path <- file.path(basic_path,"checkpoint/20171021_checkpoint")
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
 gene_list$symbol<-as.character(gene_list$symbol)
 gene_list_expr <- readr::read_rds(path = file.path(expr_path, ".rds_03_a_gene_list_expr.rds.gz"))
@@ -130,7 +130,7 @@ expr_subtype_sig_pval %>%
   readr::write_csv(path = file.path(subtype_path, "03_c_subtype_gene_fdr0.05.csv"))
 
 #----------------------------------------------------
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 fun_rank_cancer <- function(pattern){
   pattern %>% 
     dplyr::summarise_if(.predicate = is.numeric, dplyr::funs(sum(., na.rm = T))) %>%
@@ -199,24 +199,62 @@ ggsave(
 # )
 
 #-----------------------------------------------------------
+library(export)
+compare_list<-function(x){
+  res<-list()
+  for(i in 2:length(x)-1){
+    res<-c(res,list(c(x[i],x[i+1])))
+  }
+  return(res)
+}
+library("ggthemes","ggpubr")
+
 fun_draw_boxplot <- function(cancer_types, merged_clean, symbol, p.value, fdr){
   # print(cancer_types)
   p_val <- signif(-log10(p.value), digits = 3)
   gene <- symbol
-  fig_name <- paste(cancer_types, gene, p_val, "pdf", sep = ".")
+  fig_name <- paste(cancer_types, gene, p_val, sep = "_")
   # comp_list <- list(c("Stage I", "Stage II"), c("Stage II", "Stage III"), c("Stage III", "Stage IV"))
+
+  merged_clean %>% 
+    dplyr::select(subtype) %>% 
+    unique() %>% .[,1] %>% sort() %>%
+    compare_list() ->comp_list
+  
+  merged_clean %>% 
+    dplyr::filter(symbol == gene) %>% 
+    dplyr::mutate( expr = log2(expr)) %>% 
+    dplyr::filter(expr != "-Inf") %>%
+    dplyr::select(expr) %>%
+    max() ->max_exp
+  merged_clean %>% 
+    dplyr::filter(symbol == gene) %>% 
+    dplyr::mutate( expr = log2(expr)) %>% 
+    dplyr::filter(expr != "-Inf") %>%
+    dplyr::select(expr) %>%
+    min() ->min_exp
   merged_clean %>% 
     dplyr::filter(symbol == gene) %>% 
     dplyr::mutate(expr = log2(expr)) %>% 
     dplyr::arrange(subtype) %>% 
-    ggpubr::ggboxplot(x = "subtype", y = "expr",  color = "subtype", pallete = "jco"  ) +
-    ggpubr::stat_compare_means(method = "anova") +
-    labs(x  = "", y = "Expression (log2 RSEM)", title = paste(gene, "expression subtype change in", cancer_types)) +
-    ggthemes::scale_color_gdocs() -> p
-  ggsave(filename = fig_name, plot = p, path = file.path(subtype_path, "boxplot"), width = 6, height = 6,  device = "pdf")
+    ggpubr::ggviolin(x = "subtype", y = "expr",  fill = "subtype", pallete = "jco",alpha = 0.5) +
+    theme(legend.position = "none") +
+    ggpubr::stat_compare_means(comparisons = comp_list, method = "t.test") + 
+    # ylim(min_exp-1,max_exp+1) +
+    #ggpubr::stat_compare_means(method = "kruskal.test",label.y = max_exp+6,label.x=1,label.sep = "\n") +
+    # geom_text(label = paste("Oneway.test:" ,"\n","p=",signif(p.value,3),sep=""),x=1,y=max_exp+5,size=3)+
+    labs(x  = "", y = "Expression (log2 RSEM)",title=paste(cancer_types,gene,sep=", ")) +
+    # geom_text(label=paste(cancer_types,gene,sep="\n"),x =title.pos.x,y=max_exp+6,size=4,colour="black")+
+    ggthemes::scale_fill_gdocs() -> p
+  ggsave(filename = paste(fig_name,".pdf",sep = ""), plot = p, path = file.path(subtype_path, "boxplot"), width = 4, height = 3,  device = "pdf")
+  ggsave(filename = paste(fig_name,".png",sep = ""), plot = p, path = file.path(subtype_path, "boxplot"), width = 4, height = 3,  device = "png")
+  
+  export::graph2ppt(x = p,file = file.path(subtype_path, "boxplot",paste(fig_name,".pptx",sep = "")), width = 4, height = 3,font = "Times New Roman")
 }
 
-expr_subtype_sig_pval %>% purrr::pwalk(.f = fun_draw_boxplot)
+expr_subtype_sig_pval %>% 
+  dplyr::filter(fdr<=0.05) %>%
+  purrr::pwalk(.f = fun_draw_boxplot)
 
 
 save.image(file = file.path(subtype_path, ".rda_03_c_subtype_gene_expr.rda"))
