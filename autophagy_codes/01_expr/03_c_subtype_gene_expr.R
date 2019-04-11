@@ -9,6 +9,17 @@ expr_path <- file.path(out_path,"expr_rds")
 clinical_subtype <- 
   readr::read_rds(path = file.path(tcga_path,"pancan34_clinical_subtype.rds.gz")) %>% 
   dplyr::select(-n)
+clinical_subtype %>% 
+  dplyr::mutate(type = purrr::map(subtype,.f=function(.x){
+    .x$subtype %>% 
+      table() %>% 
+      t() %>% 
+      t() %>% 
+      as.data.frame() %>%
+      dplyr::as.tbl() %>% 
+      dplyr::select(-Var2)})) %>% 
+  dplyr::select(-subtype) %>% 
+  tidyr::unnest() -> cancer_subtype_summary
 
 gene_list_path <- file.path(basic_path,"checkpoint/20171021_checkpoint")
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
