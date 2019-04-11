@@ -2,19 +2,20 @@ library(methods)
 library(magrittr)
 library(utils)
 
-out_path <- "/project/huff/huff/immune_checkpoint/result_20171025"
+out_path <- "/home/huff/project/immune_checkpoint/result_20171025"
 cnv_path <- file.path(out_path, "m_1_cnv")
-tcga_path <- "/project/huff/huff/immune_checkpoint/data/TCGA_data"
-expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
+tcga_path <- "/home/huff/project/immune_checkpoint/data/TCGA_data"
+expr_path <-c("/home/huff/project/immune_checkpoint/result_20171025/expr_rds")
 gene_list_cnv <- readr::read_rds(file.path(cnv_path, '.rds_02_cnv_a_gene_list.rds.gz'))
 
 fn_ex <- function(V1, V2, .data, cancer_types){
   # .data <- filter_cnv
-  # V1 <- 'MAP1LC3A'
-  # V2 <- 'MAP1LC3B'
+  # V1 <- 'CD276'
+  # V2 <- 'VTCN1'
   .data %>% 
     dplyr::filter(symbol %in% c(V1, V2)) %>% 
-    tidyr::gather(key = barcode, value = gistic, -symbol) %>% 
+    tidyr::gather(key = barcode, value = gistic, -symbol) -> plot_ready
+  plot_ready %>% 
     tidyr::spread(key = symbol, value = gistic) %>% 
     dplyr::select(-barcode) -> .d
   .g_name <- colnames(.d)
