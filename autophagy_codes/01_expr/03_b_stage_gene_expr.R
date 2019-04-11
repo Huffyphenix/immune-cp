@@ -255,13 +255,13 @@ fun_draw_boxplot_filter <- function(cancer_types, merged_clean, symbol, p.value,
   
   d <- merged_clean %>% 
     dplyr::filter(symbol == gene) %>% 
+    dplyr::mutate(expr = ifelse(expr==0,1,expr)) %>%
     dplyr::mutate( expr = log2(expr)) %>% 
     dplyr::arrange(stage)
     
   # p_list <- ggpubr::compare_means(expr ~ stage, data = d, method = "t.test")
   
   d %>% 
-    dplyr::filter(expr != "-Inf") %>%
     dplyr::filter(stage == "Stage I") %>%
     dplyr::select(expr) %>%
     max() ->max_exp
@@ -275,7 +275,7 @@ fun_draw_boxplot_filter <- function(cancer_types, merged_clean, symbol, p.value,
       ggthemes::scale_fill_gdocs() -> p
     
       ggsave(filename = paste(fig_name,".pdf",sep=""), plot = p, path = file.path(stage_path, "boxplot_20190410"), width = 4, height = 3,  device = "pdf")
-      ggsave(filename = paste(fig_name,".png",sep=""), plot = p, path = file.path(stage_path, "boxplot_20190410"), width = 4, height = 3,  device = "pdf")
+      ggsave(filename = paste(fig_name,".png",sep=""), plot = p, path = file.path(stage_path, "boxplot_20190410"), width = 4, height = 3,  device = "png")
       
       export::graph2ppt( x=p, file = file.path(stage_path, "boxplot_20190410",paste(fig_name,".pptx",sep="")),width = 4, height = 3)
   # } else{

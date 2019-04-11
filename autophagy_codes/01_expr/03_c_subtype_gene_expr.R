@@ -221,25 +221,24 @@ fun_draw_boxplot <- function(cancer_types, merged_clean, symbol, p.value, fdr){
     unique() %>% .[,1] %>% sort() %>%
     compare_list() ->comp_list
   
-  merged_clean %>% 
+  d <- merged_clean %>% 
     dplyr::filter(symbol == gene) %>% 
-    dplyr::mutate( expr = log2(expr)) %>% 
-    dplyr::filter(expr != "-Inf") %>%
+    dplyr::mutate(expr = ifelse(expr==0,1,expr)) %>%
+    dplyr::mutate( expr = log2(expr)) 
+    
+  
+  d %>% 
+    dplyr::filter(stage == "Stage I") %>%
     dplyr::select(expr) %>%
     max() ->max_exp
-  merged_clean %>% 
-    dplyr::filter(symbol == gene) %>% 
-    dplyr::mutate( expr = log2(expr)) %>% 
-    dplyr::filter(expr != "-Inf") %>%
+  d %>%
     dplyr::select(expr) %>%
     min() ->min_exp
-  merged_clean %>% 
-    dplyr::filter(symbol == gene) %>% 
-    dplyr::mutate(expr = log2(expr)) %>% 
+  d %>% 
     dplyr::arrange(subtype) %>% 
     ggpubr::ggviolin(x = "subtype", y = "expr",  fill = "subtype", pallete = "jco",alpha = 0.5) +
     theme(legend.position = "none") +
-    ggpubr::stat_compare_means(comparisons = comp_list, method = "t.test") + 
+    ggpubr::stat_compare_means(method = "anova",label.y = max_exp+3) +
     # ylim(min_exp-1,max_exp+1) +
     #ggpubr::stat_compare_means(method = "kruskal.test",label.y = max_exp+6,label.x=1,label.sep = "\n") +
     # geom_text(label = paste("Oneway.test:" ,"\n","p=",signif(p.value,3),sep=""),x=1,y=max_exp+5,size=3)+

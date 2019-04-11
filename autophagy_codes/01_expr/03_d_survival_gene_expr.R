@@ -98,11 +98,11 @@ fun_draw_survival <- function(symbol, p.value, cancer_types, expr_clinical_ready
                surv.median.line = "hv",
                xlab = "Survival in years",
                ylab = 'Probability of survival',
+               legend= c(0.8,0.8),
                ggtheme = theme(
                  panel.border = element_blank(),
                  panel.grid.major = element_blank(),
                  panel.grid.minor = element_blank(),
-                 legend.position = c(0.8,0.6),
                  axis.line = element_line(colour = "black", size = 0.5), 
                  panel.background = element_rect(fill = "white"),
                  legend.key = element_blank(),
@@ -115,9 +115,10 @@ fun_draw_survival <- function(symbol, p.value, cancer_types, expr_clinical_ready
       scale_color_manual(
         values = c("red3","dodgerblue2"),
         labels = paste(c("High","Low"),",n =",fit_x$n,sep="")
-      )
+      ) -> p
     ggsave(filename = paste(fig_name,"pdf",sep="."), device = "pdf", path = file.path(survival_path, "OS_survival"), width = 4, height = 3)
     ggsave(filename = paste(fig_name,"png",sep="."), device = "png", path = file.path(survival_path, "OS_survival"), width = 4, height = 3)
+    export::graph2ppt(x=p, file = file.path(survival_path, "OS_survival",paste(fig_name,".pptx",sep="")),width = 4, height = 3)
   }
 }
 fun_clinical_test <- function(expr_clinical_ready, cancer_types){
