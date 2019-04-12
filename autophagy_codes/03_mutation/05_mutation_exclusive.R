@@ -87,8 +87,8 @@ fn_ex <- function(V1, V2, .data, cancer_types){
   # V2 <- 'HLA-E'
   V1 <- as.character(V1)
   V2 <- as.character(V2)
- print(V1)
-  print(V2)
+ # print(V1)
+ #  print(V2)
   .data %>% 
     dplyr::filter(symbol %in% c(V1, V2)) %>% 
     tidyr::gather(key = barcode, value = mut, -symbol) %>%
@@ -128,35 +128,39 @@ fn_mutal_exclusive <- function(cancer_types, ICP_SNV, highGene_SNV, cluster){
   ICP_SNV %>%
     rbind(highGene_SNV) -> combine_data
   .gene_pairs %>% 
-    multidplyr::partition(cluster = cluster) %>%
-    multidplyr::cluster_library("magrittr") %>%
-    multidplyr::cluster_library("showtext") %>%
-    multidplyr::cluster_library("ggplot2") %>%
-    multidplyr::cluster_library("export") %>%
-    multidplyr::cluster_assign_value("fn_ex", fn_ex) %>%
-    multidplyr::cluster_assign_value("combine_data", combine_data) %>%
-    multidplyr::cluster_assign_value("cancer_types", cancer_types) %>%
-    multidplyr::cluster_assign_value("fn_draw_exclusive",fn_draw_exclusive) %>%
-    multidplyr::cluster_assign_value("snv_path",snv_path) %>%
+    # multidplyr::partition(cluster = cluster) %>%
+    # multidplyr::cluster_library("magrittr") %>%
+    # multidplyr::cluster_library("showtext") %>%
+    # multidplyr::cluster_library("ggplot2") %>%
+    # multidplyr::cluster_library("export") %>%
+    # multidplyr::cluster_assign_value("fn_ex", fn_ex) %>%
+    # multidplyr::cluster_assign_value("combine_data", combine_data) %>%
+    # multidplyr::cluster_assign_value("cancer_types", cancer_types) %>%
+    # multidplyr::cluster_assign_value("fn_draw_exclusive",fn_draw_exclusive) %>%
+    # multidplyr::cluster_assign_value("snv_path",snv_path) %>%
     dplyr::mutate(rs = purrr::map2(Var1, Var2, .f = fn_ex, .data = combine_data, cancer_types = cancer_types)) %>% 
-    dplyr::collect() %>%
+    # dplyr::collect() %>%
     dplyr::as_tibble() %>%
     dplyr::ungroup() %>%
-    dplyr::select(-PARTITION_ID) %>%
+    # dplyr::select(-PARTITION_ID) %>%
     dplyr::select(rs) %>% 
-    tidyr::unnest() %>% 
-    tidyr::separate(col = te, into = c('cancer_types', 'g1', 'g2')) -> .gene_pairs_pval
+    tidyr::unnest() -> .gene_pairs_pval
   
-  .gene_pairs_pval %>% 
-    dplyr::mutate(fdr = p.adjust(p_val, method = 'fdr'))
+  .gene_pairs_pval 
 }
 
-cluster <- multidplyr::create_cluster(5)
+# cluster <- multidplyr::create_cluster(5)
 ICP_highGene_snv %>% 
   # dplyr::filter(cancer_types == "UVM") %>%
   purrr::pmap(.f = fn_mutal_exclusive, cluster = cluster) %>% 
   dplyr::bind_rows() -> mutual_exclusive
-parallel::stopCluster(cluster)
+# parallel::stopCluster(cluster)
 
 mutual_exclusive %>%
   readr::write_tsv(file.path(snv_path,"mutual_exclusive","ICP_mutual_exclusive_highGeneSNV.tsv"))
+
+mutual_exclusive %>% 
+  tidyr::separate(col = te, into = c('cancer_types', 'g1', 'g2')) %>% 
+  dplyr::mutate(fdr = p.adjust(p_val, method = 'fdr')) -> mutual_exclusive.fdr
+mutual_exclusive.fdr %>%
+  readr::write_tsv(file.path(snv_path,"mutual_exclusive","ICP_mutual_exclusive_highGeneSNV.fdr.tsv"))
