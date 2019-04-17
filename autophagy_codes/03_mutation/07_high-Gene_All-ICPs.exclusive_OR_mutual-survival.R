@@ -27,7 +27,7 @@ library(export)
 source("/home/huff/project/github/immune-cp/autophagy_codes/03_mutation/fn_get_mutation_exclusive.R")
 source("/home/huff/project/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
 
-
+library(survival)
 fn_survival_on <- function(V1, V2, .data1, .data2, cancer_types, .survival){
   # .data <- filter_cnv
   # V1 <- 'TP53'
@@ -41,7 +41,7 @@ fn_survival_on <- function(V1, V2, .data1, .data2, cancer_types, .survival){
     dplyr::filter(symbol %in% c(V1)) %>% 
     dplyr::select(-symbol) %>%
     tidyr::gather(key = barcode, value = mut) %>%
-    dplyr::mutate(mut = ifelse(is.na(mut),0,mut)) %>%
+    dplyr::mutate(mut = ifelse(is.na(mut),0,1)) %>%
     dplyr::mutate(mut = as.integer(mut)) %>%
     dplyr::inner_join(.data1, by = "barcode") %>%
     tidyr::unite(group, c("mut", V2)) %>%
@@ -54,12 +54,13 @@ fn_survival_on <- function(V1, V2, .data1, .data2, cancer_types, .survival){
   
   # plot if pvalue is significant
   if (kmp <= 0.05) {
-    title <- paste(cancer_types, paste(V1, V2, sep = "-"), "p=",signif(kmp,3))
+    title <- paste(cancer_types, paste(V1, V2, sep = "-"))
     color_list <- tibble::tibble(group = c( "0_0", "0_1", "1_0", "1_1"), 
                    color = c("#00B2EE", "#CDAD00", "pink1","#CD2626"))
-    sur_name <- paste(cancer_types, V1, V2, kmp, sep = "_")
+    sur_name <- paste(cancer_types, V1, V2, sep = "_")
     result_path <- file.path(snv_path,"mutual_exclusive_allICPs-highGene","survival")
-    fn_survival(plot_ready,title,color_list,"group",sur_name,result_path,h,w,lx = 0.8,ly = 0.6)
+    fn_survival(plot_ready,title,color_list,"group",sur_name,result_path,3,4,lx = 0.8,ly = 0.8)
+    print("draw survival plot ----------")
   }
   
   name <- paste(c(cancer_types, V1, V2), collapse = "_")
@@ -86,10 +87,8 @@ fn_survival_pre <- function(cancer_types, ICP_SNV, highGene_SNV, survival, clust
     dplyr::select(bcr_patient_barcode, PFI.1, PFI.time.1) %>%
     dplyr::rename("barcode" = "bcr_patient_barcode","status" = "PFI.1","time" = "PFI.time.1")
   
-  expand.grid(highGene_SNV$symbol,ICP_overall_mut$symbol) -> .gene_pairs
-  ICP_overall_mut %>%
-    rbind(highGene_SNV) %>%
-    tidyr -> combine_data
+  expand.grid(highGene_SNV$symbol,"ICPs") -> .gene_pairs
+  
   .gene_pairs %>% 
     dplyr::mutate(rs = purrr::map2(Var1, Var2, .f = fn_survival_on, .data1 = ICP_overall_mut, .data2 = highGene_SNV,cancer_types = cancer_types, .survival = .survival)) %>% 
     dplyr::as_tibble() %>%
