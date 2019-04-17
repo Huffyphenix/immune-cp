@@ -43,20 +43,15 @@ fn_survival <- function(data,title,color,group,sur_name,result_path,h,w,lx=0.8,l
                           axis.text = element_text(size = 12),
                           legend.title = element_blank(),
                           axis.title = element_text(size = 12,color = "black"),
-                          text = element_text(family = "Arial", color = "black" )
+                          text = element_text(color = "black" )
                         )
    )[[1]] +
     scale_color_manual(
       values = color_paired$color,
       labels = color_paired$group
-    )
-  pdf(file.path(result_path, paste(sur_name,"pdf",sep = ".")), height = h, width = w)
-  showtext_begin()
-  p
-  showtext_end()
-  dev.off()
-  ggsave(filename = paste(sur_name,signif(kmp, 2),"png",sep = "."), path = result_path,device = "png",height = h,width = w)
-  # ggsave(filename = paste(sur_name,signif(kmp, 2),"pdf",sep = "."), path = result_path,device = "pdf",height = h,width = w)
+    ) -> p
+  ggsave(filename = paste(sur_name,signif(kmp, 2),"png",sep = "."), plot = p, path = result_path,device = "png",height = h,width = w)
+  ggsave(filename = paste(sur_name,signif(kmp, 2),"pdf",sep = "."), plot = p, path = result_path,device = "pdf",height = h,width = w)
 }
 
 fn_mutation_burden <- function(data,group,facet="~ cancer_types",value,color,xlab,comp_list,m_name,result_path,w=7,h=10){
