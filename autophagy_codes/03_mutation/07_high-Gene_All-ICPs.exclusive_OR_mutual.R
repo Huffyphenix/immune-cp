@@ -11,12 +11,12 @@ snv_path <- file.path(out_path, "m_2_snv")
 # LOAD DATA 
 ICP_highGene_snv <- readr::read_rds(file.path(snv_path,"ICP_highGene_snv.rds.gz")) 
 
-gene_list_snv.count_per.filter_hypermutation <-
-  readr::read_rds(path = file.path(snv_path, "syn7824274_snv_gene_list_snv_count_per.filter_hypermutation.rds.gz"))
-
-ICP_highGene_snv %>%
-  dplyr::inner_join(gene_list_snv.count_per.filter_hypermutation,by="cancer_types") %>%
-  dplyr::rename("sm_count"="res") -> ICP_SNV_combine_data
+# gene_list_snv.count_per.filter_hypermutation <-
+#   readr::read_rds(path = file.path(snv_path, "syn7824274_snv_gene_list_snv_count_per.filter_hypermutation.rds.gz"))
+# 
+# ICP_highGene_snv %>%
+#   dplyr::inner_join(gene_list_snv.count_per.filter_hypermutation,by="cancer_types") %>%
+#   dplyr::rename("sm_count"="res") -> ICP_SNV_combine_data
 
 # GET EXCLUSIVE MUTATION PROFILE BETWEEN ICPS IN EACH CANCERS -----------------------
 library(showtext)
@@ -36,7 +36,7 @@ fn_draw_exclusive <- function(plot_ready, V1, V2, cancer_types,p_val,type){
     dplyr::filter_if(.predicate = is.integer, .vars_predicate = dplyr::any_vars(. != 0)) %>% 
     nrow() / nrow(rank_ready) -> diff
   
-  fig_name <- paste(type, cancer_types, p_val, signif(diff, digits = 2), V1, V2, sep = "_")
+  fig_name <- paste(type, cancer_types, V1, V2, p_val, signif(diff, digits = 2),sep = "_")
   
   rank_ready %>%
     dplyr::filter_if(.predicate = is.integer, .vars_predicate = dplyr::any_vars(. >= 1)) %>%
@@ -51,8 +51,8 @@ fn_draw_exclusive <- function(plot_ready, V1, V2, cancer_types,p_val,type){
   
   
   plot_ready %>%
-    dplyr::mutate(mut = ifelse(mut >= 1,1,mut)) %>%
-    ggplot(aes(x = barcode, y = mut, fill = as.factor(mut))) +
+    dplyr::mutate(mut = ifelse(mut >= 1,as.integer(1),mut)) %>%
+    ggplot(aes(x = barcode, y = symbol, fill = as.factor(mut))) +
     geom_tile(color = "white") +
     scale_x_discrete(limits = plot_rank) +
     scale_y_discrete(limits = c(V1,V2)) +
@@ -64,7 +64,7 @@ fn_draw_exclusive <- function(plot_ready, V1, V2, cancer_types,p_val,type){
       values = c( "#D6D6D6", "#FF6A6A")) +
     labs(x = "", y = "", title = paste(V1, "and", V2, "SNV mutual exclusive in", cancer_types, ", p=", p_val)) +
     theme(
-      axis.text = element_blank(),
+      axis.text.x = element_blank(),
       axis.title = element_blank(),
       axis.ticks = element_blank(),
       
@@ -79,18 +79,18 @@ fn_draw_exclusive <- function(plot_ready, V1, V2, cancer_types,p_val,type){
       panel.background = element_blank(),
       panel.spacing.y  = unit(0, "lines"),
       
-      text = element_text(family = "Arial",size = 8, color = "black")
+      text = element_text(size = 8, color = "black")
     )  -> p
   
-  pdf(file.path(snv_path,"mutual_exclusive_allICPs-highGene",paste(fig_name,"pdf",sep = ".")),width = 4,height = 2)
-  showtext_begin()
-  p
-  showtext_end()
-  dev.off()
-  # ggsave(file.path(snv_path,"mutual_exclusive",paste(fig_name,"pdf",sep=".")),device = "pdf",width=6,height=2)
+  # pdf(file.path(snv_path,"mutual_exclusive_allICPs-highGene",paste(fig_name,"pdf",sep = ".")),width = 4,height = 2)
+  # showtext_begin()
+  # p
+  # showtext_end()
+  # dev.off()
+  ggsave(file.path(snv_path,"mutual_exclusive_allICPs-highGene",paste(fig_name,"pdf",sep=".")),device = "pdf",width=4,height=2)
   ggsave(file.path(snv_path,"mutual_exclusive_allICPs-highGene",paste(fig_name,"png",sep = ".")),device = "png",width = 4,height = 2)
   
-  graph2ppt(x = p,file = file.path(snv_path,"mutual_exclusive_allICPs-highGene",paste(fig_name,"pptx",sep = ".")),width = 4,height = 2)
+  # graph2ppt(x = p,file = file.path(snv_path,"mutual_exclusive_allICPs-highGene",paste(fig_name,"pptx",sep = ".")),width = 4,height = 2)
 }
 fn_ex <- function(V1, V2, .data, cancer_types){
   # .data <- filter_cnv
@@ -130,7 +130,7 @@ fn_ex <- function(V1, V2, .data, cancer_types){
   if (result$exclusive_pvalue <= 0.05) {
     fn_draw_exclusive(plot_ready, V1, V2, cancer_types,result$exclusive_pvalue,"Exclusive")
   }
-  if(result$mutual_pvalue <= 0.05){
+  if (result$mutual_pvalue <= 0.05){
     fn_draw_exclusive(plot_ready, V1, V2, cancer_types,result$mutual_pvalue,"Mutual")
   }
   print("end fn_ex --------------")
@@ -147,7 +147,7 @@ fn_mutal_exclusive <- function(cancer_types, ICP_SNV, highGene_SNV, cluster){
     dplyr::mutate(mut_overall = ifelse(mut_overall >0,1,mut_overall)) %>%
     dplyr::ungroup() %>%
     dplyr::select(-symbol,-mut) %>%
-    dplyr::mutate(symbol="ICP") %>%
+    dplyr::mutate(symbol="ICPs") %>%
     dplyr::rename("mut"="mut_overall") %>%
     unique() %>%
     tidyr::spread(key="barcode",value="mut") -> ICP_overall_mut
