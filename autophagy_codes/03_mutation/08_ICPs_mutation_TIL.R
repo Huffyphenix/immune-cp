@@ -70,8 +70,9 @@ fn_mutation_burden_all <- function(data,group,filter,value,facet,color,xlab,titl
           strip.background = element_rect(fill = "white",colour = "white"),
           text = element_text(size = 12, colour = "black"),
           strip.text = element_text(size = 12)) +
-    # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
-    ggpubr::stat_compare_means(comparisons = list(c("ICPs_Mut", "WT")),method = "wilcox.test",label = "p.signif")
+    ggpubr::stat_compare_means()
+    # ggpubr::stat_compare_means(comparisons = list(c("ICPs_Mut", "WT")),method = "wilcox.test",label = "p.signif")
+    
   ggsave(filename = paste(m_a_name,"png",sep = "."), path = result_path,device = "png",width = w,height = h)
   ggsave(filename = paste(m_a_name,"pdf",sep = "."), path = result_path,device = "pdf",width = w,height = h)
   print("end draw --------------")
