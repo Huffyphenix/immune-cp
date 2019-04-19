@@ -1,4 +1,4 @@
-fn_survival <- function(data,title,color,group,sur_name,result_path,h,w,lx=0.8,ly=0.6){
+fn_survival <- function(data,title,color,group,sur_name,xlab,result_path,h,w,lx=0.8,ly=0.6){
   library(survival)
   library(survminer)
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
@@ -27,7 +27,7 @@ fn_survival <- function(data,title,color,group,sur_name,result_path,h,w,lx=0.8,l
                         data = data,
                         surv.median.line = "hv",
                         title = paste(title,", p =", signif(kmp, 2)), # change it when doing diff data
-                        xlab = "Survival in days",
+                        xlab = xlab,
                         ylab = 'Probability of survival',
                         # legend.title = "Methyla group:",
                         legend= c(lx,ly),
