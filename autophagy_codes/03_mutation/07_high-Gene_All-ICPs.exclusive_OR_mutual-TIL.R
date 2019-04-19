@@ -16,10 +16,18 @@ immunity_path_2 <- "/home/huff/project/immune_checkpoint/data/immunity"
 TIMER_immunity_onlyTumor <- readr::read_tsv(file.path(immunity_path_2,"immuneEstimation.txt")) %>%
   dplyr::filter(substr(barcode,14,14)==0) %>%
   dplyr::mutate(barcode = substr(barcode,1,12)) %>%
-  dplyr::mutate(TIL = B_cell+CD4_Tcell+CD8_Tcell+Neutrophil+Macrophage+Dendritic) 
+  dplyr::mutate(TIL = B_cell + CD4_Tcell + CD8_Tcell + Neutrophil + Macrophage + Dendritic) 
+
+# data of survival 
+survival_data <- readr::read_rds(file.path("/home/huff/project/data/TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
+  dplyr::rename("cancer_types" = "type")
+
+ICP_highGene_snv %>%
+  dplyr::inner_join(survival_data, by = "cancer_types") %>%
+  dplyr::rename("survival" = "data") -> ICP_highGene_snv.survival
 
 # survival results from 07_high-Gene_All-ICPs.exclusive_OR_mutual-survival.R
-survival_sig_res <- readr::read_tsv(file.path(snv_path,"mutual_exclusive_allICPs-highGene","survival","allICPs_mutual_exclusive_highGeneSNV-survival.tsv")) %>%
+survival_sig_res <- readr::read_tsv(file.path(snv_path,"mutual_exclusive_allICPs-highGene","survival_5y","allICPs_mutual_exclusive_highGeneSNV-survival.tsv")) %>%
   dplyr::filter(kmp <= 0.05)
 
 # GET TIL BETWEEN GROUPS DEFINED BY ICPS AND HIGHGENE MUTATION IN EACH CANCERS -----------------------
@@ -101,7 +109,7 @@ fn_diff_test <- function(data){
   
 }
 
-fn_TIL_on <- function(V1, V2, .data1, .data2, cancer_types){
+fn_TIL_on <- function(V1, V2, .data1, .data2,.survival, cancer_types){
   # .data <- filter_cnv
   # V1 <- 'TP53'
   # V2 <- 'HLA-E'
@@ -119,7 +127,8 @@ fn_TIL_on <- function(V1, V2, .data1, .data2, cancer_types){
     dplyr::inner_join(.data1, by = "barcode") %>%
     tidyr::unite(group, c("mut", V2)) %>%
     dplyr::inner_join(TIMER_immunity_onlyTumor, by = "barcode") %>%
-    tidyr::gather(-barcode,-group,key = "Cell_type",value = "value") -> plot_ready
+    tidyr::gather(-barcode,-group,key = "Cell_type",value = "value") %>%
+    dplyr::filter(barcode %in% .survival$barcode) -> plot_ready
   
   # get TIL diff between groups, get pvalue 
   plot_ready %>%
@@ -136,7 +145,7 @@ fn_TIL_on <- function(V1, V2, .data1, .data2, cancer_types){
                                  color = c("#00B2EE", "#CDAD00", "pink1","#CD2626"))
     if (nrow(result.sig) <= 3 ) {
       w = 4
-      h = 3} else if (nrow(result.sig) > 3) {
+      h = 3} else if (nrow(result.sig) > 3 & nrow(result.sig) <= 6) {
         w = 6
         h = 5
       } else {
@@ -146,7 +155,7 @@ fn_TIL_on <- function(V1, V2, .data1, .data2, cancer_types){
     fn_mutation_burden_all(data = plot_ready,group = "group",filter = result.sig,
                                    value = "value", facet = "~ Cell_type",color = color_list, 
                                    xlab = "TIL",m_a_name = paste(cancer_types, V1, V2, sep = "_"),
-                           result_path = file.path(snv_path,"mutual_exclusive_allICPs-highGene","TIL"),w = w,h = h)
+                           result_path = file.path(snv_path,"mutual_exclusive_allICPs-highGene","TIL_5y"),w = w,h = h)
   }
   
   
@@ -171,6 +180,12 @@ fn_TIL_pre <- function(cancer_types, ICP_SNV, highGene_SNV, survival, cluster){
     dplyr::rename("ICPs" = "mut_overall") %>%
     unique() -> ICP_overall_mut
   
+  .survival <- survival %>%
+    dplyr::select(bcr_patient_barcode, PFI.1, PFI.time.1) %>%
+    dplyr::rename("barcode" = "bcr_patient_barcode","status" = "PFI.1","time" = "PFI.time.1") %>%
+    dplyr::filter(time <= 1825) %>%
+    dplyr::mutate(time = time/365)
+  
   expand.grid(highGene_SNV$symbol,"ICPs") -> .gene_pairs
   ct <- cancer_types
   survival_sig_res %>%
@@ -179,7 +194,9 @@ fn_TIL_pre <- function(cancer_types, ICP_SNV, highGene_SNV, survival, cluster){
   if (length(g1) >= 1) {
     .gene_pairs %>% 
       dplyr::filter(Var1 %in% g1) %>%
-      dplyr::mutate(rs = purrr::map2(Var1, Var2, .f = fn_TIL_on, .data1 = ICP_overall_mut, .data2 = highGene_SNV,cancer_types = cancer_types)) %>% 
+      dplyr::mutate(rs = purrr::map2(Var1, Var2, .f = fn_TIL_on, 
+                                     .data1 = ICP_overall_mut, .data2 = highGene_SNV,
+                                     .survival = .survival, cancer_types = cancer_types)) %>% 
       dplyr::as_tibble() %>%
       dplyr::ungroup() %>%
       dplyr::select(rs) %>% 
@@ -191,12 +208,12 @@ fn_TIL_pre <- function(cancer_types, ICP_SNV, highGene_SNV, survival, cluster){
 }
 
 # RUNNING
-ICP_highGene_snv %>% 
+ICP_highGene_snv.survival %>% 
   # tail(20) %>%
   purrr::pmap(.f = fn_TIL_pre, cluster = cluster) %>% 
   dplyr::bind_rows() %>%
   tidyr::separate(col = te, into = c('cancer_types', 'g1', 'g2')) -> mutual_exclusive_TIL
 
 mutual_exclusive_TIL %>%
-  readr::write_tsv(file.path(snv_path,"mutual_exclusive_allICPs-highGene", "TIL", "allICPs_mutual_exclusive_highGeneSNV-TIL.tsv"))
+  readr::write_tsv(file.path(snv_path,"mutual_exclusive_allICPs-highGene", "TIL_5y", "allICPs_mutual_exclusive_highGeneSNV-TIL.tsv"))
 

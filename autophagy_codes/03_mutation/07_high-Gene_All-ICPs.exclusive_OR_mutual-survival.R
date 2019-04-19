@@ -58,8 +58,8 @@ fn_survival_on <- function(V1, V2, .data1, .data2, cancer_types, .survival){
     color_list <- tibble::tibble(group = c( "0_0", "0_1", "1_0", "1_1"), 
                    color = c("#00B2EE", "#CDAD00", "pink1","#CD2626"))
     sur_name <- paste(cancer_types, V1, V2, sep = "_")
-    result_path <- file.path(snv_path,"mutual_exclusive_allICPs-highGene","survival")
-    fn_survival(plot_ready,title,color_list,"group",sur_name,result_path,3,4,lx = 0.8,ly = 0.8)
+    result_path <- file.path(snv_path,"mutual_exclusive_allICPs-highGene","survival_5y")
+    fn_survival(plot_ready,title,color_list,"group",sur_name,xlab = "Time (years)",result_path,3,4,lx = 0.8,ly = 0.8)
     print("draw survival plot ----------")
   }
   
@@ -85,7 +85,9 @@ fn_survival_pre <- function(cancer_types, ICP_SNV, highGene_SNV, survival, clust
   
   .survival <- survival %>%
     dplyr::select(bcr_patient_barcode, PFI.1, PFI.time.1) %>%
-    dplyr::rename("barcode" = "bcr_patient_barcode","status" = "PFI.1","time" = "PFI.time.1")
+    dplyr::rename("barcode" = "bcr_patient_barcode","status" = "PFI.1","time" = "PFI.time.1") %>%
+    dplyr::filter(time <= 1825) %>%
+    dplyr::mutate(time = time/365)
   
   expand.grid(highGene_SNV$symbol,"ICPs") -> .gene_pairs
   
@@ -106,5 +108,5 @@ ICP_highGene_snv.survival %>%
   tidyr::separate(col = te, into = c('cancer_types', 'g1', 'g2')) -> mutual_exclusive_survival
 
 mutual_exclusive_survival %>%
-  readr::write_tsv(file.path(snv_path,"mutual_exclusive_allICPs-highGene", "survival", "allICPs_mutual_exclusive_highGeneSNV-survival.tsv"))
+  readr::write_tsv(file.path(snv_path,"mutual_exclusive_allICPs-highGene", "survival_5y", "allICPs_mutual_exclusive_highGeneSNV-survival.tsv"))
 
