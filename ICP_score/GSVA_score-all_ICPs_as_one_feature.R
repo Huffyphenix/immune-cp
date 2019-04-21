@@ -1,5 +1,6 @@
 ############################
 # GSVA score
+# all 79 ICP genes as one feature
 ############################
 library(GSVA)
 library(magrittr)
