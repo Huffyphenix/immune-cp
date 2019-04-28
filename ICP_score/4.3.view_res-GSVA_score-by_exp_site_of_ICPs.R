@@ -67,7 +67,6 @@ fn_heatmap <- function(cancer_types, GSVA ){
   rownames(res.gsva) <- rownames.res.gsva
   colnames(res.gsva) <- colnames.res.gsva
   
-  
   pdf(file.path(res_path,cancer_types,paste(cancer_types,"GSVAscore", "heatmap.pdf", sep = "_")),
       height = 3, width = 6)
   pheatmap(res.gsva, #scale = "row",
@@ -87,6 +86,8 @@ fn_heatmap <- function(cancer_types, GSVA ){
            show_colnames = F, treeheight_col = 30, treeheight_row = 20,
            cutree_cols = 2,main = paste(cancer_types," GSVA score", sep = ","))
   dev.off()
+  
+  ## do consensus cluster
   results = ConsensusClusterPlus(res.gsva,maxK = 5,reps = 100,pItem = 0.8,
                                  pFeature = 1, 
                                  title = file.path(res_path, cancer_types),
