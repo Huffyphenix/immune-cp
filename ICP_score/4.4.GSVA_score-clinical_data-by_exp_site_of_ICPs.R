@@ -39,6 +39,8 @@ study_class <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_
 clinical_info %>%
   dplyr::inner_join(study_class, by = "data ID") %>%
   dplyr::filter(`data type` == "RNA-seq") -> sample_info
+sample_info %>%
+  readr::write_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","RNAseq-sample_info_complete.tsv"))
 
 library(clusterProfiler)
 library(org.Hs.eg.db)
