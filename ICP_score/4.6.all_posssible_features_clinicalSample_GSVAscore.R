@@ -155,4 +155,4 @@ exp_data.nest %>%
   dplyr::select(-data_spread) -> GSVA.score
 
 GSVA.score %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by_tissue-all-possible-features.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by_tissue_target-all-possible-features.rds.gz"), compress = "gz")
