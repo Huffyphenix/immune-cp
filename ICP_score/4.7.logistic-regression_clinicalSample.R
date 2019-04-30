@@ -347,7 +347,65 @@ for(i in 1:n){
 }
 
 ############## features selection
-fn_overlap_select(logistic_feature_Selected_nrepeat) -> final_feature.bycancer
+fn_overlap_select(logistic_feature_Selected_nrepeat.bycancer) -> final_feature.bycancer
 
 # save the results
 save.image(file = file.path(res_path,"logistic_feature_selection.rdata"))
+
+##################################### performing of the feature selected #####################################
+fn_logistc_draw <- function(Cancer.y,blockade.x,response,data_spread,topn_count,dir){
+  ## data prepare
+  data_spread %>%
+    dplyr::inner_join(response, by = "Run") %>%
+    dplyr::select(-Run) %>%
+    dplyr::mutate(Response = as.factor(Response)) -> data.ready
+  data.ready <- na.omit(data.ready)
+  colnames(data.ready) <- gsub("-",".",colnames(data.ready))
+  
+  ## fomula prepare
+  for(i in 1:nrow(topn_count)){
+    if(i == 1){
+      formula <- paste("Response", topn_count$.[i], sep = "~")
+    } else{
+      formula <- paste(formula, topn_count$.[i], sep = "+")
+    }
+  }
+  
+  ## do logistic regression
+  model <- glm( as.formula(formula), data = data.ready, family = binomial)
+  
+  # Make predictions
+  probabilities <- model %>% predict(type = "response")
+  predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
+  observed.classes <- data.ready$Response
+  # Model accuracy
+  accuracy <- mean(predicted.classes == data.ready$Response)
+  error <- mean(predicted.classes != data.ready$Response)
+  
+  # table(observed.classes, predicted.classes)
+  # confusionMatrix(as.factor(predicted.classes), observed.classes,
+  #                 positive = "yes")
+  ## ROC
+  res.roc <- roc(observed.classes, probabilities)
+  pdf(file.path(res_path,dir,paste(Cancer.y,blockade.x,"ROC.pdf", sep="_")),width = 4, height = 3)
+  plot.roc(res.roc, print.auc = TRUE, print.thres = "best")
+  dev.off()
+}
+########################################## 1. features selected by targets and cancers
+data_for_logistic %>%
+  dplyr::inner_join(final_feature, by = c("Cancer.y")) %>%
+  dplyr::select(-blockade.y) %>%
+  purrr::pwalk(.f=fn_logistc_draw,dir="by_cancer_targets")
+
+########################################## 2. features selected by only cancers
+############## used on data classified only by cancer
+data_for_logistic.bycancer %>%
+  dplyr::inner_join(final_feature.bycancer, by = c("Cancer.y")) %>%
+  dplyr::mutate(blockade.x = "ALL") %>%
+  purrr::pwalk(.f=fn_logistc_draw,dir="by_only_cancer")
+
+############## used on data classified by cancer and targets
+data_for_logistic %>%
+  dplyr::inner_join(final_feature.bycancer, by = c("Cancer.y")) %>%
+  dplyr::rename("blockade.x" = "blockade") %>%
+  purrr::pwalk(.f=fn_logistc_draw,dir="by_only_cancer")
