@@ -19,6 +19,9 @@ basic_path <- file.path("/home/huff/project")
 # E zhou basi path
 basic_path <- file.path("F:/我的坚果云")
 
+# E zhou basi path
+basic_path <- file.path("S:/坚果云/我的坚果云")
+
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 TCGA_path <- file.path("/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
@@ -74,7 +77,7 @@ sample_info %>%
 
 
 ############## fnctions to do logistic regression iteration ##################
-fn_logistic <- function(exp, response, iteration){
+fn_logistic <- function(exp, response, sample_group, test_n, train_n, iteration, times = 15 ){
   apply(exp[,-1],2,mad) %>% # mad() Compute the Median Absolute Deviation
     sort() %>%
     rev() %>%
@@ -82,19 +85,21 @@ fn_logistic <- function(exp, response, iteration){
     names() -> top20_mad
   exp[,c("Run",top20_mad)] %>%
     dplyr::inner_join(response, by = "Run") %>%
-    dplyr::select(-Run) %>%
+    dplyr::inner_join(sample_group, by = "Run") %>%
+    dplyr::filter(usage == "train") %>%
+    dplyr::select(-Run, -usage) %>%
     dplyr::mutate(Response = as.factor(Response)) -> data.ready
   data.ready <- na.omit(data.ready)
   colnames(data.ready) <- gsub("-",".",colnames(data.ready))
   iteration_n <- iteration
-  res <- apply(array(1:iteration_n,dim = iteration_n),1,FUN=fn_feature_filter, data = data.ready, times = 15, test_n = 3, train_n = 10)
+  res <- apply(array(1:iteration_n,dim = iteration_n),1,FUN=fn_feature_filter, data = data.ready, times = times, test_n = test_n, train_n = train_n)
   # print("res get done")
 
   res
   # print("res output done")
 }
 
-fn_feature_filter <- function(x, data, times = 15, test_n = 3, train_n = 10){
+fn_feature_filter <- function(x, data, times = 15, test_n = 3, train_n = 6){
   # data prepare
   test_set <- sample_n(data %>% dplyr::filter(Response == "yes"),test_n) %>%
     rbind(sample_n(data %>% dplyr::filter(Response == "no"),test_n))
@@ -194,28 +199,28 @@ fn_feature_score <- function(.x, pos_auc = 0.6, neg_auc = 0.4){
     dplyr::select(features, score_all) %>%
     unique() -> .score
     
-  for_score %>%
-    dplyr::mutate(score_individual.class = ifelse(test_auc >= pos_auc, "success", "not_sure")) %>% 
-    dplyr::mutate(score_individual.class = ifelse(test_auc <= neg_auc, "failures", score_individual.class)) %>%
-    dplyr::group_by(features,score_individual.class) %>%
-    dplyr::mutate(n = n()) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(features,score_individual.class,n) %>%
-    unique() %>%
-    tidyr::spread(key="score_individual.class", value = "n") %>%
-    dplyr::mutate(failures = ifelse(is.na(failures), 0, failures)) %>%
-    dplyr::mutate(not_sure = ifelse(is.na(not_sure), 0, not_sure)) %>%
-    dplyr::mutate(success = ifelse(is.na(success), 0, success))-> for_binomtest
+  # for_score %>%
+  #   dplyr::mutate(score_individual.class = ifelse(test_auc >= pos_auc, "success", "not_sure")) %>% 
+  #   dplyr::mutate(score_individual.class = ifelse(test_auc <= neg_auc, "failures", score_individual.class)) %>%
+  #   dplyr::group_by(features,score_individual.class) %>%
+  #   dplyr::mutate(n = n()) %>%
+  #   dplyr::ungroup() %>%
+  #   dplyr::select(features,score_individual.class,n) %>%
+  #   unique() %>%
+  #   tidyr::spread(key="score_individual.class", value = "n") %>%
+  #   dplyr::mutate(failures = ifelse(is.na(failures), 0, failures)) %>%
+  #   dplyr::mutate(not_sure = ifelse(is.na(not_sure), 0, not_sure)) %>%
+  #   dplyr::mutate(success = ifelse(is.na(success), 0, success))-> for_binomtest
   
   # binom test
-  for_binomtest %>%
-    dplyr::mutate(binom.p = purrr::pmap(.l = list(features, failures, not_sure, success),.f=fn_feature_selection)) %>%
-    dplyr::select(features,binom.p) %>%
-    tidyr::unnest() -> binomtest.p
+  # for_binomtest %>%
+  #   dplyr::mutate(binom.p = purrr::pmap(.l = list(features, failures, not_sure, success),.f=fn_feature_selection)) %>%
+  #   dplyr::select(features,binom.p) %>%
+  #   tidyr::unnest() -> binomtest.p
   
-  binomtest.p %>%
-    dplyr::inner_join(.score,by="features")
-  
+  # binomtest.p %>%
+  #   dplyr::inner_join(.score,by="features")
+  .score
 }
 #### split the formula string and extract the features ####
 fn_formula_split <- function(formula){
@@ -262,15 +267,41 @@ fn_overlap_select <- function(.data, top_n = 10, overlpa_n = 5){
     })) %>%
     dplyr::select(-data)
 }
+fn_select_train_test <- function(response,data_spread,percent = 0.7){
+  train_number <- response$Response %>%
+      table() %>%
+      as.data.frame() %>%
+      dplyr::mutate(train_n = round(Freq*percent))
+  train_number %>%
+    dplyr::filter(. == "no") %>%
+    .$train_n -> no_n
+  train_number %>%
+    dplyr::filter(. == "yes") %>%
+    .$train_n -> yes_n
+  set.seed(123)
+  rbind(sample_n(response %>% dplyr::filter(Response == "no"), no_n),
+        sample_n(response %>% dplyr::filter(Response == "yes"), yes_n)) %>%
+    .$Run -> train_samples
+  response %>%
+    dplyr::filter(! Run %in% train_samples) %>%
+    .$Run -> test_samples
+  tibble::tibble(Run = c(train_samples,test_samples), 
+                 usage = c(rep("train",length(train_samples)),rep("test",length(test_samples))))
+}
 ########################################## logistic regression iteration result -----------------------------------------------------
 ########################################## 1. by targets and cancers
+data_for_logistic %>%
+  dplyr::mutate(sample_group = purrr::map2(response,data_spread,fn_select_train_test,percent = 0.7)) -> data_for_logistic
+
 ############## logistic regression
-n=10 # do n repeat to get more reliable results
+n=10 # do n fold corss validation to get more reliable results
 logistic_feature_res_nrepeat <- list()
 for(i in 1:n){
   data_for_logistic %>%
-    head(2) %>% # last two data sets of melanoma dont have enough response observation to train
-    dplyr::mutate(itertion_res = purrr::map2(data_spread, response, .f=fn_logistic,iteration = 500)) %>%
+    dplyr::mutate(test_n = ifelse(blockade == "anti–PD-1", 3, 2)) %>%
+    dplyr::mutate(train_n = ifelse(blockade == "anti–PD-1", 6, 3)) %>%
+    dplyr::filter(! blockade == "anti–PD-1、CTLA-4") %>% # last two data sets of melanoma dont have enough response observation to train
+    dplyr::mutate(itertion_res = purrr::pmap(list(data_spread, response, sample_group,  test_n, train_n),.f=fn_logistic,iteration = 500)) %>%
     dplyr::select(-response,-data_spread)-> logistic_feature_res_nrepeat[[i]]
 }
 
@@ -290,13 +321,14 @@ for(i in 1:n){
   
   logistic_feature_res.forFeatureSelect_nrepeat[[i]] %>%
     dplyr::mutate(selection = purrr::map(itertion_res_datafrme,fn_feature_score)) %>%
-    dplyr::select(-itertion_res_datafrme) -> logistic_feature_Selected_nrepeat[[i]]
+    dplyr::select(-itertion_res_datafrme, -sample_group) -> logistic_feature_Selected_nrepeat[[i]]
 }
 
 ############## features selection
 fn_overlap_select(logistic_feature_Selected_nrepeat) -> final_feature
 
 ########################################################## 2. only by cancers
+
 ############## logistic regression
 exp_data %>%
   tidyr::gather(-symbol, key="Run", value = exp) %>%
@@ -320,10 +352,13 @@ sample_info %>%
   tidyr::nest(-Cancer.y, .key = "response") %>%
   dplyr::inner_join(exp_data.nest.genelist.bycancer, by = c("Cancer.y")) -> data_for_logistic.bycancer
 
+data_for_logistic.bycancer  %>%
+  dplyr::mutate(sample_group = purrr::map2(response,data_spread,fn_select_train_test,percent = 0.7)) -> data_for_logistic.bycancer
+
 logistic_feature_res.bycancer_nrepeat <- list()
 for(i in 1:n){
   data_for_logistic.bycancer %>%
-    dplyr::mutate(itertion_res = purrr::map2(data_spread, response, .f=fn_logistic,iteration = 500)) %>%
+    dplyr::mutate(itertion_res = purrr::pmap(list(data_spread, response, sample_group), .f=fn_logistic,iteration = 500)) %>%
     dplyr::select(-response,-data_spread)-> logistic_feature_res.bycancer_nrepeat[[i]]
 }
 
@@ -339,7 +374,7 @@ for(i in 1:n){
         dplyr::as.tbl() %>%
         dplyr::rename("iteration" = "X1", "train_auc" = "X2", "test_auc" = "X3", "formula" = "X4")
     })) %>%
-    dplyr::select(-itertion_res) -> logistic_feature_res.forFeatureSelect_nrepeat.bycancer[[i]]
+    dplyr::select(-itertion_res, -sample_group) -> logistic_feature_res.forFeatureSelect_nrepeat.bycancer[[i]]
   
   logistic_feature_res.forFeatureSelect_nrepeat.bycancer[[i]] %>%
     dplyr::mutate(selection = purrr::map(itertion_res_datafrme,fn_feature_score)) %>%
@@ -351,13 +386,19 @@ fn_overlap_select(logistic_feature_Selected_nrepeat.bycancer) -> final_feature.b
 
 # save the results
 save.image(file = file.path(res_path,"logistic_feature_selection.rdata"))
-
+load(file = file.path(res_path,"logistic_feature_selection.rdata"))
 ##################################### performing of the feature selected #####################################
-fn_logistc_draw <- function(Cancer.y,blockade.x,response,data_spread,topn_count,dir){
+fn_logistc_draw <- function(Cancer.y,blockade.x,response,data_spread,sample_group,blockade,topn_count,dir){
+  if(blockade.x != "anti–PD-1"){
+    sample_group %>%
+      dplyr::mutate(usage = "test") -> sample_group
+  }
   ## data prepare
   data_spread %>%
     dplyr::inner_join(response, by = "Run") %>%
-    dplyr::select(-Run) %>%
+    dplyr::inner_join(sample_group, by = "Run") %>%
+    dplyr::filter(usage == "test") %>%
+    dplyr::select(-Run, -usage) %>%
     dplyr::mutate(Response = as.factor(Response)) -> data.ready
   data.ready <- na.omit(data.ready)
   colnames(data.ready) <- gsub("-",".",colnames(data.ready))
@@ -387,25 +428,52 @@ fn_logistc_draw <- function(Cancer.y,blockade.x,response,data_spread,topn_count,
   #                 positive = "yes")
   ## ROC
   res.roc <- roc(observed.classes, probabilities)
-  pdf(file.path(res_path,dir,paste(Cancer.y,blockade.x,"ROC.pdf", sep="_")),width = 4, height = 3)
+  png(file.path(res_path,dir,paste(Cancer.y,blockade.x,"by-feature-from",blockade,"ROC.png", sep="_")),width = 400, height = 300)
   plot.roc(res.roc, print.auc = TRUE, print.thres = "best")
   dev.off()
 }
 ########################################## 1. features selected by targets and cancers
-data_for_logistic %>%
+############## used on data classified only by cancer
+data_for_logistic.bycancer %>%
+  dplyr::mutate(sample_group = purrr::map2(Cancer.y,sample_group, .f=function(.x, .y){
+    if(.x == "melanoma"){
+      .y %>%
+        dplyr::mutate(usage = "test") -> .y
+    } else{
+      .y <- .y
+    }
+    .y
+  })) %>%
   dplyr::inner_join(final_feature, by = c("Cancer.y")) %>%
-  dplyr::select(-blockade.y) %>%
-  purrr::pwalk(.f=fn_logistc_draw,dir="by_cancer_targets")
+  dplyr::mutate(blockade.x = "ALL20") %>%
+  dplyr::select(-test_n,-train_n) %>%
+  purrr::pwalk(.f=fn_logistc_draw,dir="by_cancer_targets_20test")
+
+############## used on data classified by cancer and targets
+data_for_logistic %>%
+  dplyr::left_join(final_feature, by = c("Cancer.y")) %>%
+  dplyr::rename("blockade" = "blockade.y") %>%
+  dplyr::select(-test_n,-train_n) %>%
+  purrr::pwalk(.f=fn_logistc_draw,dir="by_cancer_targets_20test")
 
 ########################################## 2. features selected by only cancers
 ############## used on data classified only by cancer
 data_for_logistic.bycancer %>%
   dplyr::inner_join(final_feature.bycancer, by = c("Cancer.y")) %>%
   dplyr::mutate(blockade.x = "ALL") %>%
-  purrr::pwalk(.f=fn_logistc_draw,dir="by_only_cancer")
+  purrr::pwalk(.f=fn_logistc_draw,dir="by_only_cancer_20test")
 
 ############## used on data classified by cancer and targets
 data_for_logistic %>%
+  dplyr::mutate(sample_group = purrr::map2(Cancer.y,sample_group, .f=function(.x, .y){
+    if(.x == "melanoma"){
+      .y %>%
+        dplyr::mutate(usage = "test") -> .y
+    } else{
+      .y <- .y
+    }
+    .y
+  })) %>%
   dplyr::inner_join(final_feature.bycancer, by = c("Cancer.y")) %>%
   dplyr::rename("blockade.x" = "blockade") %>%
-  purrr::pwalk(.f=fn_logistc_draw,dir="by_only_cancer")
+  purrr::pwalk(.f=fn_logistc_draw,dir="by_only_cancer_20test")
