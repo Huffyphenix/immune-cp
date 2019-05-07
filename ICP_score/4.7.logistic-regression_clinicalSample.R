@@ -314,7 +314,8 @@ fn_select_train_test <- function(response,data_spread,percent = 0.7){
 ########################################## 1. by targets and cancers
 data_for_logistic %>%
   dplyr::mutate(sample_group = purrr::map2(response,data_spread,fn_select_train_test,percent = 0.7)) -> data_for_logistic
-
+data_for_logistic %>%
+  readr::write_rds(file.path(res_path,"genelist_exp_for_logistic.rds.gz"),compress = "gz")
 ############## logistic regression
 n=10 # do n fold corss validation to get more reliable results
 logistic_feature_res_nrepeat <- list()
