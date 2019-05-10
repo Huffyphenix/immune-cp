@@ -36,12 +36,44 @@ survival_data <- readr::read_rds(file.path(TCGA_path,"TCGA_pancan_cancer_cell_su
   dplyr::rename("survival" = "data")
 
 ## clinical expression and response data
-clinical_data_for_logistic <- readr::read_rds(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","genelist_exp_for_logistic.rds.gz"))
+clinical_data_for_logistic <- readr::read_rds(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical/class_metastic_type","genelist_exp_for_logistic.rds.gz"))
 
 ## features filtered by logistic regression
-final_feature.5 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5","final_feature.5.tsv")) %>%
+final_feature.5 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical/class_metastic_type","by_cancer_targets_30test.6","final_feature.6.tsv")) %>%
   tidyr::nest(features,.key="features")
 
+## stepAIC features
+final_feature.5.1 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5.stepAIC","gastric cancer_ALL30_by-feature-from_anti–PD-1_features.tsv")) %>%
+  dplyr::mutate(Cancer.y = "gastric cancer",blockade="anti-PD-1")
+
+final_feature.5.2 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5.stepAIC","melanoma_anti-CTLA-4_by-feature-from_anti-CTLA-4_features.tsv")) %>%
+  dplyr::mutate(Cancer.y = "melanoma",blockade="anti-CTLA-4")
+
+final_feature.5.3 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5.stepAIC","melanoma_anti-CTLA-4_by-feature-from_anti–PD-1_features.tsv")) %>%
+  dplyr::mutate(Cancer.y = "melanoma",blockade="anti-PD-1")
+
+final_feature.5.4 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5.stepAIC","melanoma_anti–PD-1、CTLA-4_by-feature-from_anti-CTLA-4_features.tsv")) %>%
+  dplyr::mutate(Cancer.y = "melanoma",blockade="anti-CTLA-4")
+
+final_feature.5.5 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5.stepAIC","melanoma_anti–PD-1、CTLA-4_by-feature-from_anti–PD-1_features.tsv")) %>%
+  dplyr::mutate(Cancer.y = "melanoma",blockade="anti-PD-1")
+
+final_feature.5.6 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5.stepAIC","melanoma_anti–PD-1_by-feature-from_anti-CTLA-4_features.tsv")) %>%
+  dplyr::mutate(Cancer.y = "melanoma",blockade="anti-CTLA-4")
+
+final_feature.5.7 <- readr::read_tsv(file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical","by_cancer_targets_30test.5.stepAIC","melanoma_anti–PD-1_by-feature-from_anti–PD-1_features.tsv")) %>%
+  dplyr::mutate(Cancer.y = "melanoma",blockade="anti-PD-1")
+
+final_feature.5.1 %>%
+  rbind(final_feature.5.2) %>%
+  rbind(final_feature.5.3) %>%
+  rbind(final_feature.5.4) %>%
+  rbind(final_feature.5.5) %>%
+  rbind(final_feature.5.6) %>%
+  rbind(final_feature.5.7) %>%
+  # dplyr::select(-blockade) %>%
+  unique() %>%
+  tidyr::nest(features,.key="features")-> final_feature.5.x
 ## timer TIL data
 immunity_path_2 <- file.path(immune_res_path,"ICP_score/2.1.GSVA-ICPs_exp_site_5_feature")
 TIMER_immunity_onlyTumor <- readr::read_tsv(file.path(immunity_path_2,"immuneEstimation.txt")) %>%
@@ -68,10 +100,22 @@ exp_data %>%
 
 final_feature.5 %>%
   dplyr::mutate(cancer_types = ifelse(Cancer.y == "gastric cancer","STAD","SKCM")) %>%
+  dplyr::inner_join(clinical_data_for_logistic, by = c("Cancer.y","Cancer_type","blockade")) %>%
   dplyr::inner_join(genelist_exp,by="cancer_types") %>% 
   dplyr::inner_join(survival_data,by="cancer_types") %>%
-  purrr::pwalk(.f=fn_run)
+  purrr::pwalk(.f=fn_run,analysis="cluster")
 
+# final_feature.5.x %>%
+#   dplyr::mutate(cancer_types = ifelse(Cancer.y == "gastric cancer","STAD","SKCM")) %>%
+#   dplyr::inner_join(genelist_exp,by="cancer_types") %>% 
+#   dplyr::inner_join(survival_data,by="cancer_types") %>%
+#   purrr::pwalk(.f=fn_run,blockade="stepAIC_combined")
+# 
+# final_feature.5.x %>%
+#   dplyr::mutate(cancer_types = ifelse(Cancer.y == "gastric cancer","STAD","SKCM")) %>%
+#   dplyr::inner_join(genelist_exp,by="cancer_types") %>% 
+#   dplyr::inner_join(survival_data,by="cancer_types") %>%
+#   purrr::pwalk(.f=fn_run)
 # functions ---------------------------------------------------------------
 color_list <- c("1" = "pink1",
                 "2" = "skyblue1",
@@ -80,52 +124,85 @@ color_list <- c("1" = "pink1",
                 "5" = "dodgerblue4",
                 "6" = "tan2")
 
-fn_run <- function(Cancer.y,blockade,features,cancer_types,filter_exp,survival){
+fn_run <- function(Cancer.y,Cancer_type,blockade,features,cancer_types,response,data_spread,sample_group,filter_exp,survival,analysis="lm_model"){
+  print(paste(Cancer.y,Cancer_type,blockade,cancer_types))
   survival %>%
     dplyr::rename("barcode" = "bcr_patient_barcode") %>%
     dplyr::select(barcode,PFS,PFS.time) %>%
     dplyr::rename("status" = "PFS", "time" = "PFS.time") -> survival
-  # ## get the logistic model
-  # model <- fn_logistic_model(data_spread,response,features)
+  
   
   ## use features to class samples
-  filter_exp %>%
-    dplyr::select(-entrez_id) %>%
-    dplyr::mutate(symbol = gsub("-",".",symbol)) %>%
-    dplyr::filter(symbol %in% features$features) %>%
-    tidyr::gather(-symbol,key="barcode",value="exp") %>%
-    tidyr::spread(key="symbol",value="exp") %>%
-    dplyr::filter(substr(barcode,14,15)=="01") %>%
-    dplyr::mutate(barcode = substr(barcode,1,12)) %>%
-    tidyr::gather(-barcode,key="symbol",value="exp") %>%
-    tidyr::spread(key="barcode",value="exp") -> filter_exp.ready
+  if(strsplit(Cancer_type," ")[[1]][1]=="metastatic"){
+    filter_exp %>%
+      dplyr::select(-entrez_id) %>%
+      dplyr::mutate(symbol = gsub("-",".",symbol)) %>%
+      dplyr::filter(symbol %in% features$features) %>%
+      tidyr::gather(-symbol,key="barcode",value="exp") %>%
+      tidyr::spread(key="symbol",value="exp") %>%
+      dplyr::filter(substr(barcode,14,15)=="06") %>%
+      dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+      tidyr::gather(-barcode,key="symbol",value="exp") %>%
+      tidyr::spread(key="barcode",value="exp") -> filter_exp.ready
+    if(nrow(filter_exp.ready)==0){
+      filter_exp %>%
+        dplyr::select(-entrez_id) %>%
+        dplyr::mutate(symbol = gsub("-",".",symbol)) %>%
+        dplyr::filter(symbol %in% features$features) %>%
+        tidyr::gather(-symbol,key="barcode",value="exp") %>%
+        tidyr::spread(key="symbol",value="exp") %>%
+        dplyr::filter(substr(barcode,14,15)=="01") %>%
+        dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+        tidyr::gather(-barcode,key="symbol",value="exp") %>%
+        tidyr::spread(key="barcode",value="exp") -> filter_exp.ready
+    }
+  }else{
+    filter_exp %>%
+      dplyr::select(-entrez_id) %>%
+      dplyr::mutate(symbol = gsub("-",".",symbol)) %>%
+      dplyr::filter(symbol %in% features$features) %>%
+      tidyr::gather(-symbol,key="barcode",value="exp") %>%
+      tidyr::spread(key="symbol",value="exp") %>%
+      dplyr::filter(substr(barcode,14,15)=="01") %>%
+      dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+      tidyr::gather(-barcode,key="symbol",value="exp") %>%
+      tidyr::spread(key="barcode",value="exp") -> filter_exp.ready
+  }
   
-  ## cluster analysis
-  filter_exp.ready.m <- as.matrix(as.data.frame(filter_exp.ready[,-1]))
-  rownames(filter_exp.ready.m) <- filter_exp.ready$symbol
-  # results = ConsensusClusterPlus(filter_exp.ready.m,maxK = 5,reps = 100,pItem = 0.8,
-  #                                pFeature = 1, 
-  #                                title = file.path(res_path, cancer_types),
-  #                                distance = "binary", plot = "pdf",
-  #                                clusterAlg = "hc",seed = 1262118388.71279)
-  
-  # Compute the dissimilarity matrix
-  dist <- dist(t(filter_exp.ready.m), method = "euclidean")
-  hc <- hclust(d = dist, method = "complete")
-  
-  ## use model to predict TCGA data
-  # probabilities <- model %>% predict(filter_exp.ready,type = "response")
-  # probabilities %>%
-  #   as.data.frame() %>%
-  #   dplyr::mutate(barcode = filter_exp.ready$barcode) %>%
-  #   dplyr::mutate(barcode = substr(barcode,1,12)) %>%
-  #   dplyr::inner_join(survival,by="barcode") %>%
-  #   dplyr::rename("probabilities" = ".") %>%
-  #   dplyr::mutate(group = ifelse(probabilities> 0.5, "yes", "no")) %>%
-  #   dplyr::arrange(group)-> data.for.survival
-  ## draw pic 
-  for (i in 2:5) {
-    C <- i
+  if(analysis == "lm_model"){
+    res_path.1 <- file.path(res_path,"by_model")
+    # ## get the logistic model
+    model <- fn_logistic_model(data_spread,response,features)
+    
+    filter_exp.ready %>%
+      tidyr::gather(-symbol,key="barcode",value="exp") %>%
+      tidyr::spread(key="symbol",value="exp") -> filter_exp.ready.forlogistic
+    # use model to predict TCGA data
+    probabilities <- model %>% predict(filter_exp.ready.forlogistic[,-1],type = "response")
+    probabilities %>%
+      as.data.frame() %>%
+      dplyr::mutate(barcode = filter_exp.ready.forlogistic$barcode) %>%
+      dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+      dplyr::inner_join(survival,by="barcode") %>%
+      dplyr::rename("probabilities" = ".") %>%
+      dplyr::mutate(group = ifelse(probabilities> 0.5, "1", "2")) %>%
+      dplyr::arrange(group) %>%
+      dplyr::mutate(group = as.character(group)) -> sample_info
+  } else {
+    res_path.1 <- file.path(res_path,"by_cluster")
+    ## cluster analysis
+    filter_exp.ready.m <- as.matrix(as.data.frame(filter_exp.ready[,-1]))
+    rownames(filter_exp.ready.m) <- filter_exp.ready$symbol
+    # results = ConsensusClusterPlus(filter_exp.ready.m,maxK = 5,reps = 100,pItem = 0.8,
+    #                                pFeature = 1, 
+    #                                title = file.path(res_path, cancer_types),
+    #                                distance = "binary", plot = "pdf",
+    #                                clusterAlg = "hc",seed = 1262118388.71279)
+    
+    # Compute the dissimilarity matrix
+    dist <- dist(t(filter_exp.ready.m), method = "euclidean")
+    hc <- hclust(d = dist, method = "complete")
+    C = 2
     group <- cutree(hc, k = C)
     # group <- results[[i]]$consensusClass
     # data.frame(Run = names(group),group = group) %>%
@@ -140,6 +217,14 @@ fn_run <- function(Cancer.y,blockade,features,cancer_types,filter_exp,survival){
       # dplyr::select(Response, group) %>%
       dplyr::mutate(group = as.character(group)) %>%
       as.data.frame() -> sample_info
+  }
+  
+  
+  
+  ## draw pic 
+  # for (i in 2:5) {
+  #   C <- i
+    
     # rownames(sample_info) <- sample_info$barcode
     
     # sample_anno <- HeatmapAnnotation(df = sample_info,
@@ -177,26 +262,36 @@ fn_run <- function(Cancer.y,blockade,features,cancer_types,filter_exp,survival){
     #            value = "TIL", facet = "Cell_type", ylab = "TIL", C = C,
     #            title  = cancer_types, data_type = "TIMER",result_path = file.path(res_path, cancer_types), h = 6, w = 8)
     #### survival analysis #####
-    color <- data.frame(group = c("1","2","3","4","5","6"),
+    color <- data.frame(group = c("1","2","no","yes","5","6"),
                         color = c("pink1","skyblue1","darkseagreen1","darkgreen","dodgerblue4","tan2"))
-    # fn_survival(data=sample_info,title=paste(cancer_types,blockade,sep="_"),color=color,
-    #             "group",sur_name=paste(cancer_types,"from_features",Cancer.y,blockade,sep="_"),
-    #             xlab = "Time (days)",result_path = file.path(res_path,"survival.cluster"),h=3,w=4,lx=0.8,ly=0.6)
-    # 
-    # fn_compare(group = sample_info %>% dplyr::mutate(group = as.integer(group)), 
-    #            cancer_types = paste(cancer_types,Cancer.y,blockade), data = TIMER_immunity_onlyTumor,
-    #            value = "TIL", facet = "Cell_type", ylab = "TIL", C = C,
-    #            title  = cancer_types, data_type = "TIMER",result_path = file.path(res_path, "TIL"), h = 6, w = 8)
+    fn_survival(data=sample_info,title=paste(cancer_types,blockade,sep="_"),color=color,
+                "group",sur_name=paste(C,cancer_types,"from_features",Cancer_type,blockade,sep="_"),
+                xlab = "Time (days)",result_path = file.path(res_path.1,"survival"),h=3,w=4,lx=0.8,ly=0.6)
+    fn_compare(group = sample_info %>% dplyr::mutate(group = as.integer(group)),
+               cancer_types = paste(cancer_types,Cancer_type,blockade), data = TIMER_immunity_onlyTumor,
+               value = "TIL", facet = "Cell_type", ylab = "TIL", C = C,
+               title  = cancer_types, data_type = "TIMER",result_path = file.path(res_path.1, "TIL"), h = 6, w = 8)
     
     fn_mutation_burden_all(data = sample_info %>% 
                              dplyr::mutate(group = as.integer(group)) %>% 
                              dplyr::inner_join(mutation_burden_class,by="barcode") %>%
                              dplyr::mutate(sm_count = log2(sm_count)),
                            group = "group",value = "sm_count", xlab = "log2(Mutation burden)", 
-                           m_a_name = paste(C,cancer_types,Cancer.y,blockade,sep="_"),
-                           result_path = file.path(res_path, "MB"), h = 6, w = 8)
+                           m_a_name = paste(C,cancer_types,Cancer_type,blockade,sep="_"),
+                           result_path = file.path(res_path.1, "MB"), h = 6, w = 8)
+    
+    # apply(filter_exp.ready.m,1,scale)
+    # tiff(file.path(res_path,paste(pubmed_ID, cancer_types,"GSVAscore", "heatmap.tiff", sep = "_")),
+    #      height = 300, width = 600,compression = c("lzw"))
+    # pheatmap(res.gsva, #scale = "row",
+    #          clustering_distance_rows = "correlation",
+    #          color = colorRampPalette(c("#00B2EE","white","red"))(50),
+    #          border_color = NA,cutree_rows = 2,
+    #          show_colnames = F, treeheight_col = 30, treeheight_row = 20,
+    #          cutree_cols = 2,main = paste(paste("PMID:",pubmed_ID),cancer_types," GSVA score", sep = ","))
+    # dev.off()
     # fn_survival.calculate(group, clinical, pubmed_ID, C,cancer_types, result_path = res_path, h = 3, w = 4)
-  }
+  # }
 }
   ## do survival analysis
   # color <- tibble::tibble(group = c("no","yes"),
@@ -227,6 +322,7 @@ fn_logistic_model <- function(data_spread,response,features){
 
 ## function to draw survival
 fn_survival <- function(data,title,color,group,sur_name,xlab,result_path,h,w,lx=0.8,ly=0.6){
+  print("survival")
   library(survival)
   library(survminer)
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
@@ -284,8 +380,9 @@ fn_survival <- function(data,title,color,group,sur_name,xlab,result_path,h,w,lx=
 
 ## fn TIL compare
 fn_compare <- function(group, cancer_types, data, value, facet, ylab, title, data_type, result_path,C, h, w){
+  print("Timer")
   
-  print(paste("Compare",data_type,cancer_types))
+  # print(paste("Compare",data_type,cancer_types))
   
   group %>%
     dplyr::inner_join(data, by = "barcode") %>%
@@ -343,6 +440,8 @@ fn_compare <- function(group, cancer_types, data, value, facet, ylab, title, dat
 }
 
 fn_mutation_burden_all <- function(data,group,value,color,xlab,m_a_name,result_path,w=4,h=3){
+  print("mutation burden")
+  
   data %>%
     ggpubr::ggboxplot(x = group, y = value,fill="white",alpha = 0,width = 0.1,
                       color = group #add = "jitter",#, palette = "npg"
