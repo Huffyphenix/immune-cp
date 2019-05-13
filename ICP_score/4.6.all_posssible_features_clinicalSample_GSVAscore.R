@@ -18,10 +18,13 @@ basic_path <- file.path("/home/huff/project")
 # E zhou basi path
 basic_path <- file.path("F:/我的坚果云")
 
+# Hust basi path
+basic_path <- file.path("S:/坚果云/我的坚果云")
+
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 TCGA_path <- file.path("/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
-res_path <- file.path(immune_res_path,"ICP_score/2.1.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
+res_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
 
 # load data ---------------------------------------------------------------
 exp_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data/mRNA_exp","all_FPKM_expression_2.txt"))
@@ -49,13 +52,13 @@ library(org.Hs.eg.db)
 bitr(gene_list$symbol,"SYMBOL", "ENSEMBL",OrgDb = org.Hs.eg.db)
 
 sample_info %>%
-  dplyr::select(Run, Cancer.y, blockade) %>%
+  dplyr::select(Run, Cancer.y, Cancer_type) %>%
   unique() -> Run_pubmed.id
 exp_data %>%
   tidyr::gather(-gene_id, key="Run", value = exp) %>%
   dplyr::mutate(exp = ifelse(is.na(exp),0,exp)) %>%
   dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
-  tidyr::nest(-Cancer.y, -blockade) -> exp_data.gather
+  tidyr::nest(-Cancer.y, -Cancer_type) -> exp_data.gather
 
 exp_data.gather %>%
   dplyr::mutate(data_spread = purrr::map(data,.f = function(.x){
@@ -72,7 +75,7 @@ gene_list %>%
   dplyr::filter(!is.na(ens_id)) -> gene_list
 
 ICPs_exp_in_TI.cancer.site_groups <- 
-  readr::read_tsv(file.path(immune_res_path, "ICP_score/2.GSVA-ICPs_exp_site_5_feature","ICPs_exp_in_TI.cancer.site_groups.tsv")) %>%
+  readr::read_tsv(file.path(immune_res_path, "ICP_score/2.1.GSVA-ICPs_exp_site_5_feature","ICPs_exp_in_TI.cancer.site_groups.tsv")) %>%
   dplyr::inner_join(gene_list,by = "symbol") %>%
   dplyr::select(symbol, Tissues, `log2FC(I/T)`, TCGA_Cancer, ICP_exp_group, GeneID, ens_id, type, functionWithImmune)
 
@@ -155,4 +158,4 @@ exp_data.nest %>%
   dplyr::select(-data_spread) -> GSVA.score
 
 GSVA.score %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by_tissue_target-all-possible-features.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class.rds.gz"), compress = "gz")
