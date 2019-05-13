@@ -358,7 +358,7 @@ final_feature.4 %>%
   tidyr::unnest() %>%
   readr::write_tsv(file.path(res_path,"by_cancer_targets_30test.4","final_feature.4.tsv"))
 
-# 30 most variant genes, iteration = 500, times = 15, 10fold cross validation, sum of the rank, under top_n=10*10
+# 30 most variant genes, iteration = 500, times = 15, 10fold cross validation, sum of the rank, top_n sum
 final_feature.5 %>%
   tidyr::unnest() %>%
   readr::write_tsv(file.path(res_path,"by_cancer_targets_30test.5","final_feature.5.tsv"))
@@ -367,7 +367,7 @@ final_feature.6 %>%
   readr::write_tsv(file.path(res_path,"by_cancer_targets_30test.6","final_feature.6.tsv"))
 
 ##################### repeat 100 times get the best features
-for(j in 1:100){
+for(j in 54:100){
   n=10
   logistic_feature_res_nrepeat <- list()
   for(i in 1:n){
