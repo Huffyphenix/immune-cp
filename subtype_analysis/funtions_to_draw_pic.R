@@ -68,7 +68,7 @@ fn_mutation_burden <- function(data,group,facet="~ cancer_types",value,color,xla
     ) +
     facet_wrap(as.formula(facet), strip.position = "bottom", scales = "free") +
     scale_color_manual(
-      values = color
+      values = color$color
     )+
     # ylim(4,12) +
     ylab(xlab) +
@@ -99,10 +99,10 @@ fn_mutation_burden_all <- function(data,group,value,color,xlab,comp_list,m_a_nam
     ) +
     # facet_wrap(~ cancer_types, strip.position = "bottom", scales = "free") +
     scale_color_manual(
-      values = color
+      values = color$color
     )+
     scale_fill_manual(
-      values = color
+      values = color$color
     ) +
     # ylim(4,12) +
     ylab(xlab) +
