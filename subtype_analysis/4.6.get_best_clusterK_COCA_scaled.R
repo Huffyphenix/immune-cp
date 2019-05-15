@@ -10,7 +10,7 @@ library(magrittr)
 basic_path <- "/home/huff/project"
 source(file.path(basic_path,"github/immune-cp/subtype_analysis/funtions_to_draw_pic.R"))
 
-result_path <- file.path(result_path,"immune_checkpoint/result_20171025/subtype_analysis/coca_scaled-methyalltag/Get_best_clutser_20")
+result_path <- file.path(basic_path,"immune_checkpoint/result_20171025/subtype_analysis/coca_scaled-methyalltag/Get_best_clutser_20")
 data_result_path <- file.path(basic_path,"immune_checkpoint/genelist_data")
 
 results <- readr::read_rds(path = file.path(data_result_path, ".recode.combined.ConsensusClusterplus-exp-cnv-methyalltags.rds.gz"))
@@ -30,9 +30,11 @@ time_status %>%
   dplyr::select(-cancer_types.x,-cancer_types.y) %>%
   dplyr::rename("time"="PFS.time","status"="PFS")-> clinical_data
 
+TIL_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/data/immunity","immuneEstimation.txt")) %>%
+  dplyr::mutate(barcode = substr(barcode,1,12))
 color_20 <- c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", "#A52A2A", "#FF4040", "#98F5FF", "#53868B", "#EEAD0E", "#458B00", "#EEA2AD", "#E066FF", "#EE3A8C", "#00FF00", "#FFFF00", "#5CACEE", "#8B6914", "#FF7F24")
 
-for(i in 2:20){
+for (i in 2:20){
   print(paste(i,1,sep = "."))
   data_type <- "COCA"
   C <- i
@@ -48,7 +50,7 @@ for(i in 2:20){
   # Figure 2. survival
   
   group_statistic <- group %>% table()
-  less_than_10<- names(group_statistic[group_statistic<10])
+  less_than_10 <- names(group_statistic[group_statistic<10])
   all_clusters <- names(group_statistic)
   more_than_10 <- setdiff(all_clusters,less_than_10)
   
@@ -58,13 +60,14 @@ for(i in 2:20){
     dplyr::rename("barcode"="sample") %>%
     dplyr::left_join(clinical_data,by="barcode") -> group_survival_data
   
-  color_list = color_20[1:length(more_than_10)]
+  color_list = tibble::tibble(group = more_than_10,color = color_20[1:length(more_than_10)]) %>%
+    dplyr::mutate(group = as.integer(group))
   title <- paste(data_type,"Survival for",C,"Clusters",sep=" ")
   sur_name <-  paste(data_type,"Survival_for",C,"Clusters.png",sep="_")
   if (length(more_than_10)>=2) {
     group_survival_data %>%
       dplyr::filter(group %in% more_than_10) %>%
-      fn_survival(title,color_list,more_than_10,sur_name,result_path,3,4)
+      fn_survival(title,color_list,group="group",sur_name,xlab = "Time (days)",result_path=result_path,h=3,w=4)
   }else{
     print("Too small groups")
   }
@@ -85,16 +88,41 @@ for(i in 2:20){
       dplyr::filter(group %in% more_than_10) %>%
       dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
       dplyr::mutate(sm_count = log2(sm_count)) %>%
-      fn_mutation_burden(group = "group",facet="~ cancer_types",value = "sm_count",color = color_list,xlab = "log2(Mutation Burden)",comp_list = comp_list,m_name = m_name,result_path = result_path,w=12)
+      fn_mutation_burden(group = "group",facet="~ cancer_types",value = "sm_count",color = color_list,
+                         xlab = "log2(Mutation Burden)",comp_list = comp_list,m_name = m_name,
+                         result_path = result_path,w=12)
     
     # Figure 4. mutation burden in all samples
-    print(paste(i,1,sep = "."))
-    m_a_name <-  paste(data_type,"all_mutation_for",C,"Clusters",sep="_")
+    print(paste(i,5,sep = "."))
+    m_a_name <-  paste(data_type,"mutation_all_for",C,"Clusters",sep="_")
     group_survival_data %>%
       dplyr::filter(group %in% more_than_10) %>%
       dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
       dplyr::mutate(sm_count = log2(sm_count)) %>%
-      fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,xlab = "log2(Mutation Burden)",comp_list = comp_list,m_a_name = m_a_name,result_path = result_path)
+      fn_mutation_burden_all(group = "group",value = "sm_count",color = color_list,
+                             xlab = "log2(Mutation Burden)",comp_list = comp_list,m_a_name = m_a_name,
+                             result_path = result_path)
+    
+    # Figure 5. TIL in all samples
+    print(paste(i,6,sep = "."))
+    T_name <-  paste(data_type,"TIL_for",C,"Clusters",sep="_")
+    group_survival_data %>%
+      dplyr::filter(group %in% more_than_10) %>%
+      dplyr::inner_join(TIL_data,by = "barcode") %>%
+      fn_mutation_burden(group = "group",facet="~ cancer_types",value = "CD8_Tcell",color = color_list,
+                             xlab = "CD8_Tcell",comp_list = comp_list,m_name = T_name,
+                             result_path = result_path,w=12)
+    
+    # Figure 6. TIL in all samples
+    print(paste(i,7,sep = "."))
+    T_a_name <-  paste(data_type,"TIL_all_for",C,"Clusters",sep="_")
+    group_survival_data %>%
+      dplyr::filter(group %in% more_than_10) %>%
+      dplyr::inner_join(TIL_data,by = "barcode") %>%
+      fn_mutation_burden_all(group = "group",value = "CD8_Tcell",color = color_list,
+                             xlab = "CD8_Tcell",comp_list = comp_list,m_a_name = T_a_name,
+                             result_path = result_path)
+    
   } else{
     print("Too small groups")
   }
@@ -137,7 +165,7 @@ for(i in 2:20){
       axis.title = element_text(size = 12,color = "black")
     ) +
     guides(fill = guide_colorbar(title.position = "left"))
-  ggsave(filename =paste("Sample_composition_for",C,"Clusters.png",sep="_"), path = result_path,device = "png",height = 6,width = 4)
+  ggsave(filename = paste("Sample_composition_for",C,"Clusters.png",sep="_"), path = result_path,device = "png",height = 6,width = 4)
   print(paste(i,6,sep = "."))
   #   return(1)
 }
