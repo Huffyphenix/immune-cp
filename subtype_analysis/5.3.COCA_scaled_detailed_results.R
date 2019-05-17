@@ -8,11 +8,12 @@ library(magrittr)
 
 # data path ---------------------------------------------------------------
 basic_path <- "/home/huff/project/immune_checkpoint/result_20171025"
+basic_path <- "F:/胡斐斐/我的坚果云/immune_checkpoint/result_20171025"
 data_result_path <- file.path(basic_path,"genelist_data")
 
 # best K we got from 4.6.get_best_clusterL_COCA_scaled.R
-C = 6
-result_path <- file.path(basic_path,paste("subtype_analysis/coca_scaled/cluster",C,sep="_"))
+C = 4
+result_path <- file.path(basic_path,paste("subtype_analysis/coca_scaled-methyalltag/cluster",C,sep="_"))
 
 load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
 source("/project/huff/huff/github/immune-cp/subtype_analysis/.rda_IMK_mutationburden_cancerSubtype_analysis.rdafuntions_to_draw_pic.R")
