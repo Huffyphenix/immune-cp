@@ -34,6 +34,11 @@ TIL_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/data/immunit
   dplyr::mutate(barcode = substr(barcode,1,12))
 color_20 <- c("#CDC0B0", "#838B8B", "#000000", "#0000FF", "#00008B", "#8A2BE2", "#A52A2A", "#FF4040", "#98F5FF", "#53868B", "#EEAD0E", "#458B00", "#EEA2AD", "#E066FF", "#EE3A8C", "#00FF00", "#FFFF00", "#5CACEE", "#8B6914", "#FF7F24")
 
+C <- 4
+W <- results[[C]][['consensusMatrix']]
+W %>%
+  readr::write_rds(file.path(result_path,paste(C,"consensusMatrix.rds.gz")),compress = "gz")
+
 for (i in 2:20){
   print(paste(i,1,sep = "."))
   data_type <- "COCA"
