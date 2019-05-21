@@ -20,7 +20,7 @@ load(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info
 # get best K for cluster results  -----------------------------------------
 source("/project/huff/huff/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
 
-mutation_burden_class <- readr::read_rds(file.path("/project/huff/huff/data/TCGA","classfication_of_26_cancers_by_mutation_burden192.rds.gz")) %>%
+mutation_burden_class <- readr::read_rds(file.path(basic_path,"data/TCGA","classfication_of_26_cancers_by_mutation_burden192.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::rename("cancer_types"="Cancer_Types")
 time_status %>%
