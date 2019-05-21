@@ -7,26 +7,47 @@ library(ComplexHeatmap)
 library(magrittr)
 
 # data path ---------------------------------------------------------------
-basic_path <- "/home/huff/project/immune_checkpoint/result_20171025"
-data_result_path <- file.path(basic_path,"genelist_data")
+basic_path <- "/home/huff/project"
+
+basic_path <- "F:/我的坚果云"
+basic_path <- "F:/胡斐斐/我的坚果云"
+
+code_path <- file.path("F:/github/immune-cp")
+data_result_path <- file.path(basic_path,"immune_checkpoint/genelist_data")
 
 # best K we got from 4.6.get_best_clusterL_COCA_scaled.R
-C = 6
-result_path <- file.path(basic_path,paste("subtype_analysis/coca_scaled/cluster",C,sep="_"))
+C = 4
+result_path <- file.path(basic_path,"immune_checkpoint/result_20171025/subtype_analysis/coca_scaled-methyalltag")
 
-load(file = file.path(data_result_path, ".rda_IMK_mutationburden_cancerSubtype_analysis.rda"))
-source("/project/huff/huff/github/immune-cp/subtype_analysis/.rda_IMK_mutationburden_cancerSubtype_analysis.rdafuntions_to_draw_pic.R")
+load(file = file.path(data_result_path, ".rda_genelist_data_survival_cancer.info.rda"))
+source(file.path(code_path,"subtype_analysis","funtions_to_draw_pic.R"))
 
 # load COCA result
-results <- readr::read_rds(path = file.path(data_result_path, ".recode.combined.ConsensusClusterplus-exp-cnv-methyalltags.rds.gz"))
+# results <- readr::read_rds(path = file.path(data_result_path, ".recode.combined.ConsensusClusterplus-exp-cnv-methyalltags.rds.gz"))
 
 
 
-W <- results[[C]][['consensusMatrix']]
-group <- results[[C]][['consensusClass']]
-W <- matrix(W,nrow = length(group),dimnames = list(names(group),names(group)))
+# W <- results[[C]][['consensusMatrix']]
+# group <- results[[C]][['consensusClass']]
+W <- readr::read_rds( file.path(result_path,"Get_best_clutser_20/4 consensusMatrix.rds.gz"))
+group <- readr::read_tsv(file.path(result_path,"Get_best_clutser_20/4_clusters_group_info.tsv"))
+group$sample %>%
+  table() %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  dplyr::filter(Freq > 1) %>%
+  .$. %>%
+  as.character() -> confused_samples
+group %>%
+  dplyr::mutate(n=c(1:7732)) %>%
+  dplyr::filter(sample %in% confused_samples) %>%
+  .$n -> confused_samples.n
+W <- matrix(W,nrow = length(group$sample),dimnames = list(group$sample,group$sample))
+W <- W[-confused_samples.n,-confused_samples.n]
+group %>%
+  dplyr::filter(!sample %in% confused_samples) -> group
 
-clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+clinical_tcga <- readr::read_rds(file.path(basic_path,"data/TCGA_survival/Firehose","Pancan.Merge.clinical.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-cancer_types) %>%
   unique() %>%
@@ -36,49 +57,68 @@ clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Panc
   dplyr::mutate(Status =  max(Status)) %>%
   dplyr::ungroup()
 
-survival_info <- time_status %>%
+survival_info <- readr::read_rds(file.path(basic_path,"data/TCGA_survival/cell.2018.10.1016","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>% # cell.2018.10.1016 clinical data
+  tidyr::unnest() %>%
+  dplyr::select(bcr_patient_barcode,PFS,PFS.time) %>%
+  tidyr::drop_na() %>%
+  dplyr::rename("barcode" = "bcr_patient_barcode")  %>%
   dplyr::full_join(clinical_tcga,by="barcode") %>%
   dplyr::select(-Age,-Stage) %>%
   unique() %>%
-  dplyr::filter(barcode %in% names(group)) %>% # colnames(W) change to names(group) when doing single data set(expr, cnv and methy data)
+  dplyr::filter(barcode %in% group$sample) %>% # colnames(W) change to names(group) when doing single data set(expr, cnv and methy data)
   dplyr::mutate(color=ifelse(PFS==1,"red","blue")) %>%
   dplyr::mutate(os_color=ifelse(Status==1,"red","blue")) %>%
   dplyr::mutate(PFS=ifelse(PFS==1,"Dead","Alive")) %>%
   dplyr::mutate(Status = ifelse(Status==1,"Dead","Alive")) 
 
-mutation_info <- mutation_burden_class %>%
+mutation_info <- readr::read_rds(file.path(basic_path,"data/TCGA","classfication_of_26_cancers_by_mutation_burden192.rds.gz")) %>%
+  tidyr::unnest() %>%
+  dplyr::rename("cancer_types"="Cancer_Types") %>%
   dplyr::right_join(survival_info,by="barcode") %>%
-  dplyr::select(barcode,mutation_status) %>%
+  dplyr::select(barcode,mutation_status,cancer_types) %>%
   dplyr::mutate(color = ifelse(mutation_status=="NA","white","grey")) %>%
   dplyr::mutate(color = ifelse(mutation_status=="high_muation_burden","pink",color)) %>%
   dplyr::mutate(color = ifelse(is.na(color),"white",color)) %>%
   dplyr::mutate(mutation_status = ifelse(is.na(mutation_status),"NA","High")) %>%
   dplyr::mutate(mutation_status = ifelse(color=="grey","Low",mutation_status))
 
-purity_info <- tumor_purity %>%
+purity_info <- readr::read_tsv(file.path(basic_path,"data/TCGA_tumor_purity_from_ncomms9971/ncomms9971-s2.txt")) %>%
+  dplyr::rename("barcode"="Sample ID") %>%
+  dplyr::select(barcode,`Cancer type`,CPE) %>%
+  dplyr::rename("purity" = "CPE", "cancer_types" = "Cancer type") %>%
+  dplyr::filter(substr(barcode,14,15)=="01") %>%
+  dplyr::mutate(barcode.1 = barcode) %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
   dplyr::right_join(survival_info,by="barcode") %>%
   dplyr::select(barcode,purity) %>%
-  dplyr::mutate(purity = ifelse(is.na(purity),0,purity))
-cancer_color <- readr::read_tsv(file.path("/data/shiny-data/GSCALite","02_pcc.tsv"))
+  dplyr::mutate(purity = ifelse(is.na(purity),0,purity)) %>%
+  dplyr::group_by(barcode) %>%
+  dplyr::mutate(purity = mean(purity)) %>%
+  unique()
+
+# cancer_color <- readr::read_tsv(file.path("/data/shiny-data/GSCALite","02_pcc.tsv"))
+cancer_color <- readr::read_tsv(file.path(basic_path,"data","02_pcc.tsv"))
 cancer_info <- gene_list_expr.cancer_info %>%
   rbind(gene_list_cnv_gistic.cancer_info) %>%
   rbind(genelist_methy_mutaion_class.cancer_info) %>%
   unique() %>%
   dplyr::select(cancer_types,barcode) %>%
   unique() %>%
-  dplyr::filter(barcode %in% names(group)) %>%
+  dplyr::filter(barcode %in% group$sample) %>%
   dplyr::inner_join(cancer_color,by = "cancer_types")
 cluster_color <- data.frame(Cluster=c(1:C),color = colors()[seq(1,656,32)[1:C+1]])
+# cluster_color <- data.frame(Cluster=c(1:C),color = c("#000000", "#0000FF","#8A2BE2", "#A52A2A"))
 cluster_info <- group %>%
-  as.data.frame() %>%
-  dplyr::rename("Cluster" = ".") %>%
-  dplyr::mutate(barcode = names(group)) %>%
+  dplyr::rename("barcode" = "sample","Cluster"="group") %>%
   dplyr::inner_join(cluster_color,by="Cluster")
-M_label=cbind(names(group),group,survival_info$PFS,survival_info$Status,mutation_info$mutation_status,cancer_info$cancer_types,purity_info$purity)
+M_label=cbind(group %>%
+                dplyr::rename("barcode" = "sample","Cluster"="group"),
+              survival_info$PFS,survival_info$Status,mutation_info$mutation_status,
+              cancer_info$cancer_types,purity_info$purity)
 colnames(M_label)=c("barcode","Cluster","Relapse","OS","mutation_burden_class","cancer_types","TumorPurity")
 
 cancer_info$cancer_types %>% unique() %>% length() -> cancer_n
-M_label_colors=cbind("Cluster"=cluster_info$color,
+M_label_colors=cbind("Cluster"=as.character(cluster_info$color),
                      "Relapse"=survival_info$color,
                      "OS"=survival_info$os_color,
                      "mutation_burden_class"=mutation_info$color,
@@ -93,14 +133,15 @@ M_label_colors=cbind("Cluster"=cluster_info$color,
 # complex heatmap prepare -------------------------------------------------
 
 normalize <- function(X) X/rowSums(X)
-ind <- sort(as.vector(group), index.return = TRUE)
+ind <- sort(as.vector(group$group), index.return = TRUE)
 ind <- ind$ix
 
 diag(W) <- median(as.vector(W))
 W <- normalize(W)
 W <- W + t(W)
 
-M_label=data.frame('barcode' = names(group),"Cluster" = group,"Relapse"=survival_info$PFS,"OS"=survival_info$Status,"mutation_burden_class"=mutation_info$mutation_status,"cancer_types"=cancer_info$cancer_types,"TumorPurity"=as.numeric(purity_info$purity))
+# M_label=data.frame('barcode' = names(group),"Cluster" = group,"Relapse"=survival_info$PFS,"OS"=survival_info$Status,"mutation_burden_class"=mutation_info$mutation_status,"cancer_types"=cancer_info$cancer_types,"TumorPurity"=as.numeric(purity_info$purity))
+M_label=as.data.frame(M_label)
 # rownames(M_label)=colnames(W) # To add if the spectralClustering function
 c(W[ind,ind] %>% colnames()) %>%
   as.data.frame() %>%
@@ -142,7 +183,7 @@ col_anno <- HeatmapAnnotation(df=M_label[,-1],
                                                                             c("white","grey100","grey0"))),
                               gap = unit(0.5, "mm"),
                               width = unit(0.5, "cm"))
-draw(col_anno,1:8255)
+draw(col_anno,1:10)
 
 library(circlize)
 he = Heatmap(W[ind,ind],
@@ -155,17 +196,19 @@ he = Heatmap(W[ind,ind],
              top_annotation = col_anno,show_heatmap_legend = F
              # heatmap_legend_param = list(title = c("Scaled Exp."))
 )
-pdf(file.path(result_path,paste("clusters",C,"_group_heatmap.pdf",sep = "_")),width = 6,height = 6)
-png(filename = file.path(result_path,paste("clusters",C,"_group_heatmap.png",sep = "_")),
+pdf(file.path(result_path,paste("clusters",C,sep = "_"),paste("clusters",C,"_group_heatmap.pdf",sep = "_")),width = 6,height = 6)
+png(filename = file.path(result_path,paste("clusters",C,sep = "_"),paste("clusters",C,"_group_heatmap.png",sep = "_")),
     width = 600, height = 600, units = "px", pointsize = 12,
     bg = "white")
 he
 dev.off()
 
+save.image(file.path(result_path,paste("clusters",C,sep = "_"),".Rdata"))
 
+result_path <- file.path(result_path,paste("clusters",C,sep = "_"))
 # sample distribution in cancers ------------------------------------------
-data.frame(barcode = names(group),group=group) %>%
-  dplyr::as.tbl() %>%
+group %>%
+  dplyr::rename("barcode"="sample") %>%
   dplyr::left_join(cancer_info,by="barcode") -> group_cancer_data
 group_cancer_data %>%
   dplyr::group_by(cancer_types,group) %>%
@@ -187,7 +230,7 @@ cluster_cancers_statistic %>%
   ggplot(aes(x=group,y=cancer_types,fill = `Sample Composition (%)`)) +
   geom_tile(color = "grey") +
   geom_text(aes(label = n)) +
-  scale_x_discrete(limit = as.character(c(1:6))) +
+  scale_x_discrete(limit = as.character(c(1:4))) +
   scale_fill_gradient2(
     limit = c(0, 100),
     breaks = seq(0, 100, 25),
@@ -222,7 +265,7 @@ cluster_cancers_statistic %>%
   scale_fill_manual(
     name = "Clusters",
     breaks = as.character(c(1:20)),
-    values = c("#000000", "#0000FF","#8A2BE2", "#A52A2A", "#98F5FF", "#53868B", "#EEAD0E", "#458B00", "#EEA2AD", "#E066FF", "#EE3A8C", "#00FF00", "#FFFF00", "#5CACEE", "#8B6914", "#FF7F24")
+    values = as.character(cluster_color$color)
   ) +
   scale_x_discrete(position = "top") +
   theme(
@@ -246,6 +289,8 @@ cluster_cancers_statistic %>%
     axis.title.x = element_blank(),
     # axis.title.y = element_blank(),
     axis.line.x = element_blank()
+    # panel.spacing = unit(-1,"lines"),
+    # panel.spacing.x = unit(-10,"lines")
   )
 ggsave(filename =paste("Sample_composition_for",C,"Clusters-stacked.png",sep="_"), path = result_path,device = "png",height = 4,width = 12)
 ggsave(filename =paste("Sample_composition_for",C,"Clusters-stacked.pdf",sep="_"), path = result_path,device = "pdf",height = 4,width = 12)
@@ -309,8 +354,8 @@ res_path <- file.path(result_path)
 M_label %>%
   dplyr::as.tbl() -> C6_survival
 
-color_list <- c("#000000", "#0000FF","#8A2BE2", "#A52A2A", "#98F5FF", "#53868B")
-group <- c(1,2,3,4,5,6)
+color_list <- cluster_color$color
+group <- cluster_color$Cluster
 
 
 # cluster with groups ------ 5 years PFS
