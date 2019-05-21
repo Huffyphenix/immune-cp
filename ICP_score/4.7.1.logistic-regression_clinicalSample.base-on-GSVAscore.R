@@ -18,6 +18,9 @@ basic_path <- file.path("/home/huff/project")
 # E zhou basi path
 basic_path <- file.path("F:/我的坚果云")
 
+# home basic path
+basic_path <- file.path("F:/胡斐斐/我的坚果云")
+
 # Hust basi path
 basic_path <- file.path("S:/坚果云/我的坚果云")
 
