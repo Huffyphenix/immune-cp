@@ -13,6 +13,8 @@ basic_path <- "F:/我的坚果云"
 basic_path <- "F:/胡斐斐/我的坚果云"
 
 code_path <- file.path("F:/github/immune-cp")
+code_path <- file.path(file.path(basic_path,"github/immune-cp"))
+
 data_result_path <- file.path(basic_path,"immune_checkpoint/genelist_data")
 
 # best K we got from 4.6.get_best_clusterL_COCA_scaled.R
@@ -75,7 +77,7 @@ mutation_info <- readr::read_rds(file.path(basic_path,"data/TCGA","classfication
   tidyr::unnest() %>%
   dplyr::rename("cancer_types"="Cancer_Types") %>%
   dplyr::right_join(survival_info,by="barcode") %>%
-  dplyr::select(barcode,mutation_status,cancer_types) %>%
+  dplyr::select(barcode,mutation_status,sm_count,cancer_types) %>%
   dplyr::mutate(color = ifelse(mutation_status=="NA","white","grey")) %>%
   dplyr::mutate(color = ifelse(mutation_status=="high_muation_burden","pink",color)) %>%
   dplyr::mutate(color = ifelse(is.na(color),"white",color)) %>%
@@ -204,6 +206,7 @@ he
 dev.off()
 
 save.image(file.path(result_path,paste("clusters",C,sep = "_"),".Rdata"))
+load(file.path(result_path,paste("clusters",C,sep = "_"),".Rdata"))
 
 result_path <- file.path(result_path,paste("clusters",C,sep = "_"))
 # sample distribution in cancers ------------------------------------------
@@ -224,7 +227,7 @@ group_cancer_data %>%
   dplyr::group_by(tcga) %>%
   dplyr::mutate(all_n = sum(n_a)) %>%
   dplyr::mutate(all_ratio = 100*n_a/all_n) -> cluster_cancers_statistic
-
+library(ggplot2)
 cluster_cancers_statistic %>%
   dplyr::mutate(group=as.character(group)) %>%
   ggplot(aes(x=group,y=cancer_types,fill = `Sample Composition (%)`)) +
@@ -297,7 +300,7 @@ ggsave(filename =paste("Sample_composition_for",C,"Clusters-stacked.pdf",sep="_"
 
 # survival ----------------------------------------------------------------
 # survival function
-fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6){
+fn_survival <- function(data,title,color,sur_name,result_path,xlab,h,w,lx=0.8,ly=0.6){
   library(survival)
   library(survminer)
   fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
@@ -323,7 +326,7 @@ fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6)
                         data = data,
                         surv.median.line = "hv",
                         title = paste(title,", p =", signif(kmp, 2)), # change it when doing diff data
-                        xlab = "Survival in days",
+                        xlab = xlab,
                         ylab = 'Probability of survival',
                         # legend.title = "Methyla group:",
                         legend= c(lx,ly),
@@ -341,7 +344,7 @@ fn_survival <- function(data,title,color,sur_name,result_path,h,w,lx=0.8,ly=0.6)
                           axis.title = element_text(size = 12,color = "black"),
                           legend.key.size = unit(0.2, "cm")
                         )
-  ) +
+  )[[1]] +
     scale_color_manual(
       values = color_paired$color,
       labels = color_paired$group
@@ -354,7 +357,7 @@ res_path <- file.path(result_path)
 M_label %>%
   dplyr::as.tbl() -> C6_survival
 
-color_list <- cluster_color$color
+color_list <- cluster_color$color %>% as.character()
 group <- cluster_color$Cluster
 
 
@@ -366,12 +369,14 @@ C6_survival %>%
 
 sur_name <- paste("PFS_Survival-5years_for",C,"Groups",sep="_")
 C6_survival.PFS %>%
-  dplyr::filter(time<=1825) %>%
-  fn_survival("6 Clutsers, PFS",color_list,sur_name,res_path,3,4,0.9,0.9)
+  dplyr::mutate(time = time/365) %>%
+  dplyr::filter(time<=5) %>%
+  fn_survival("6 Clutsers, PFS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 sur_name <- paste("PFS_Survival-all_years_for",C,"Groups",sep="_")
 C6_survival.PFS %>%
-  fn_survival("6 Clutsers, PFS",color_list,sur_name,res_path,3,4,0.9,0.9)
+  dplyr::mutate(time = time/365) %>%
+  fn_survival("6 Clutsers, PFS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 # cluster with groups for each cancers
 C6_survival.PFS %>%
@@ -388,21 +393,31 @@ C6_survival.PFS %>%
   dplyr::filter(Freq >=2) %>%
   .$. %>% as.character() -> cancers_do_survival
 
-for(cancer in cancers_do_survival){
+for (cancer in cancers_do_survival) {
+  pfs.path <- file.path(res_path,"PFS","5years")
+  if (!dir.exists(pfs.path)) {
+    dir.create(pfs.path)
+  }
   sur_name <- paste("Survival-5years","PFS",cancer,3,"Groups",sep="_")
   
   C6_survival.PFS %>%
-    dplyr::filter(time<=1825) %>%
+    dplyr::mutate(time = time/365) %>%
+    dplyr::filter(time <= 5) %>%
     dplyr::filter(cancer_types == cancer) %>%
-    fn_survival(paste(cancer," PFS",sep=","),color_list,sur_name,file.path(res_path,"PFS"),3,4)
+    fn_survival(paste(cancer," PFS",sep=","),color_list,sur_name,pfs.path,"Time (years)",3,4)
 }
 
 for(cancer in cancers_do_survival){
+  pfs.path <- file.path(res_path,"PFS","all_yeas")
+  if (!dir.exists(pfs.path)) {
+    dir.create(pfs.path)
+  }
   sur_name <- paste("Survival-all_years","PFS",cancer,3,"Groups",sep="_")
   
   C6_survival.PFS %>%
+    dplyr::mutate(time = time/365) %>%
     dplyr::filter(cancer_types == cancer) %>%
-    fn_survival(paste(cancer," PFS",sep=","),color_list,sur_name,file.path(res_path,"PFS"),3,4)
+    fn_survival(paste(cancer," PFS",sep=","),color_list,sur_name,pfs.path,"Time (years)",3,4)
 }
 
 # cluster with groups ------ 5 years OS
@@ -415,12 +430,14 @@ C6_survival %>%
 
 sur_name <- paste("OS_Survival-all_years_for",C,"Groups",sep="_")
 C6_survival.OS %>%
-  fn_survival("6 Clutsers, OS",color_list,sur_name,res_path,3,4,0.9,0.9)
+  dplyr::mutate(time = time/365) %>%
+  fn_survival("6 Clutsers, OS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 sur_name <- paste("OS_Survival-5years_for",C,"Groups",sep="_")
 C6_survival.OS %>%
-  dplyr::filter(time<=1825) %>%
-  fn_survival("6 Clutsers, OS",color_list,sur_name,res_path,3,4,0.9,0.9)
+  dplyr::mutate(time = time/365) %>%
+  dplyr::filter(time<=5) %>%
+  fn_survival("6 Clutsers, OS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 # cluster with groups for each cancers
 C6_survival.OS %>%
@@ -438,237 +455,405 @@ C6_survival.OS %>%
   .$. %>% as.character() -> cancers_do_survival
 
 for(cancer in cancers_do_survival){
+  pfs.path <- file.path(res_path,"OS","5years")
+  if (!dir.exists(pfs.path)) {
+    dir.create(pfs.path,recursive = T)
+  }
   sur_name <- paste("Survival-5years","OS",cancer,3,"Groups",sep="_")
   
   C6_survival.OS %>%
-    dplyr::filter(time<=1825) %>%
+    dplyr::mutate(time = time/365) %>%
+    dplyr::filter(time<=5) %>%
     dplyr::filter(cancer_types == cancer) %>%
-    fn_survival(paste(cancer," OS",sep=","),color_list,sur_name,file.path(res_path,"OS"),3,4)
+    fn_survival(paste(cancer," OS",sep=","),color_list,sur_name,pfs.path,"Time (years)",3,4)
 }
 
 for(cancer in cancers_do_survival){
+  pfs.path <- file.path(res_path,"OS","all_years")
+  if (!dir.exists(pfs.path)) {
+    dir.create(pfs.path,recursive = T)
+  }
   sur_name <- paste("Survival-all_years","OS",cancer,3,"Groups",sep="_")
   
   C6_survival.OS %>%
+    dplyr::mutate(time = time/365) %>%
     dplyr::filter(cancer_types == cancer) %>%
-    fn_survival(paste(cancer," OS",sep=","),color_list,sur_name,file.path(res_path,"OS"),3,4)
+    fn_survival(paste(cancer," OS",sep=","),color_list,sur_name,pfs.path,"Time (years)",3,4)
 }
 
 # mutation burden ---------------------------------------------------------
+fn_mutation_burden <- function(data,group,facet="~ cancer_types",anno_text,value,color,ylab,m_name,result_path,w=7, h=10){
+  data %>%
+    dplyr::select(group) %>%
+    dplyr::inner_join(color, by = "group") %>%
+    unique() %>%
+    dplyr::mutate(group = as.character(group))-> color
+    
+  comp_mat <- apply(combn(unique(data$group),2),2,as.character)
+  comp_list <- list()
+  for (col in 1:ncol(comp_mat)) {
+    comp_list[[col]] <- comp_mat[,col]
+  }
+  
+  
+  data %>%
+    dplyr::mutate(group = as.character(group)) %>%
+    ggpubr::ggboxplot(x = group, y = value,fill = "white",alpha = 0,width = 0.1,
+                      color = "white" #add = "jitter",#, palette = "npg"
+    ) +
+    geom_jitter(aes(color = group),size=0.2,alpha=0.2) +
+    geom_violin(fill="white",alpha = 0) +
+    geom_boxplot(fill="white",alpha = 0,width=0.1) +
+    facet_wrap(as.formula(facet), scales = "free") +
+    geom_text(aes(x = group,y = y,label = paste("n=",n)), data = anno_text, size = 2) +
+    scale_color_manual(
+      values = color$color
+    ) +
+    # ylim(4,12) +
+    ylab(ylab) +
+    xlab("Group") +
+    # ggpubr::stat_compare_means() +
+    theme(legend.position = "none",
+          # axis.title.x = element_blank(),
+          strip.background = element_rect(fill = "white",colour = "white"),
+          text = element_text(size = 10, colour = "black"),
+          strip.text = element_text(size = 8)) +
+    ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif",size=2)
+    # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
+  
+  ggsave(filename =paste(m_name,"png",sep="."), path = result_path,device = "png",width = w,height = h)
+  ggsave(filename =paste(m_name,"pdf",sep="."), path = result_path,device = "pdf",width = w,height = h)
+}
+
+fn_mutation_burden_all <- function(data,group,value,color,ylab,m_name,result_path,w=7, h=10){
+  data %>%
+    dplyr::select(group) %>%
+    dplyr::inner_join(color, by = "group") %>%
+    unique() %>%
+    dplyr::mutate(group = as.character(group)) -> color
+  
+  comp_mat <- apply(combn(unique(data$group),2),2,as.character)
+  comp_list <- list()
+  for (col in 1:ncol(comp_mat)) {
+    comp_list[[col]] <- comp_mat[,col]
+  }
+  
+  anno_text <- data %>%
+    dplyr::group_by(group) %>%
+    dplyr::mutate(n = n(), y = mean(value)) %>%
+    dplyr::select(group,n, y) %>%
+    unique() %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group = as.character(group))
+  
+  data %>%
+    dplyr::mutate(group = as.character(group)) %>%
+    ggpubr::ggboxplot(x = group, y = value,fill = "white",alpha = 0,width = 0.1,
+                      color = group#,facet.by="cancer_types" #add = "jitter",#, palette = "npg"
+    ) + 
+    geom_violin(aes(fill = group),alpha = 0.5,color = "grey70") +
+    geom_text(aes(x = group,y = y,label = paste("n=",n)), data = anno_text, size = 2) +
+    scale_fill_manual(values = color$color) +
+    scale_color_manual(
+      values = color$color
+    ) +
+    # ylim(4,12) +
+    ylab(ylab) +
+    xlab("Group") +
+    # ggpubr::stat_compare_means() +
+    theme(legend.position = "none",
+          # axis.title.x = element_blank(),
+          strip.background = element_rect(fill = "white",colour = "white"),
+          text = element_text(size = 10, colour = "black"),
+          strip.text = element_text(size = 8))+
+  ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif",size=2) 
+  
+  ggsave(filename =paste(m_name,"png",sep="."), path = result_path,device = "png",width = w,height = h)
+  ggsave(filename =paste(m_name,"pdf",sep="."), path = result_path,device = "pdf",width = w,height = h)
+}
 
 C6_survival.PFS %>%
   # dplyr::rename("cluster" = "group","barcode"="sample") %>%
-  dplyr::left_join(mutation_burden_class,by="barcode") %>%
-  dplyr::mutate(sm_count = ifelse(is.na(sm_count),0,sm_count)) %>%
+  dplyr::left_join(mutation_info,by="barcode") %>%
+  dplyr::mutate(sm_count = ifelse(is.na(sm_count),0.1,sm_count)) %>%
+  dplyr::mutate(sm_count = ifelse(sm_count==0,0.1,sm_count)) %>%
   dplyr::rename("cancer_types"="cancer_types.x") -> group_cluster_mutation
-comp_mat <- combn(length(unique(group_cluster_mutation$group)),2)
-comp_list <- list()
 
-m_name <-  paste("Combined_mutation_for",C,"Groups",sep="_")
-for (col in 1:ncol(comp_mat)) {
-  comp_list[[col]] <- comp_mat[,col]
-}
-# color_list <- c("#CD2626", "#CD9B1D", "#00B2EE")
 group_cluster_mutation %>%
-  dplyr::mutate(sm_count = log2(sm_count)) %>%
-  fn_mutation_burden("group",facet="~ cancer_types","sm_count",color_list,"log2 (MutationBurden)",comp_list,m_name,res_path,6,6)
+  dplyr::group_by(cancer_types,group) %>%
+  dplyr::mutate(n=n()) %>%
+  dplyr::select(cancer_types,group,n) %>%
+  unique() %>%
+  dplyr::filter(n>=10) %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(n=n()) %>%
+  dplyr::select(cancer_types,n) %>%
+  unique() %>%
+  dplyr::filter(n>=2) -> cancers_do_MB
+# color_list <- c("#CD2626", "#CD9B1D", "#00B2EE")
 
-# Figure 4
+# MB for each cancers
+for (cancertypes in cancers_do_MB$cancer_types) {
+  path <- file.path(res_path,"MB")
+  if(!dir.exists(path)){
+    dir.create(file.path(path))
+  }
+  m_name <-  paste(cancertypes,"MB_for",C,"Groups",sep="_")
+  group_cluster_mutation %>%
+    dplyr::mutate(sm_count = log2(sm_count)) %>%
+    dplyr::filter(cancer_types == cancertypes) %>%
+    dplyr::rename("value" = "sm_count") %>%
+    fn_mutation_burden("group",facet="~ cancer_types","value",color_for_mutation, "log2 (MutationBurden)",m_name,path,w=4,h=3)
+}
+
+# MB for all samples
 m_a_name <-  paste("Combined_all_mutation_for",C,"Groups",sep="_")
 group_cluster_mutation %>%
   dplyr::mutate(sm_count = log2(sm_count)) %>%
-  fn_mutation_burden_all("group","sm_count",color_list,"log2 (MutationBurden)",comp_list,m_a_name,res_path)
+  dplyr::rename("value" = "sm_count") %>%
+  fn_mutation_burden_all(group = "group",value = "value",color = color_for_mutation,ylab = "log2 (MutationBurden)", m_name = m_a_name,result_path = path,h=3,w=4)
 
 
 # tumor purity ------------------------------------------------------------
-m_name <-  paste("Combined_TumorPurity_for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  fn_mutation_burden("group",facet="~ cancer_types","TumorPurity",color_list,"Tumor Purity",comp_list,m_name,res_path,8,8)
+# Tumor purity for each cancers
+for (cancertypes in cancers_do_MB$cancer_types) {
+  path <- file.path(res_path,"TumorPurity")
+  if(!dir.exists(path)){
+    dir.create(file.path(path))
+  }
+  m_name <-  paste(cancertypes,"TumorPurity_for",C,"Groups",sep="_")
+  group_cluster_mutation %>%
+    dplyr::filter(cancer_types == cancertypes) %>%
+    dplyr::rename("value" = "TumorPurity") %>%
+    fn_mutation_burden("group",facet="~ cancer_types","value",color_for_mutation,"Tumor Purity",m_name,path,w=4,h=3)
+}
 
+# tumor purity for all samples
 m_a_name <-  paste("Combined_all_TumorPurity_for",C,"Groups",sep="_")
 group_cluster_mutation %>%
-  fn_mutation_burden_all("group","TumorPurity",color_list,"Tumor Purity",comp_list,m_a_name,res_path)
+  dplyr::rename("value" = "TumorPurity") %>%
+  fn_mutation_burden_all("group","value",color_for_mutation,"Tumor Purity",m_a_name,path,h=3,w=4)
 
 
 # immune infiltration  -----------------------------------------------------
-# miao's data (TCAP)
-TCGA_infiltration_data <- readr::read_rds(file.path("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")) %>%
-  dplyr::select(barcode,InfiltrationScore)
+# miao's data (TCAP) ----------------
+TCGA_infiltration_data <- readr::read_rds(file.path(basic_path,"data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")) 
+for (cancertypes in cancers_do_MB$cancer_types) {
+  path <- file.path(res_path,"TIL_miao")
+  if(!dir.exists(path)){
+    dir.create(file.path(path))
+  }
+  m_name <-  paste(cancertypes,"TIL_for",C,"Groups",sep="_")
+  anno_text <- group_cluster_mutation %>%
+    dplyr::filter(cancer_types == cancertypes) %>%
+    dplyr::left_join(TCGA_infiltration_data,by="barcode") %>%
+    dplyr::select(barcode, group, cancer_types,Bcell,CD4_T,CD8_T,Neutrophil,Macrophage,DC,InfiltrationScore) %>%
+    tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+    dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+    dplyr::mutate(value = as.numeric(value)) %>%
+    dplyr::group_by(group,cancer_types, cell_type) %>%
+    dplyr::mutate(n = n(), y = mean(value)) %>%
+    dplyr::select(group,cell_type,n, y) %>%
+    unique() %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group = as.character(group))
+  group_cluster_mutation %>%
+    dplyr::filter(cancer_types == cancertypes) %>%
+    dplyr::left_join(TCGA_infiltration_data,by="barcode") %>%
+    dplyr::select(barcode, group, cancer_types,Bcell,CD4_T,CD8_T,Neutrophil,Macrophage,DC,InfiltrationScore) %>%
+    tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+    dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+    dplyr::mutate(value = as.numeric(value)) %>%
+    fn_mutation_burden("group",facet="~ cell_type",anno_text,"value",color_for_mutation,paste("TCAP score of",cancertypes),m_name,path,w=6,h=6)
+}
 
 m_name <-  paste("Combined_ImmuneInfiltration_for",C,"Groups",sep="_")
+anno_text <- group_cluster_mutation %>%
+  dplyr::left_join(TCGA_infiltration_data,by="barcode") %>%
+  dplyr::select(barcode, group, cancer_types,Bcell,CD4_T,CD8_T,Neutrophil,Macrophage,DC,InfiltrationScore) %>%
+  tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+  dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+  dplyr::mutate(value = as.numeric(value)) %>%
+  dplyr::group_by(group, cell_type) %>%
+  dplyr::mutate(n = n(), y = mean(value)) %>%
+  dplyr::select(group,cell_type,n, y) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(group = as.character(group))
 group_cluster_mutation %>%
   dplyr::left_join(TCGA_infiltration_data,by="barcode") %>%
-  dplyr::filter(!is.na(InfiltrationScore)) %>%
-  dplyr::mutate(InfiltrationScore = as.numeric(as.character(InfiltrationScore))) %>%
-  fn_mutation_burden("group",facet="~ cancer_types","InfiltrationScore",color_list,"Immune Infiltration Score",comp_list,m_name,res_path,h=12)
+  dplyr::select(barcode, group, cancer_types,Bcell,CD4_T,CD8_T,Neutrophil,Macrophage,DC,InfiltrationScore) %>%
+  tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+  dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+  fn_mutation_burden("group",facet="~ cell_type",anno_text,"value",color_for_mutation,paste("TCAP score of all"),m_name,path,h=6,w=6)
 
-m_a_name <-  paste("Combined_all_ImmuneInfiltration_for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(InfiltrationScore = as.numeric(as.character(InfiltrationScore))) %>%
-  fn_mutation_burden_all("group","InfiltrationScore",color_list,"Immune Infiltration Score",comp_list,m_a_name,res_path)
+# m_a_name <-  paste("Combined_all_ImmuneInfiltration_for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(InfiltrationScore = as.numeric(as.character(InfiltrationScore))) %>%
+#   fn_mutation_burden_all("group","InfiltrationScore",color_list,"Immune Infiltration Score",comp_list,m_a_name,res_path)
+# 
+# all_TCGA_infiltration_data <- readr::read_rds(file.path("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")) 
+# 
+# m_name <-  paste("Combined_TIL_for","CD4_naive",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(CD4_naive = as.numeric(as.character(CD4_naive))) %>%
+#   fn_mutation_burden_all("group","CD4_naive",color_list,"CD4 naive",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","CD8_naive",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(CD8_naive = as.numeric(as.character(CD8_naive))) %>%
+#   fn_mutation_burden_all("group","CD8_naive",color_list,"CD8 naive",comp_list,m_name,res_path)
+# 
+#   m_name <-  paste("Combined_TIL_for","Cytotoxic",c,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Cytotoxic = as.numeric(as.character(Cytotoxic))) %>%
+#   fn_mutation_burden_all("group","Cytotoxic",color_list,"Cytotoxic",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Exhausted",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Exhausted = as.numeric(as.character(Exhausted))) %>%
+#   fn_mutation_burden_all("group","Exhausted",color_list,"Exhausted",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Tr1",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Tr1 = as.numeric(as.character(Tr1))) %>%
+#   fn_mutation_burden_all("group","Tr1",color_list,"Tr1",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","nTreg",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(nTreg = as.numeric(as.character(nTreg))) %>%
+#   fn_mutation_burden_all("group","nTreg",color_list,"nTreg",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","iTreg",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(iTreg = as.numeric(as.character(iTreg))) %>%
+#   fn_mutation_burden_all("group","iTreg",color_list,"iTreg",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Th1",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Th1 = as.numeric(as.character(Th1))) %>%
+#   fn_mutation_burden_all("group","Th1",color_list,"Th1",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Th2",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Th2 = as.numeric(as.character(Th2))) %>%
+#   fn_mutation_burden_all("group","Th2",color_list,"Th2",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Th17",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Th17 = as.numeric(as.character(Th17))) %>%
+#   fn_mutation_burden_all("group","Th17",color_list,"Th17",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Tfh",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Tfh = as.numeric(as.character(Tfh))) %>%
+#   fn_mutation_burden_all("group","Tfh",color_list,"Tfh",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Central_memory",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Central_memory = as.numeric(as.character(Central_memory))) %>%
+#   fn_mutation_burden_all("group","Central_memory",color_list,"Central_memory",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Effector_memory",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Effector_memory = as.numeric(as.character(Effector_memory))) %>%
+#   fn_mutation_burden_all("group","Effector_memory",color_list,"Effector_memory",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","NKT",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(NKT = as.numeric(as.character(NKT))) %>%
+#   fn_mutation_burden_all("group","NKT",color_list,"NKT",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","MAIT",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(MAIT = as.numeric(as.character(MAIT))) %>%
+#   fn_mutation_burden_all("group","MAIT",color_list,"MAIT",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","DC",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(DC = as.numeric(as.character(DC))) %>%
+#   fn_mutation_burden_all("group","DC",color_list,"DC",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Bcell",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Bcell = as.numeric(as.character(Bcell))) %>%
+#   fn_mutation_burden_all("group","Bcell",color_list,"Bcell",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Monocyte",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Monocyte = as.numeric(as.character(Monocyte))) %>%
+#   fn_mutation_burden_all("group","Monocyte",color_list,"Monocyte",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Macrophage",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Macrophage = as.numeric(as.character(Macrophage))) %>%
+#   fn_mutation_burden_all("group","Macrophage",color_list,"Macrophage",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","NK",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(NK = as.numeric(as.character(NK))) %>%
+#   fn_mutation_burden_all("group","NK",color_list,"NK",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Neutrophil",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Neutrophil = as.numeric(as.character(Neutrophil))) %>%
+#   fn_mutation_burden_all("group","Neutrophil",color_list,"Neutrophil",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","Gamma_delta",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(Gamma_delta = as.numeric(as.character(Gamma_delta))) %>%
+#   fn_mutation_burden_all("group","Gamma_delta",color_list,"Gamma_delta",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","CD4_T",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(CD4_T = as.numeric(as.character(CD4_T))) %>%
+#   fn_mutation_burden_all("group","CD4_T",color_list,"CD4_T",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","CD4_T_cancers",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(CD4_T = as.numeric(as.character(CD4_T))) %>%
+#   fn_mutation_burden("group",facet = "~ cancer_types","CD4_T",color_list,"CD4_T",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","CD8_T",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::mutate(CD8_T = as.numeric(as.character(CD8_T))) %>%
+#   fn_mutation_burden_all("group","CD8_T",color_list,"CD8_T",comp_list,m_name,res_path)
+# 
+# m_name <-  paste("Combined_TIL_for","all",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
+#   dplyr::select(-Relapse,-OS,-mutation_burden_class,-TumorPurity ,-status,-time,-cancer_types.y,-sm_count,-mutation_status,-cancers) %>%
+#   tidyr::gather(-group,-cancer_types,-barcode,key="TIL_class",value="score") %>%
+#   dplyr::mutate(score = as.numeric(score)) %>%
+#   fn_mutation_burden("group","score",facet="~ TIL_class",color_list,"score",comp_list,m_name,res_path)
 
-all_TCGA_infiltration_data <- readr::read_rds(file.path("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")) 
-
-m_name <-  paste("Combined_TIL_for","CD4_naive",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(CD4_naive = as.numeric(as.character(CD4_naive))) %>%
-  fn_mutation_burden_all("group","CD4_naive",color_list,"CD4 naive",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","CD8_naive",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(CD8_naive = as.numeric(as.character(CD8_naive))) %>%
-  fn_mutation_burden_all("group","CD8_naive",color_list,"CD8 naive",comp_list,m_name,res_path)
-
-  m_name <-  paste("Combined_TIL_for","Cytotoxic",c,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Cytotoxic = as.numeric(as.character(Cytotoxic))) %>%
-  fn_mutation_burden_all("group","Cytotoxic",color_list,"Cytotoxic",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Exhausted",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Exhausted = as.numeric(as.character(Exhausted))) %>%
-  fn_mutation_burden_all("group","Exhausted",color_list,"Exhausted",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Tr1",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Tr1 = as.numeric(as.character(Tr1))) %>%
-  fn_mutation_burden_all("group","Tr1",color_list,"Tr1",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","nTreg",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(nTreg = as.numeric(as.character(nTreg))) %>%
-  fn_mutation_burden_all("group","nTreg",color_list,"nTreg",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","iTreg",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(iTreg = as.numeric(as.character(iTreg))) %>%
-  fn_mutation_burden_all("group","iTreg",color_list,"iTreg",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Th1",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Th1 = as.numeric(as.character(Th1))) %>%
-  fn_mutation_burden_all("group","Th1",color_list,"Th1",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Th2",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Th2 = as.numeric(as.character(Th2))) %>%
-  fn_mutation_burden_all("group","Th2",color_list,"Th2",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Th17",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Th17 = as.numeric(as.character(Th17))) %>%
-  fn_mutation_burden_all("group","Th17",color_list,"Th17",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Tfh",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Tfh = as.numeric(as.character(Tfh))) %>%
-  fn_mutation_burden_all("group","Tfh",color_list,"Tfh",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Central_memory",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Central_memory = as.numeric(as.character(Central_memory))) %>%
-  fn_mutation_burden_all("group","Central_memory",color_list,"Central_memory",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Effector_memory",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Effector_memory = as.numeric(as.character(Effector_memory))) %>%
-  fn_mutation_burden_all("group","Effector_memory",color_list,"Effector_memory",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","NKT",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(NKT = as.numeric(as.character(NKT))) %>%
-  fn_mutation_burden_all("group","NKT",color_list,"NKT",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","MAIT",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(MAIT = as.numeric(as.character(MAIT))) %>%
-  fn_mutation_burden_all("group","MAIT",color_list,"MAIT",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","DC",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(DC = as.numeric(as.character(DC))) %>%
-  fn_mutation_burden_all("group","DC",color_list,"DC",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Bcell",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Bcell = as.numeric(as.character(Bcell))) %>%
-  fn_mutation_burden_all("group","Bcell",color_list,"Bcell",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Monocyte",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Monocyte = as.numeric(as.character(Monocyte))) %>%
-  fn_mutation_burden_all("group","Monocyte",color_list,"Monocyte",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Macrophage",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Macrophage = as.numeric(as.character(Macrophage))) %>%
-  fn_mutation_burden_all("group","Macrophage",color_list,"Macrophage",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","NK",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(NK = as.numeric(as.character(NK))) %>%
-  fn_mutation_burden_all("group","NK",color_list,"NK",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Neutrophil",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Neutrophil = as.numeric(as.character(Neutrophil))) %>%
-  fn_mutation_burden_all("group","Neutrophil",color_list,"Neutrophil",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","Gamma_delta",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(Gamma_delta = as.numeric(as.character(Gamma_delta))) %>%
-  fn_mutation_burden_all("group","Gamma_delta",color_list,"Gamma_delta",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","CD4_T",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(CD4_T = as.numeric(as.character(CD4_T))) %>%
-  fn_mutation_burden_all("group","CD4_T",color_list,"CD4_T",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","CD4_T_cancers",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(CD4_T = as.numeric(as.character(CD4_T))) %>%
-  fn_mutation_burden("group",facet = "~ cancer_types","CD4_T",color_list,"CD4_T",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","CD8_T",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::mutate(CD8_T = as.numeric(as.character(CD8_T))) %>%
-  fn_mutation_burden_all("group","CD8_T",color_list,"CD8_T",comp_list,m_name,res_path)
-
-m_name <-  paste("Combined_TIL_for","all",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(all_TCGA_infiltration_data,by="barcode") %>%
-  dplyr::select(-Relapse,-OS,-mutation_burden_class,-TumorPurity ,-status,-time,-cancer_types.y,-sm_count,-mutation_status,-cancers) %>%
-  tidyr::gather(-group,-cancer_types,-barcode,key="TIL_class",value="score") %>%
-  dplyr::mutate(score = as.numeric(score)) %>%
-  fn_mutation_burden("group","score",facet="~ TIL_class",color_list,"score",comp_list,m_name,res_path)
-
-# TIMER data
+# TIMER data --------------
 TIMER_immunity <- readr::read_tsv(file.path("/project/huff/huff/immune_checkpoint/data/immunity","immuneEstimation.txt")) %>%
   dplyr::mutate(TIL = B_cell+CD4_Tcell+CD8_Tcell+Neutrophil+Macrophage+Dendritic) %>%
   dplyr::mutate(group =  substr(barcode,14,14)) %>%
@@ -676,47 +861,76 @@ TIMER_immunity <- readr::read_tsv(file.path("/project/huff/huff/immune_checkpoin
   dplyr::select(-group) %>%
   dplyr::mutate(barcode = substr(barcode,1,12))
 
-m_name <-  paste("Combined_TIMER_for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::left_join(TIMER_immunity,by="barcode") %>%
-  dplyr::filter(!is.na(TIL)) %>%
-  fn_mutation_burden("group",facet="~ cancer_types","TIL",color_list,"TIMER Score",comp_list,m_name,res_path,h=6)
+for (cancertypes in cancers_do_MB$cancer_types) {
+  path <- file.path(res_path,"TIL")
+  if(!dir.exists(path)){
+    dir.create(file.path(path))
+  }
+  m_name <-  paste(cancertypes,"TIL_for",C,"Groups",sep="_")
+  anno_text <- group_cluster_mutation %>%
+    dplyr::filter(cancer_types == cancertypes) %>%
+    dplyr::left_join(TIMER_immunity,by="barcode") %>%
+    dplyr::select(barcode, group, cancer_types,B_cell,CD4_Tcell,CD8_Tcell,Neutrophil,Macrophage,Dendritic,TIL) %>%
+    tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+    dplyr::mutate(value = ifelse(is.na(value),0,value))%>%
+    dplyr::group_by(group,cancer_types, cell_type) %>%
+    dplyr::mutate(n = n(), y = mean(value)) %>%
+    dplyr::select(group,cell_type,n, y) %>%
+    unique() %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group = as.character(group))
+  group_cluster_mutation %>%
+    dplyr::filter(cancer_types == cancertypes) %>%
+    dplyr::left_join(TIMER_immunity,by="barcode") %>%
+    dplyr::select(barcode, group, cancer_types,B_cell,CD4_Tcell,CD8_Tcell,Neutrophil,Macrophage,Dendritic,TIL) %>%
+    tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+    dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+    fn_mutation_burden("group",facet="~ cell_type",anno_text,"value",color_for_mutation,paste("TIMER score of",cancertypes),m_name,path,w=6,h=6)
+}
 
-m_a_name <-  paste("Combined_TIMER-B_cell-for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
-  dplyr::filter(!is.na(TIL)) %>%
-  fn_mutation_burden_all("group","B_cell",color_list,"TIMER B_cell Score",comp_list,m_a_name,res_path)
-
-m_a_name <-  paste("Combined_TIMER-CD4_Tcell-for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
-  dplyr::filter(!is.na(TIL)) %>%
-  fn_mutation_burden_all("group","CD4_Tcell",color_list,"TIMER CD4_Tcell Score",comp_list,m_a_name,res_path)
-
-m_a_name <-  paste("Combined_TIMER-CD8_Tcell-for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
-  dplyr::filter(!is.na(TIL)) %>%
-  fn_mutation_burden_all("group","CD8_Tcell",color_list,"TIMER CD8_Tcell Score",comp_list,m_a_name,res_path)
-
-m_a_name <-  paste("Combined_TIMER-Neutrophil-for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
-  dplyr::filter(!is.na(TIL)) %>%
-  fn_mutation_burden_all("group","Neutrophil",color_list,"TIMER Neutrophil Score",comp_list,m_a_name,res_path)
-
-m_a_name <-  paste("Combined_TIMER-Macrophage-for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
-  dplyr::filter(!is.na(TIL)) %>%
-  fn_mutation_burden_all("group","Macrophage",color_list,"TIMER Macrophage Score",comp_list,m_a_name,res_path)
-
-m_a_name <-  paste("Combined_TIMER-Dendritic-for",C,"Groups",sep="_")
-group_cluster_mutation %>%
-  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
-  dplyr::filter(!is.na(TIL)) %>%
-  fn_mutation_burden_all("group","Dendritic",color_list,"TIMER Dendritic Score",comp_list,m_a_name,res_path)
+# m_name <-  paste("Combined_TIMER_for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::filter(cancer_types %in% cancers_do_MB$cancer_types) %>%
+#   dplyr::left_join(TIMER_immunity,by="barcode") %>%
+#   dplyr::rename("value"="TIL") %>%
+#   dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+#   fn_mutation_burden("group",facet="~ cancer_types","value",color_for_mutation,"TIMER Score",m_name,path,h=6)
+# 
+# m_a_name <-  paste("Combined_TIMER-B_cell-for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+#   dplyr::filter(!is.na(TIL)) %>%
+#   fn_mutation_burden_all("group","B_cell",color_list,"TIMER B_cell Score",comp_list,m_a_name,res_path)
+# 
+# m_a_name <-  paste("Combined_TIMER-CD4_Tcell-for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+#   dplyr::filter(!is.na(TIL)) %>%
+#   fn_mutation_burden_all("group","CD4_Tcell",color_list,"TIMER CD4_Tcell Score",comp_list,m_a_name,res_path)
+# 
+# m_a_name <-  paste("Combined_TIMER-CD8_Tcell-for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+#   dplyr::filter(!is.na(TIL)) %>%
+#   fn_mutation_burden_all("group","CD8_Tcell",color_list,"TIMER CD8_Tcell Score",comp_list,m_a_name,res_path)
+# 
+# m_a_name <-  paste("Combined_TIMER-Neutrophil-for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+#   dplyr::filter(!is.na(TIL)) %>%
+#   fn_mutation_burden_all("group","Neutrophil",color_list,"TIMER Neutrophil Score",comp_list,m_a_name,res_path)
+# 
+# m_a_name <-  paste("Combined_TIMER-Macrophage-for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+#   dplyr::filter(!is.na(TIL)) %>%
+#   fn_mutation_burden_all("group","Macrophage",color_list,"TIMER Macrophage Score",comp_list,m_a_name,res_path)
+# 
+# m_a_name <-  paste("Combined_TIMER-Dendritic-for",C,"Groups",sep="_")
+# group_cluster_mutation %>%
+#   dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+#   dplyr::filter(!is.na(TIL)) %>%
+#   fn_mutation_burden_all("group","Dendritic",color_list,"TIMER Dendritic Score",comp_list,m_a_name,res_path)
 
 # 10 cancer related pathways score ----------------------------------------
 
