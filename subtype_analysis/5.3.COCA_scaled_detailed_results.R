@@ -499,11 +499,10 @@ fn_mutation_burden <- function(data,group,facet="~ cancer_types",anno_text,value
   data %>%
     dplyr::mutate(group = as.character(group)) %>%
     ggpubr::ggboxplot(x = group, y = value,fill = "white",alpha = 0,width = 0.1,
-                      color = "white" #add = "jitter",#, palette = "npg"
-    ) +
-    geom_jitter(aes(color = group),size=0.2,alpha=0.2) +
-    geom_violin(fill="white",alpha = 0) +
-    geom_boxplot(fill="white",alpha = 0,width=0.1) +
+                      color = group#,facet.by="cancer_types" #add = "jitter",#, palette = "npg"
+    ) + 
+    geom_violin(aes(fill = group),alpha = 0.5,color = "grey70") +
+    scale_fill_manual(values = color$color) +
     facet_wrap(as.formula(facet), scales = "free") +
     geom_text(aes(x = group,y = y,label = paste("n=",n)), data = anno_text, size = 2) +
     scale_color_manual(
@@ -680,6 +679,7 @@ anno_text <- group_cluster_mutation %>%
   unique() %>%
   dplyr::ungroup() %>%
   dplyr::mutate(group = as.character(group))
+
 group_cluster_mutation %>%
   dplyr::left_join(TCGA_infiltration_data,by="barcode") %>%
   dplyr::select(barcode, group, cancer_types,Bcell,CD4_T,CD8_T,Neutrophil,Macrophage,DC,InfiltrationScore) %>%
@@ -1032,9 +1032,9 @@ TCGA_virus <- readr::read_rds(file.path("/project/huff/huff/data/TCGA/virus_leve
   dplyr::select(-Provenance)
 
 group_cluster_mutation %>%
-  dplyr::select(barcode,cluster,cancer_types,group) %>%
+  dplyr::select(barcode,cancer_types,group) %>%
   dplyr::left_join(TCGA_virus,by="barcode") %>%
-  tidyr::gather(-c("barcode","cluster","cancer_types","group"),key=virus,value=virus_levels) %>% 
+  tidyr::gather(-c("barcode","cancer_types","group"),key=virus,value=virus_levels) %>% 
   tidyr::drop_na(virus_levels) %>%
   # dplyr::mutate(virus_levels=ifelse(is.na(virus_levels),0,virus_levels)) %>%
   dplyr::mutate(virus_levels=as.numeric(virus_levels)) -> virus_for_groups
@@ -1052,7 +1052,8 @@ virus_for_groups %>%
   ggpubr::ggboxplot(x = "group", y = "virus_levels",
                     color = "white" #add = "jitter",#, palette = "npg"
   ) +
-  geom_jitter(aes(color = group)) +
+  geom_jitter(aes(color = group),size=0.2,alpha=0.2) +
+  geom_violin(fill="white",alpha=0) +
   # geom_text(aes(x=group,y=y,label = n),data = virus.text) +
   # geom_point(aes(x=as.numeric(group)+b,y=sm_count,color=group),alpha = 0.5) +
   scale_x_discrete(#breaks = c(1:3),
@@ -1110,5 +1111,5 @@ virus_for_groups %>%
 v_a_name <- paste("Combined_virus_levels_for",3,"Groups.pdf",sep="_")
 ggsave(filename =v_a_name, path = res_path,device = "pdf",width = 6,height = 12)
 
-save.image(file = file.path(res_path, ".rda_combined_clusters_into_group_analysis.rda"))
-load(file = file.path(res_path, ".rda_combined_clusters_into_group_analysis.rda"))
+save.image(file = file.path(res_path, ".rda_combined_result_analysis.rda"))
+load(file = file.path(res_path, ".rda_combined_result_analysis.rda"))
