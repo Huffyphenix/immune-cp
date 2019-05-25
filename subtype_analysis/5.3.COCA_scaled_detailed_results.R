@@ -319,7 +319,10 @@ fn_survival <- function(data,title,color,sur_name,result_path,xlab,h,w,lx=0.8,ly
   #   ) -> legend
   tibble::tibble(group = group, color = color) %>%
     dplyr::inner_join(data,by="group") %>%
-    dplyr::mutate(group = paste("C",group,sep="")) %>%
+    dplyr::group_by(group) %>%
+    dplyr::mutate(n=n()) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group = paste("C",group,",n=",n,sep="")) %>%
     dplyr::select(group,color) %>%
     unique() -> color_paired
   survminer::ggsurvplot(fit,pval=F, #pval.method = T,
@@ -371,12 +374,12 @@ sur_name <- paste("PFS_Survival-5years_for",C,"Groups",sep="_")
 C6_survival.PFS %>%
   dplyr::mutate(time = time/365) %>%
   dplyr::filter(time<=5) %>%
-  fn_survival("6 Clutsers, PFS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
+  fn_survival("4 Clutsers, PFS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 sur_name <- paste("PFS_Survival-all_years_for",C,"Groups",sep="_")
 C6_survival.PFS %>%
   dplyr::mutate(time = time/365) %>%
-  fn_survival("6 Clutsers, PFS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
+  fn_survival("4 Clutsers, PFS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 # cluster with groups for each cancers
 C6_survival.PFS %>%
@@ -431,13 +434,13 @@ C6_survival %>%
 sur_name <- paste("OS_Survival-all_years_for",C,"Groups",sep="_")
 C6_survival.OS %>%
   dplyr::mutate(time = time/365) %>%
-  fn_survival("6 Clutsers, OS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
+  fn_survival("4 Clutsers, OS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 sur_name <- paste("OS_Survival-5years_for",C,"Groups",sep="_")
 C6_survival.OS %>%
   dplyr::mutate(time = time/365) %>%
   dplyr::filter(time<=5) %>%
-  fn_survival("6 Clutsers, OS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
+  fn_survival("4 Clutsers, OS",color_list,sur_name,res_path,"Time (years)",3,4,0.9,0.9)
 
 # cluster with groups for each cancers
 C6_survival.OS %>%
@@ -511,12 +514,13 @@ fn_mutation_burden <- function(data,group,facet="~ cancer_types",anno_text,value
     # ylim(4,12) +
     ylab(ylab) +
     xlab("Group") +
-    # ggpubr::stat_compare_means() +
+    
     theme(legend.position = "none",
           # axis.title.x = element_blank(),
           strip.background = element_rect(fill = "white",colour = "white"),
           text = element_text(size = 10, colour = "black"),
           strip.text = element_text(size = 8)) +
+    # ggpubr::stat_compare_means(size=2) 
     ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif",size=2)
     # ggpubr::stat_compare_means(label.y = 14,paired = TRUE) +
   
@@ -666,6 +670,7 @@ for (cancertypes in cancers_do_MB$cancer_types) {
     fn_mutation_burden("group",facet="~ cell_type",anno_text,"value",color_for_mutation,paste("TCAP score of",cancertypes),m_name,path,w=6,h=6)
 }
 
+# TI L miao for all samples
 m_name <-  paste("Combined_ImmuneInfiltration_for",C,"Groups",sep="_")
 anno_text <- group_cluster_mutation %>%
   dplyr::left_join(TCGA_infiltration_data,by="barcode") %>%
@@ -685,6 +690,7 @@ group_cluster_mutation %>%
   dplyr::select(barcode, group, cancer_types,Bcell,CD4_T,CD8_T,Neutrophil,Macrophage,DC,InfiltrationScore) %>%
   tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
   dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+  dplyr::mutate(value = as.numeric(value)) %>%
   fn_mutation_burden("group",facet="~ cell_type",anno_text,"value",color_for_mutation,paste("TCAP score of all"),m_name,path,h=6,w=6)
 
 # m_a_name <-  paste("Combined_all_ImmuneInfiltration_for",C,"Groups",sep="_")
@@ -888,13 +894,24 @@ for (cancertypes in cancers_do_MB$cancer_types) {
     fn_mutation_burden("group",facet="~ cell_type",anno_text,"value",color_for_mutation,paste("TIMER score of",cancertypes),m_name,path,w=6,h=6)
 }
 
-# m_name <-  paste("Combined_TIMER_for",C,"Groups",sep="_")
-# group_cluster_mutation %>%
-#   dplyr::filter(cancer_types %in% cancers_do_MB$cancer_types) %>%
-#   dplyr::left_join(TIMER_immunity,by="barcode") %>%
-#   dplyr::rename("value"="TIL") %>%
-#   dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
-#   fn_mutation_burden("group",facet="~ cancer_types","value",color_for_mutation,"TIMER Score",m_name,path,h=6)
+m_name <-  paste("Combined_TIMER_for",C,"Groups",sep="_")
+anno_text <- group_cluster_mutation %>%
+  dplyr::left_join(TIMER_immunity,by="barcode") %>%
+  dplyr::select(barcode, group, cancer_types,B_cell,CD4_Tcell,CD8_Tcell,Neutrophil,Macrophage,Dendritic,TIL) %>%
+  tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+  dplyr::mutate(value = ifelse(is.na(value),0,value))%>%
+  dplyr::group_by(group, cell_type) %>%
+  dplyr::mutate(n = n(), y = mean(value)) %>%
+  dplyr::select(group,n, y) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(group = as.character(group))
+group_cluster_mutation %>%
+  dplyr::left_join(TIMER_immunity,by="barcode") %>%
+  dplyr::select(barcode, group, cancer_types,B_cell,CD4_Tcell,CD8_Tcell,Neutrophil,Macrophage,Dendritic,TIL) %>%
+  tidyr::gather(-barcode, -group, -cancer_types,key="cell_type",value="value") %>%
+  dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+  fn_mutation_burden("group",facet="~ cell_type",anno_text,"value",color_for_mutation,paste("TIMER score of",cancertypes),m_name,path,w=6,h=6)
 # 
 # m_a_name <-  paste("Combined_TIMER-B_cell-for",C,"Groups",sep="_")
 # group_cluster_mutation %>%
@@ -989,7 +1006,7 @@ pathway_score_for_all.diff.pva %>%
   tidyr::unnest() %>%
   dplyr::filter(p.value <=0.05) -> pathway_score_for_all.diff.pva.sig
 
-
+# compare pathway score in all samples
 pathway_score_for_groups %>%
   dplyr::filter(pathway %in% pathway_score_for_all.diff.pva.sig$pathway) %>%
   ggpubr::ggboxplot(x = "group", y = "score",
@@ -1025,6 +1042,29 @@ pathway_score_for_groups %>%
 p_a_name <- paste("Combined_all_PathwayScore_for",C,"Groups.pdf",sep="_")
 ggsave(filename = paste(p_a_name,"png",sep="."), path = res_path,device = "png",width = 8,height = 6)
 ggsave(filename = paste(p_a_name,"pdf",sep="."), path = res_path,device = "pdf",width = 8,height = 6)
+
+# compare pathway score in each cancers ------
+for (cancertypes in cancers_do_MB$cancer_types) {
+  path <- file.path(res_path,"pathway")
+  if(!dir.exists(path)){
+    dir.create(file.path(path))
+  }
+  m_name <-  paste(cancertypes,"pathway_for",C,"Groups",sep="_")
+  anno_text <- pathway_score_for_groups %>%
+    dplyr::filter(cancer_types.x == cancertypes) %>%
+    dplyr::rename("value" = "score") %>%
+    dplyr::group_by(group,pathway) %>%
+    dplyr::mutate(n = n(), y = mean(value)) %>%
+    dplyr::select(group,pathway,n, y) %>%
+    unique() %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group = as.character(group))
+  pathway_score_for_groups %>%
+    dplyr::filter(cancer_types.x == cancertypes) %>%
+    dplyr::rename("value" = "score") %>%
+    dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
+    fn_mutation_burden("group",facet="~ pathway",anno_text,"value",color_for_mutation,paste("Pathway score of",cancertypes),m_name,path,w=6,h=6)
+}
 
 
 # virus related pathways score ----------------------------------------
