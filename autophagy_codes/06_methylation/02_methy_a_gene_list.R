@@ -3,9 +3,10 @@ library(magrittr)
 
 
 # Path
-out_path <- "/project/huff/huff/immune_checkpoint/result_20171025"
-tcga_path <- "/project/huff/huff/immune_checkpoint/data/TCGA_data"
-expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
+basic_path <- "/home/huff/project"
+out_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
+tcga_path <- file.path(basic_path,"immune_checkpoint/data/TCGA_data")
+expr_path <- file.path(basic_path,"immune_checkpoint/result_20171025/expr_rds")
 methy_path <- file.path(out_path, "m_4_methylation")
 methy_box <- file.path(methy_path, "boxplot")
 
@@ -19,7 +20,25 @@ gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
 gene_list$symbol<-as.character(gene_list$symbol)
 gene_list$col<-as.character(gene_list$col)
 gene_list$size<-as.character(gene_list$size)
-
+ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+fn_site_color <- function(.n,.x){
+  print(.n)
+  if(.x=="Mainly_Tumor"){
+    "red"
+  }else if(.x=="Mainly_Immune"){
+    "Blue"
+  }else if(.x=="Both"){
+    c("#9A32CD")
+  }else{
+    "grey"
+  }
+}
+gene_list %>%
+  dplyr::inner_join(ICP_expr_pattern,by="symbol") %>%
+  dplyr::rename("Exp_site"="Exp site") %>%
+  dplyr::mutate(Exp_site=ifelse(is.na(Exp_site),"N",Exp_site)) %>%
+  dplyr::mutate(site_col = purrr::map2(symbol,Exp_site,fn_site_color)) %>%
+  tidyr::unnest() -> gene_list
 
 # functions
 filter_gene_list <- function(.x, gene_list) {
@@ -198,8 +217,7 @@ plot_ready %>%
     axis.title = element_blank(),
     axis.ticks = element_line(color = "black"),
     # axis.text.y = element_text(color = gene_rank$color),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, color = gene_rank$col,face = gene_rank$size),
-    
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, color = gene_rank$site_col,face = gene_rank$size),
     legend.text = element_text(size = 10),
     legend.title = element_text(size = 12),
     legend.key = element_rect(fill = "white", colour = "black"),
@@ -215,7 +233,66 @@ plot_ready %>%
     )
   ) -> p
 
-ggsave(filename = '02_atg_meth_diff.pdf', device = 'pdf', plot = p, path = methy_path, height = 5.5, width = 15)
+ggsave(filename = '02_atg_meth_diff.pdf', device = 'pdf', plot = p, path = methy_path, height = 5, width = 10)
+
+plot_ready %>%
+  dplyr::inner_join(gene_rank,by="symbol") %>%
+  dplyr::mutate(fun = "functionWithImmune") %>%
+  ggplot(aes(y=fun,x=symbol)) +
+  geom_tile(aes(fill = functionWithImmune),color="grey",size=1) +
+  scale_x_discrete(limit = gene_rank$symbol) +
+  scale_fill_manual(
+    name = "Immune Checkpoint",
+    values = c("#1C86EE", "#EE3B3B", "#EE7600")
+  ) +
+  theme(
+    panel.background = element_rect(colour = "black", fill = "white"),
+    panel.grid = element_line(colour = "grey", linetype = "dashed"),
+    panel.grid.major = element_line(
+      colour = "grey",
+      linetype = "dashed",
+      size = 0.2
+    ),
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 14),
+    # legend.position = "none",
+    legend.key = element_rect(fill = "white", colour = "black"),
+    plot.margin=unit(c(0,0,0,-0), "cm") 
+  ) -> p1
+
+p + theme(axis.ticks.y = element_blank(),
+          axis.text = element_text(color = "black"),
+          plot.margin=unit(c(-0,-0,0,-0), "cm")) -> p1.1
+p1 + theme(axis.ticks.y = element_blank(),
+           axis.text = element_text(color = "black"),
+           plot.margin=unit(c(-0,-0,0,-0), "cm")) -> p1.2
+
+ggarrange(p1.1,p1.2,
+          ncol = 1, nrow = 2,  align = "hv", 
+          heights = c(5, 1),
+          legend = "top",
+          common.legend = TRUE) -> p
+
+ggsave(
+  filename = "fig_04_combine_methy-Exp_site.pdf",
+  device = "pdf",
+  plot = p,
+  width = 10,
+  height = 6,
+  path = methy_path
+)
+ggsave(
+  filename = "fig_04_combine_methy-Exp_site.png",
+  device = "png",
+  plot = p,
+  width = 10,
+  height = 6,
+  path = methy_path
+)
 #------------------------------lysosome----------------
 
 plot_ready %>% 
