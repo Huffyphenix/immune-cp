@@ -4,12 +4,12 @@
 # FANTOM 5 data filter and classification ---------------------------------
 
 library(magrittr)
-library(org.Hs.eg.db)
+# library(org.Hs.eg.db)
 library(clusterProfiler)
 # data path ---------------------------------------------------------------
-
-fantom_path <- "/project/huff/huff/data/FANTOM5/extra"
-immune_path <- "/project/huff/huff/immune_checkpoint"
+basic_path <- "/home/huff/project"
+fantom_path <- file.path(basic_path,"data/FANTOM5/extra")
+immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 
 
@@ -18,9 +18,14 @@ gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 fantom_exp <- readr::read_tsv(file.path(fantom_path,"matrix.hg38_fair_new_CAGE_peaks_phase1and2_tpm_ann.osc.txt"))
 fantom_sample_info <- readr::read_tsv(file.path(fantom_path,"HumanSamples2.0.classification.txt"))
 
+# dealing with peaks such as p1@KIR2DL2,p1@KIR2DL3,p1@KIR2DS2 covered several genes ------
+fantom_exp %>%
+  dplyr::select(short_description,entrezgene_id,hgnc_id) %>%
+  tidyr::separate(entrezgene_id,paste("entrez",1:10,sep=" "),"/")
+# load gene list and correspond TCGA symbol with FANTOM symbol id ----
 gene_list <- read.table(file.path(gene_list_path, "all.entrez_id-gene_id"),header=T)
 
-ICP_HGNC_symbol <- readr::read_tsv(file.path("/project/huff/huff/data/HGNC","All_approved_symbols.txt")) %>%
+ICP_HGNC_symbol <- readr::read_tsv(file.path(basic_path,"data/HGNC","All_approved_symbols.txt")) %>%
   dplyr::select(hgnc_id,entrez_id,symbol) %>%
   dplyr::filter(entrez_id %in% gene_list$GeneID)
 
