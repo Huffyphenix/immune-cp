@@ -120,18 +120,20 @@ fantom_sample_info_transcode %>%
   dplyr::arrange(`Characteristics[Tissue]`) %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","cell_lines.statistic.tsv"))
 
-# merge expression data and sample info by sample keys --------------------
+# merge expression data and sample info by sample keys [mean expression]--------------------
 
 # cell lines = tumor expression ----
 fantom_sample_info_transcode %>%
   dplyr::filter(`Characteristics [Category]` == "cell lines") %>%
-  dplyr::inner_join(ICP_fantom_gene.exp.substr,by="sample") %>%
-  dplyr::group_by(hgnc_id,`Characteristics[Tissue]`) %>%
+  dplyr::inner_join(ICP_fantom_exp.gene.substr,by="sample") %>%
+  dplyr::group_by(entrez_ID,`Characteristics[Tissue]`) %>%
   dplyr::mutate(gene_mean_exp = mean(gene_tpm)) %>%
-  dplyr::select(hgnc_id,`Characteristics[Tissue]`,gene_mean_exp) %>%
+  dplyr::select(entrez_ID,`Characteristics[Tissue]`,gene_mean_exp) %>%
   unique() %>%
   dplyr::ungroup() %>%
-  dplyr::inner_join(ICP_HGNC_symbol,by="hgnc_id")  %>%
+  dplyr::mutate(GeneID = as.integer(entrez_ID)) %>%
+  dplyr::inner_join(gene_list,by="GeneID")  %>%
+  dplyr::select(-GeneID) %>%
   dplyr::mutate(Group = "Tumor Cell")-> ICP_fantom_gene.exp.cell_line
   
 # primary cell = immune cell and stromal cell ----
@@ -141,21 +143,54 @@ fantom_sample_info_transcode %>%
   dplyr::inner_join(xCell_Fantom_cellname_adjust,by="Fantom5_cellname") %>%
   # dplyr::filter(! is.na(`Characteristics[Tissue]`)) %>%
   dplyr::rename("Group" = "Type") %>%
-  dplyr::inner_join(ICP_fantom_gene.exp.substr,by="sample") %>%
-  dplyr::group_by(hgnc_id,Group) %>%
+  dplyr::inner_join(ICP_fantom_exp.gene.substr,by="sample") %>%
+  dplyr::group_by(entrez_ID,Group) %>%
   dplyr::mutate(gene_mean_exp = mean(gene_tpm)) %>%
-  dplyr::select(hgnc_id,Group,gene_mean_exp) %>%
+  dplyr::select(entrez_ID,Group,gene_mean_exp) %>%
   unique() %>%
   dplyr::ungroup() %>%
-  dplyr::inner_join(ICP_HGNC_symbol,by="hgnc_id") -> ICP_fantom_gene.exp.Immune_Stromal_cell
+  dplyr::mutate(GeneID = as.integer(entrez_ID)) %>%
+  dplyr::inner_join(gene_list,by="GeneID") %>%
+  dplyr::select(-GeneID)-> ICP_fantom_gene.exp.Immune_Stromal_cell 
 
-
-# data combination --------------------------------------------------------
+# data combination -------
 ICP_fantom_gene.exp.Immune_Stromal_cell %>%
   dplyr::mutate(`Characteristics[Tissue]`="PrimaryCell") %>%
   rbind(ICP_fantom_gene.exp.cell_line) -> ICP_fantom.gene_exp.cell_line.Immune_cell.combine
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
-  readr::write_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.mean.exp.rds.gz"),compress = "gz")
 
+# all raw expression from tissue cell lines and primary cells -------------
+# tumor cell lines
+fantom_sample_info_transcode %>%
+  dplyr::filter(`Characteristics [Category]` == "cell lines") %>%
+  dplyr::inner_join(ICP_fantom_exp.gene.substr,by="sample") %>%
+  dplyr::select(sample,entrez_ID,`Characteristics[Tissue]`,gene_tpm) %>%
+  dplyr::mutate(GeneID = as.integer(entrez_ID)) %>%
+  dplyr::inner_join(gene_list,by="GeneID")  %>%
+  dplyr::select(-GeneID) %>%
+  dplyr::mutate(Group = "Tumor Cell")-> ICP_fantom_gene.exp.cell_line.rawexp
+
+# immune cell and stramal cells
+fantom_sample_info_transcode %>%
+  dplyr::filter(`Characteristics [Category]` == "primary cells") %>%
+  dplyr::rename("Fantom5_cellname"="Characteristics [Cell type]") %>%
+  dplyr::inner_join(xCell_Fantom_cellname_adjust,by="Fantom5_cellname") %>%
+  # dplyr::filter(! is.na(`Characteristics[Tissue]`)) %>%
+  dplyr::rename("Group" = "Type") %>%
+  dplyr::inner_join(ICP_fantom_exp.gene.substr,by="sample") %>%
+  dplyr::select(sample,entrez_ID,Group,gene_tpm) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(GeneID = as.integer(entrez_ID)) %>%
+  dplyr::inner_join(gene_list,by="GeneID") %>%
+  dplyr::select(-GeneID) -> ICP_fantom_gene.exp.Immune_Stromal_cell.rawexp
+
+ICP_fantom_gene.exp.Immune_Stromal_cell.rawexp %>%
+  dplyr::mutate(`Characteristics[Tissue]`="PrimaryCell") %>%
+  rbind(ICP_fantom_gene.exp.cell_line.rawexp) -> ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rawexp
+
+ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rawexp %>%
+  readr::write_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.raw.exp.rds.gz"),compress = "gz")
 # all_cancer_TIL <- readr::read_rds("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")
