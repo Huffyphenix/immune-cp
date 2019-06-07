@@ -11,6 +11,7 @@ basic_path <- "/home/huff/project"
 fantom_path <- file.path(basic_path,"data/FANTOM5/extra")
 immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
+xcell_path <- file.path(basic_path,"data/TCGA/immune_infiltration/xCell")
 
 
 # load data ---------------------------------------------------------------
@@ -20,8 +21,15 @@ fantom_sample_info <- readr::read_tsv(file.path(fantom_path,"HumanSamples2.0.cla
 
 # dealing with peaks such as p1@KIR2DL2,p1@KIR2DL3,p1@KIR2DS2 covered several genes ------
 fantom_exp %>%
-  dplyr::select(short_description,entrezgene_id,hgnc_id) %>%
-  tidyr::separate(entrezgene_id,paste("entrez",1:10,sep=" "),"/")
+  dplyr::select("00Annotation",entrezgene_id) %>%
+  tidyr::separate(entrezgene_id,paste("entrez",1:10,sep="_")," ") %>%
+  tidyr::gather(-`00Annotation`,key="entrez_i",value="entrez_ID") %>%
+  dplyr::filter(!is.na(entrez_ID)) %>%
+  dplyr::select(-entrez_i) -> fantom_exp.entrezid.seperate
+
+fantom_exp %>%
+  dplyr::inner_join(fantom_exp.entrezid.seperate,by="00Annotation") -> fantom_exp.id.dealing
+
 # load gene list and correspond TCGA symbol with FANTOM symbol id ----
 gene_list <- read.table(file.path(gene_list_path, "all.entrez_id-gene_id"),header=T)
 
@@ -37,14 +45,18 @@ xCell_Fantom_cellname_adjust <- readr::read_tsv(file.path(xcell_path,"xCell_Fant
   dplyr::inner_join(xCell_cell_type,by="Cell types") %>%
   dplyr::mutate(Type = ifelse(Subgroup == "Lymphoid" | Subgroup == "Myeloid","Immune Cell","Stromal Cell")) %>%
   dplyr::select(Fantom5_cellname,Type) %>%
-  unique()
+  unique() %>% 
+  dplyr::filter(!is.na(Fantom5_cellname))
+
+xCell_Fantom_cellname_adjust %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","xCell_Fantom_cellname_adjust.immune-stromal-cells.tsv"))
 # data filter -------------------------------------------------------------
 ##### filter ICP genes in expression data, and catch the key info of samples ----
 # filter ICP genes
-fantom_exp %>%
-  dplyr::filter(hgnc_id %in% ICP_HGNC_symbol$hgnc_id) %>%
-  dplyr::select(-`00Annotation`,-description,-association_with_transcript,-entrezgene_id,-uniprot_id) %>%
-  tidyr::gather(-hgnc_id,-short_description,key="sample",value="TPM") -> ICP_fantom_exp
+fantom_exp.id.dealing %>%
+  dplyr::filter(entrez_ID %in% gene_list$GeneID) %>%
+  dplyr::select(-`00Annotation`,-description,-association_with_transcript,-entrezgene_id,-uniprot_id,-hgnc_id) %>%
+  tidyr::gather(-entrez_ID,-short_description,key="sample",value="TPM") -> ICP_fantom_exp
 
 # catch the key info of samples 
 fn_substr <- function(.x){
@@ -62,11 +74,15 @@ ICP_fantom_exp %>%
   dplyr::mutate(sample = as.character(sample))-> ICP_fantom_exp.substr;ICP_fantom_exp.substr
 
 ICP_fantom_exp.substr %>%
-  dplyr::group_by(hgnc_id,sample) %>%
-  dplyr::mutate(gene_tpm = sum(TPM)) %>%
-  dplyr::select(hgnc_id,sample,gene_tpm) %>% 
+  dplyr::mutate(pi = purrr::map(short_description,.f=function(.x){
+    strsplit(.x,"@")[[1]][1]
+  })) %>%
+  tidyr::unnest() %>%
+  dplyr::filter(pi == "p1") %>%
+  dplyr::rename(gene_tpm = TPM) %>%
+  dplyr::select(entrez_ID,sample,gene_tpm) %>% 
   unique() %>%
-  dplyr::ungroup() -> ICP_fantom_gene.exp.substr
+  dplyr::ungroup() -> ICP_fantom_exp.gene.substr
 
 ##### filter cell line and primary cell samples ----
 # filter samples we need and transcode the sample names by curl_escape() of curl R package
@@ -75,7 +91,34 @@ fantom_sample_info %>%
   dplyr::filter(`Characteristics [Category]` %in% c("cell lines","primary cells")) %>%
   dplyr::mutate(sample = toupper(paste(curl_escape(`Charateristics [description]`),`Source Name`,sep="."))) %>%
   dplyr::select(sample,`Characteristics[Tissue]`,`Characteristics [Cell type]`,`Characteristics [Category]`) -> fantom_sample_info_transcode
+# immune cell statistic
+fantom_sample_info_transcode %>%
+  dplyr::filter(`Characteristics [Category]` == "primary cells") %>%
+  dplyr::select(`Characteristics [Cell type]`) %>%
+  dplyr::group_by(`Characteristics [Cell type]`) %>%
+  dplyr::mutate(n = n()) %>%
+  dplyr::rename("Fantom5_cellname" = "Characteristics [Cell type]") %>%
+  dplyr::inner_join(xCell_Fantom_cellname_adjust,by = "Fantom5_cellname") %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(Type) %>%
+  dplyr::mutate(Type_n = sum(n)) %>%
+  dplyr::arrange(Type) %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","xCell_Fantom_cellname_adjust.immune-stromal-cells.statistic.tsv"))
 
+# cell line statistic
+fantom_sample_info_transcode %>%
+  dplyr::filter(`Characteristics [Category]` == "cell lines") %>%
+  dplyr::select(`Characteristics[Tissue]`,`Characteristics [Cell type]`) %>%
+  dplyr::group_by(`Characteristics [Cell type]`) %>%
+  dplyr::mutate(cell_type_n = n()) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(`Characteristics[Tissue]`) %>%
+  dplyr::mutate(tissue_n = sum(cell_type_n)) %>%
+  unique() %>%
+  dplyr::arrange(`Characteristics[Tissue]`) %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","cell_lines.statistic.tsv"))
 
 # merge expression data and sample info by sample keys --------------------
 
@@ -113,6 +156,6 @@ ICP_fantom_gene.exp.Immune_Stromal_cell %>%
   rbind(ICP_fantom_gene.exp.cell_line) -> ICP_fantom.gene_exp.cell_line.Immune_cell.combine
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
-  readr::write_rds(file.path(immune_path,"genelist_data","ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rds.gz"),compress = "gz")
 
 # all_cancer_TIL <- readr::read_rds("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")
