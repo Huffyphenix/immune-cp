@@ -12,10 +12,11 @@ result_path <- file.path(immune_path,"result_20171025","ICP_exp_patthern")
 # load data ---------------------------------------------------------------
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine <-
-  readr::read_rds(file.path(immune_path,"genelist_data","ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rds.gz"))
+  readr::read_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.raw.exp.rds.gz")) %>%
+  dplyr::filter(Group != "Stromal Cell")
 
 
-TCGA_tissue <- readr::read_tsv("/project/huff/huff/data/TCGA/TCGA_cancer_tissue_classification.txt")
+TCGA_tissue <- readr::read_tsv(file.path(basic_path,"data/TCGA/TCGA_cancer_tissue_classification.txt"))
 TCGA_tissue$Tissues %>% unique()
 
 is_outlier <- function(x) {
@@ -32,19 +33,84 @@ max_3 <- function(.x){
   res <- .x > top4 
   return(res)
 }
+
+## get fold change of gene expression between tumor tissue cell line and immune cells ----------
+fn_DE_TI <- function(cell_line_exp,.symbol){
+  ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
+    dplyr::filter(Group == "Immune Cell") %>%
+    dplyr::filter(symbol == .symbol) -> immune_exp
+  
+  broom::tidy(
+    wilcox.test(immune_exp$gene_tpm, cell_line_exp$gene_tpm, alternative = "two.sided") #Comparing the means of two independent groups:Unpaired Two-Samples Wilcoxon Test (non-parametric) 
+  ) %>%
+    dplyr::mutate(mean_cell_line = mean(cell_line_exp$gene_tpm), mean_immune_exp = mean(immune_exp$gene_tpm)) %>%
+    dplyr::mutate(`log2FC(I/T)` = log2((mean_immune_exp+1)/(mean_cell_line+1)))
+}
+
+ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
+  dplyr::filter(`Characteristics[Tissue]` != "PrimaryCell") %>%
+  tidyr::nest(-entrez_ID,-symbol,.key="cell_line_exp") %>%
+  dplyr::mutate(DE_I_T = purrr::map2(cell_line_exp,symbol,fn_DE_TI)) %>%
+  dplyr::select(-cell_line_exp) %>%
+  tidyr::unnest() -> ICP_DE_FC_between_cellline_immune
+
+## define genes exp site by fold change and pvalue ----
+fn_define_exp_site <- function(symbol,fc,pvalue){
+  print(symbol)
+  if(is.na(pvalue)){
+    tmp <- "Not_sure"
+  }
+  if(fc>=2){
+    if(fc>=5){
+      if(pvalue<=0.05){
+        tmp <- "Only_exp_on_Immune"
+      }
+    }else if(fc<5){
+      if(pvalue<=0.05){
+        tmp <- "Mainly_exp_on_Immune"
+      }
+    }
+  }else if(fc<=(-2)){
+    if(fc<=(-5)){
+      if(pvalue<=0.05){
+        tmp <- "Only_exp_on_Tumor"
+      }
+    }else if(fc>(-5)){
+      if(pvalue<=0.05){
+        tmp <- "Mainly_exp_on_Tumor"
+      }
+    }
+  } else {
+    tmp <- "Both_exp_on_Tumor_Immune"
+  }
+  tmp
+}
+
+ICP_DE_FC_between_cellline_immune %>%
+  dplyr::mutate(Exp_site = purrr::pmap(list(symbol,`log2FC(I/T)`,p.value),fn_define_exp_site)) %>%
+  tidyr::unnest() -> ICP_Exp_site_by_DE_FC_between_cellline_immune
+
+ICP_Exp_site_by_DE_FC_between_cellline_immune %>%
+  readr::write_tsv(file.path(result_path,"ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
+
+# draw picture ------------------------------------------------------------
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
   # dplyr::filter(`Characteristics[Tissue]` %in% c("PrimaryCell",TCGA_tissue$Tissues)) %>%
-  dplyr::mutate(Group = ifelse(Group=="Stromal Cell","Stromal",Group)) %>%
+  # dplyr::mutate(Group = ifelse(Group=="Stromal Cell","Stromal",Group)) %>%
   dplyr::mutate(Group = ifelse(Group=="Immune Cell","Immune",Group)) %>%
   dplyr::mutate(Group = ifelse(Group=="Tumor Cell","Tumor",Group)) %>%
-  dplyr::group_by(symbol,Group) %>%
-  dplyr::mutate(outlier = ifelse(max_3(gene_mean_exp), `Characteristics[Tissue]`,NA)) %>%
-  # dplyr::filter(symbol %in% c("ICOSLG","TNFRSF14","VSIR")) %>%
-  ggplot(aes(x=Group,y=gene_mean_exp)) +
+  dplyr::mutate(gene_tpm = log2(gene_tpm+1)) %>%
+  dplyr::inner_join(ICP_Exp_site_by_DE_FC_between_cellline_immune,by=c("symbol","entrez_ID")) -> ready_for_draw
+
+ready_for_draw %>%
+  dplyr::arrange(`log2FC(I/T)`)
+within(ready_for_draw, symbol <- factor(symbol, levels = levels(sort(`log2FC(I/T)`))))
+) %>%
+  ggplot(aes(x=Group,y=gene_tpm)) +
   geom_violin(aes(fill=Group),alpha = 0.4) +
-  geom_jitter(aes(color=Group),size=1,width = 0.1,height = 0) +
+  geom_jitter(aes(color=Group),size=0.1,width = 0.1,height = 0) +
   facet_wrap(~symbol,scale="free_y") +
-  geom_text(aes(label = outlier), na.rm = TRUE, nudge_x = -0.25, nudge_y = 0.25,size=3) +
+  # geom_text(aes(label = outlier), na.rm = TRUE, nudge_x = -0.25, nudge_y = 0.25,size=3) +
   scale_color_manual(
     values = c("#3CB371", "#CDCD00", "#FF3030"),
     breaks = c("Immune", "Stromal", "Tumor")
