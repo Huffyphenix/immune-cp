@@ -92,12 +92,16 @@ fantom_sample_info %>%
   dplyr::mutate(sample = toupper(paste(curl_escape(`Charateristics [description]`),`Source Name`,sep="."))) %>%
   dplyr::select(sample,`Characteristics[Tissue]`,`Characteristics [Cell type]`,`Characteristics [Category]`) -> fantom_sample_info_transcode
 # immune cell statistic
-fantom_sample_info_transcode %>%
+ICP_fantom_exp.gene.substr %>%
+  dplyr::select(sample) %>%
+  unique() %>%
+  dplyr::inner_join(fantom_sample_info_transcode, by="sample") %>%
   dplyr::filter(`Characteristics [Category]` == "primary cells") %>%
-  dplyr::select(`Characteristics [Cell type]`) %>%
+  dplyr::select(sample,`Characteristics [Cell type]`) %>%
   dplyr::group_by(`Characteristics [Cell type]`) %>%
   dplyr::mutate(n = n()) %>%
   dplyr::rename("Fantom5_cellname" = "Characteristics [Cell type]") %>%
+  dplyr::select(-sample) %>%
   dplyr::inner_join(xCell_Fantom_cellname_adjust,by = "Fantom5_cellname") %>%
   unique() %>%
   dplyr::ungroup() %>%
@@ -107,10 +111,13 @@ fantom_sample_info_transcode %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","xCell_Fantom_cellname_adjust.immune-stromal-cells.statistic.tsv"))
 
 # cell line statistic
-fantom_sample_info_transcode %>%
+ICP_fantom_exp.gene.substr %>%
+  dplyr::select(sample) %>%
+  unique() %>%
+  dplyr::inner_join(fantom_sample_info_transcode, by="sample") %>%
   dplyr::filter(`Characteristics [Category]` == "cell lines") %>%
   dplyr::select(`Characteristics[Tissue]`,`Characteristics [Cell type]`) %>%
-  dplyr::group_by(`Characteristics [Cell type]`) %>%
+  dplyr::group_by(`Characteristics[Tissue]`,`Characteristics [Cell type]`) %>%
   dplyr::mutate(cell_type_n = n()) %>%
   unique() %>%
   dplyr::ungroup() %>%
@@ -118,6 +125,8 @@ fantom_sample_info_transcode %>%
   dplyr::mutate(tissue_n = sum(cell_type_n)) %>%
   unique() %>%
   dplyr::arrange(`Characteristics[Tissue]`) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(all_n = sum(cell_type_n)) %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","cell_lines.statistic.tsv"))
 
 # merge expression data and sample info by sample keys [mean expression]--------------------
