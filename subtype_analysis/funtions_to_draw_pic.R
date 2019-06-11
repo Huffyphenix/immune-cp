@@ -40,10 +40,10 @@ fn_survival <- function(data,title,color,group,sur_name,xlab,result_path,h,w,lx=
                           legend.key = element_blank(),
                           legend.background = element_blank(),
                           legend.text = element_text(size = 8),
-                          axis.text = element_text(size = 12),
+                          axis.text = element_text(size = 12,color = "black"),
                           legend.title = element_blank(),
                           axis.title = element_text(size = 12,color = "black"),
-                          text = element_text(color = "black" )
+                          text = element_text(color = "black")
                         )
    )[[1]] +
     scale_color_manual(
