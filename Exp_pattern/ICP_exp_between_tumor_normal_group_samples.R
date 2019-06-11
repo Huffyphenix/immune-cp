@@ -210,8 +210,8 @@ gene_list_expr.T_N.only_paired %>%
 gene_list_expr.T_N.only_paired.gene_score %>%
   dplyr::group_by(Participant) %>%
   dplyr::mutate(score = ifelse(is.na(score),0,score))%>%
-  dplyr::mutate(score_sum = mean(score)) %>%
-  dplyr::select(cancer_types,Participant,score_sum) %>%
+  dplyr::mutate(score_mean = mean(score)) %>%
+  dplyr::select(cancer_types,Participant,score_mean) %>%
   unique() %>%
   dplyr::ungroup()-> gene_list_expr.T_N.only_paired.sample_score
 
