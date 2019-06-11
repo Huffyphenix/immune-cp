@@ -5,7 +5,8 @@ library(magrittr)
 library(dplyr)
 
 # data path 
-immune_path <- "/project/huff/huff/immune_checkpoint"
+basic_path <- "/home/huff/project"
+immune_path <- file.path(basic_path,"immune_checkpoint")
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern/score_from.tumor_class_by_T_N.by_max")
 
 # load data
