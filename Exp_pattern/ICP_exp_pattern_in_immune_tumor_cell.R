@@ -48,7 +48,7 @@ fn_DE_TI <- function(cell_line_exp,.symbol){
 }
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
-  dplyr::filter(`Characteristics[Tissue]` != "PrimaryCell") %>%
+  dplyr::filter(! `Characteristics[Tissue]` %in% c("PrimaryCell","blood")) %>%
   tidyr::nest(-entrez_ID,-symbol,.key="cell_line_exp") %>%
   dplyr::mutate(DE_I_T = purrr::map2(cell_line_exp,symbol,fn_DE_TI)) %>%
   dplyr::select(-cell_line_exp) %>%
@@ -94,50 +94,67 @@ ICP_Exp_site_by_DE_FC_between_cellline_immune %>%
   readr::write_tsv(file.path(result_path,"ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
 
 # draw picture ------------------------------------------------------------
-ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
-  # dplyr::filter(`Characteristics[Tissue]` %in% c("PrimaryCell",TCGA_tissue$Tissues)) %>%
+strip_color <- data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor" ),
+                          site_cplor = c("#458B74", "#76EEC6", "#EEC591", "#FF6A6A"))
+ICP_fantom.gene_exp.cell_line.Immune_cell.combine  %>%
+  dplyr::filter(! `Characteristics[Tissue]` %in% c("blood")) %>%
   # dplyr::mutate(Group = ifelse(Group=="Stromal Cell","Stromal",Group)) %>%
   dplyr::mutate(Group = ifelse(Group=="Immune Cell","Immune",Group)) %>%
   dplyr::mutate(Group = ifelse(Group=="Tumor Cell","Tumor",Group)) %>%
   dplyr::mutate(gene_tpm = log2(gene_tpm+1)) %>%
-  dplyr::inner_join(ICP_Exp_site_by_DE_FC_between_cellline_immune,by=c("symbol","entrez_ID")) -> ready_for_draw
+  dplyr::inner_join(ICP_Exp_site_by_DE_FC_between_cellline_immune,by=c("symbol","entrez_ID")) %>%
+  dplyr::inner_join(strip_color,by="Exp_site") %>%
+  dplyr::filter(!is.na(`Characteristics[Tissue]`)) %>%
+  dplyr::mutate(symbol = paste(symbol, ", FC =",signif(`log2FC(I/T)`,2),sep = ""))-> ready_for_draw
 
 ready_for_draw %>%
-  dplyr::arrange(`log2FC(I/T)`)
-within(ready_for_draw, symbol <- factor(symbol, levels = levels(sort(`log2FC(I/T)`))))
-) %>%
-  ggplot(aes(x=Group,y=gene_tpm)) +
-  geom_violin(aes(fill=Group),alpha = 0.4) +
-  geom_jitter(aes(color=Group),size=0.1,width = 0.1,height = 0) +
-  facet_wrap(~symbol,scale="free_y") +
+  dplyr::arrange(`log2FC(I/T)`) %>%
+  .$symbol -> sort.symbol
+
+ready_for_draw <- within(ready_for_draw, symbol <- factor(symbol, levels = unique(sort.symbol))) # change symbol's factor level to rank the facets on plot
+with(ready_for_draw, levels(symbol))
+
+
+ready_for_draw %>%
+  dplyr::select(symbol,Exp_site) %>%
+  # dplyr::filter(symbol %in% c("CD276","CTLA4")) %>%
+  unique() -> color_bac
+color_bac$Group <- color_bac$gene_tpm <- 1
+
+library(ggbeeswarm)
+ggplot(ready_for_draw,
+       aes(x = Group,y = gene_tpm)) +
+  # geom_violin() +
+  geom_quasirandom(size=0.2) +
+  geom_rect(data=color_bac,aes(fill = Exp_site),xmin = -Inf,xmax = Inf,ymin = -Inf,ymax = Inf,alpha = 0.1) +
+  facet_wrap(~symbol,scale = "free_y") +
+  ggpubr::stat_compare_means(method = "wilcox.test",label = "p.format") +
   # geom_text(aes(label = outlier), na.rm = TRUE, nudge_x = -0.25, nudge_y = 0.25,size=3) +
-  scale_color_manual(
-    values = c("#3CB371", "#CDCD00", "#FF3030"),
-    breaks = c("Immune", "Stromal", "Tumor")
-  ) +
   scale_fill_manual(
-    values = c("#FF3030")
+    values = c("yellow",  "green","red", "blue"),
+    # values = c("#008B00", "#00EE00", "#CD8500", "#FF4500"),
+    breaks = c("Only_exp_on_Immune", "Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor")
   ) +
   # theme_bw() +
+  ylab("log2(TPM)") +
   theme(
-    panel.background = element_rect(fill = "white", 
-                                    colour = "black"),
+    panel.background = element_rect(fill = "white",colour = "black"),
     axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(vjust = 1, hjust = 1, size = 10, angle = 30),
-    axis.title = element_blank(),
-    legend.position = "none",
+    axis.text.x = element_text(vjust = 1, hjust = 1, size = 10),
+    axis.title.x = element_blank(),
+    # legend.position = "none",
     legend.text = element_text(size = 10),
-    legend.title = element_text(size = 12,angle = 90),
+    legend.title = element_text(size = 12),
     legend.background = element_blank(),
     legend.key = element_rect(fill = "white", colour = "black"),
     plot.title = element_text(size = 20),
     axis.text = element_text(colour = "black"),
     strip.background = element_rect(fill = "white",colour = "black"),
-    strip.text = element_text(size = 12)
-)
-
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-TCGA.tissue.png"),device = "png",height = 10,width = 15)  
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-TCGA.tissue.pdf"),device = "pdf",height = 10,width = 15)  
+    strip.text = element_text(size = 12),
+    text = element_text(color = "black")
+) 
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.png"),device = "png",height = 10,width = 15)  
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.pdf"),device = "pdf",height = 10,width = 15)  
 
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.png"),device = "png",height = 10,width = 15)  
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.pdf"),device = "pdf",height = 10,width = 15)
