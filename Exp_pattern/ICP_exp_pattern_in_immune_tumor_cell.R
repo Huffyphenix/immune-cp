@@ -165,13 +165,13 @@ fn_exp_pantern_classify <- function(.n,.x){
   print(.n)
   .x %>% 
     dplyr::filter(Group == "Stromal Cell") %>%
-    .$gene_mean_exp -> Stromal_exp
+    .$gene_tpm -> Stromal_exp
   .x %>% 
     dplyr::filter(Group == "Immune Cell") %>%
-    .$gene_mean_exp -> Immune_exp
+    .$gene_tpm -> Immune_exp
   .x %>% 
     dplyr::filter(Group == "Tumor Cell") %>%
-    .$gene_mean_exp  %>%
+    .$gene_tpm  %>%
     quantile(0.5) %>%
     as.numeric()-> Tumor_exp
   if(Tumor_exp==0){Tumor_exp <- 0.01}
@@ -191,8 +191,9 @@ fn_exp_pantern_classify <- function(.n,.x){
 }
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
+  dplyr::filter(! `Characteristics[Tissue]` %in% c("blood")) %>%
   dplyr::group_by(symbol) %>%
-  dplyr::select(-hgnc_id) %>%
+  dplyr::select(-entrez_ID) %>%
   tidyr::nest() %>%
   dplyr::mutate(Exp_pattern = purrr::map2(symbol,data,fn_exp_pantern_classify)) %>%
   dplyr::select(-data) %>%
@@ -200,7 +201,7 @@ ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
 
 ICP_exp_pattern_in_immune_tumor_cell %>%
   dplyr::arrange(symbol) %>%
-  readr::write_tsv(file.path(result_path,"ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+  readr::write_tsv(file.path(result_path,"pattern_info","ICP_exp_pattern_in_immune_tumor(no-blood)_cell.tsv"))
 
 # detailed tissue exp pattern ------------------------------------------------------
 
@@ -208,18 +209,21 @@ fn_exp_detailed_pantern_classify <- function(.n,.x){
   print(.n)
   .x %>% 
     dplyr::filter(Group == "Stromal Cell") %>%
-    .$gene_mean_exp -> Stromal_exp
+    .$gene_tpm -> Stromal_exp
   .x %>% 
     dplyr::filter(Group == "Immune Cell") %>%
-    .$gene_mean_exp -> Immune_exp
-  if(Immune_exp==0){Immune_exp <- 0.01}
+    .$gene_tpm -> Immune_exp
+  Immune_exp <- mean(Immune_exp)
   
   .x %>% 
     dplyr::filter(Group == "Tumor Cell") %>%
     dplyr::group_by(`Characteristics[Tissue]`) %>%
-    dplyr::mutate(gene_mean_exp = ifelse(gene_mean_exp==0,0.01,gene_mean_exp)) %>%
-    dplyr::mutate(Immune_exp = Immune_exp) %>%
-    dplyr::mutate(log2FC = log2(Immune_exp/gene_mean_exp)) %>%
+    dplyr::mutate(gene_tpm = mean(gene_tpm)) %>%
+    dplyr::select(`Characteristics[Tissue]`,gene_tpm) %>%
+    unique() %>%
+    dplyr::mutate(Immune_exp = ifelse(Immune_exp==0,0.01,Immune_exp)) %>%
+    dplyr::mutate(gene_tpm = ifelse(gene_tpm==0,0.01,gene_tpm)) %>%
+    dplyr::mutate(log2FC = log2(Immune_exp/gene_tpm)) %>%
     dplyr::mutate(Exp_patern = purrr::map(log2FC,.f=function(log2fc){
       if(log2fc >= 1){
         "Immune Higher"
@@ -233,37 +237,40 @@ fn_exp_detailed_pantern_classify <- function(.n,.x){
 }
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
+  dplyr::filter(! `Characteristics[Tissue]` %in% c("blood")) %>%
   dplyr::group_by(symbol) %>%
-  dplyr::select(-hgnc_id) %>%
+  dplyr::select(-entrez_ID) %>%
   tidyr::nest() %>%
   dplyr::mutate(Exp_pattern = purrr::map2(symbol,data,fn_exp_detailed_pantern_classify)) %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue
 
 ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
-  readr::write_tsv(file.path(result_path,"ICP_exp_pattern_in_immune_tumor_cell.detailed_tissues.tsv"))
+  readr::write_tsv(file.path(result_path,"pattern_info","ICP_exp_pattern_in_immune_tumor(no-blood)_cell.detailed_tissues.tsv"))
 
 # plot 
 # classification of tcga cancers
 
-ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+# ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
 fn_site_color <- function(.x){
   # print(.n)
-  if(.x=="Mainly_Tumor"){
+  if(.x=="Mainly_exp_on_Tumor"){
     "red"
-  }else if(.x=="Mainly_Immune"){
+  }else if(.x=="Mainly_exp_on_Immune"){
     "Blue"
-  }else if(.x=="Both"){
+  }else if(.x=="Only_exp_on_Immune"){
+    "Blue"
+  }else if(.x=="Both_exp_on_Tumor_Immune"){
     c("#9A32CD")
   }else{
     "grey"
   }
 }
-ICP_expr_pattern %>%
-  dplyr::filter(!is.na(`Exp site`)) %>%
-  dplyr::mutate(site_col = purrr::map(`Exp site`,fn_site_color)) %>%
+ICP_Exp_site_by_DE_FC_between_cellline_immune %>%
+  dplyr::filter(!is.na(`Exp_site`)) %>%
+  dplyr::mutate(site_col = purrr::map(`Exp_site`,fn_site_color)) %>%
   tidyr::unnest() %>%
-  dplyr::arrange(`Exp site`,symbol) -> gene_rank
+  dplyr::arrange(`log2FC(I/T)`) -> gene_rank
 
 ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
   dplyr::filter(`Characteristics[Tissue]` %in% c(TCGA_tissue$Tissues %>% unique())) %>%
@@ -316,14 +323,14 @@ ICP_exp_pattern_in_immune_tumor_cell.detailed_tissue %>%
     axis.text = element_text(colour = "black"),
     plot.margin = unit(c(0,1,1,1),"cm")
   ) -> p2
-
+library(ggpubr)
 ggarrange(p1,
           p2, 
           ncol = 1, nrow = 2,  align = "hv", 
           heights = c(10, 1))
 
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma.detailed_tissue.png"),device = "png",height = 12,width = 6)
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma.detailed_tissue.pdf"),device = "pdf",height = 12,width = 6)
+ggsave(file.path(result_path,"pattern_info","FANTOM5.ICP_exp_in_tumor_immune_stroma.detailed_tissue.png"),device = "png",height = 12,width = 6)
+ggsave(file.path(result_path,"pattern_info","FANTOM5.ICP_exp_in_tumor_immune_stroma.detailed_tissue.pdf"),device = "pdf",height = 12,width = 6)
 
 
 save.image(file.path(result_path,"FANTOM5.ICP_exp.pattern.rda"))
