@@ -6,8 +6,9 @@ library(magrittr)
 library(dplyr)
 
 # processed path
-tcga_path = c("/project/huff/huff/immune_checkpoint/data/TCGA_data")
-immune_path <- "/project/huff/huff/immune_checkpoint"
+basic_path <- "/home/huff/project"
+tcga_path = file.path(basic_path,"immune_checkpoint/data/TCGA_data")
+immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 
 
@@ -120,22 +121,22 @@ gene_list_expr.nest.TNgrouped %>%
   dplyr::filter(substr(barcode,15,15)==1) %>%
   dplyr::select(-barcode) %>%
   tidyr::spread(key="group",value="exp") %>%
-  dplyr::mutate(`log2(T/N)` = log2(Tumor/Normal)) -> gene_list_expr.T_N.only_paired
+  dplyr::mutate(`log2(T/N)` = log2((Tumor+1)/(Normal+1))) -> gene_list_expr.T_N.only_paired
   
 
 
-# group tumor samples -----------------------------------------------------
+# group tumor samples by gene counts -----------------------------------------------------
 
-ICP_expr_pattern <- readr::read_tsv(file.path(immune_path,"result_20171025","ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+ICP_expr_pattern <- readr::read_tsv(file.path(immune_path,"result_20171025","ICP_exp_patthern","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
 
 fn_group_sample_by_ICP_exp_in_TN_1 <- function(.name,.data){
   print(.name)
   .data %>%
     dplyr::filter(!is.na(`log2(T/N)`)) %>%
-    dplyr::filter(!is.na(`Exp site`)) -> .tmp
+    dplyr::filter(!is.na(`Exp_site`)) -> .tmp
   if(dim(.tmp)[1]>0){
     .tmp %>%
-      dplyr::mutate(sample_status = purrr::map2(`log2(T/N)`,`Exp site`,fn_group_sample_by_ICP_exp_in_TN_2)) %>%
+      dplyr::mutate(sample_status = purrr::map2(`log2(T/N)`,`Exp_site`,fn_group_sample_by_ICP_exp_in_TN_2)) %>%
       tidyr::unnest() %>%
       dplyr::select(symbol,sample_status,description)
   }else{
@@ -167,6 +168,10 @@ fn_group_sample_by_ICP_exp_in_TN_2 <- function(.x,.y){
 # paired tumor-normal samples grouping ----
 gene_list_expr.T_N.only_paired %>%
   dplyr::inner_join(ICP_expr_pattern) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_Immune","Both")) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Mainly_Tumor",Exp_site.1)) %>%
+  dplyr::mutate(Exp_site=Exp_site.1) %>%
+  dplyr::select(-Exp_site.1) %>%
   tidyr::nest(-cancer_types,-Participant) %>%
   tidyr::unite(c_p,c("cancer_types","Participant")) %>%
   dplyr::mutate(status = purrr::map2(c_p,data,fn_group_sample_by_ICP_exp_in_TN_1)) %>%
@@ -185,8 +190,36 @@ tumor_class_by_T_N.only_paired %>%
   dplyr::mutate(class = ifelse(Immunity_cold==Immunity_hot,"not clear",class)) -> tumor_class_by_T_N.only_paired.class
  
 tumor_class_by_T_N.only_paired.class %>% 
-  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired"))
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_geneCounts","tumor_class_by_T_N.only_paired"))
 
+# scored tumor samples by FC -----------------------------------------------------
+# gene's FC in fantom * FC in tumor-normal
+fn_score_samples_byFC <- function(.x,.y){
+  FC_T_N_tcga <- 2^.x
+  FC_fantom <- 2^.y
+  FC_T_N_tcga*FC_fantom
+}
+
+# paired tumor-normal samples grouping ----
+gene_list_expr.T_N.only_paired %>%
+  dplyr::inner_join(ICP_expr_pattern) %>%
+  dplyr::mutate(score = purrr::map2(`log2(T/N)`,`log2FC(I/T)`,fn_score_samples_byFC)) %>%
+  dplyr::select(cancer_types,symbol,Participant,score) %>%
+  tidyr::unnest() -> gene_list_expr.T_N.only_paired.gene_score
+
+gene_list_expr.T_N.only_paired.gene_score %>%
+  dplyr::group_by(Participant) %>%
+  dplyr::mutate(score = ifelse(is.na(score),0,score))%>%
+  dplyr::mutate(score_sum = mean(score)) %>%
+  dplyr::select(cancer_types,Participant,score_sum) %>%
+  unique() %>%
+  dplyr::ungroup()-> gene_list_expr.T_N.only_paired.sample_score
+
+gene_list_expr.T_N.only_paired.sample_score %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_FCProduct","tumor_class_by_T_N.only_paired"))
+
+#### following code was not used anymore
+#### not run
 # using peak exp value compare with every tumor samples to group tumor samples ----
 gene_list_expr.T_N.by_peak %>%
   dplyr::inner_join(ICP_expr_pattern) %>%
@@ -231,3 +264,4 @@ tumor_class_by_T_N.by_mean %>%
   dplyr::mutate(class = ifelse(Immunity_cold==Immunity_hot,"not clear",class)) -> tumor_class_by_T_N.by_mean.class
 tumor_class_by_T_N.by_mean.class %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.by_mean"))
+
