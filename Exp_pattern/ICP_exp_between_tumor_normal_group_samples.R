@@ -96,7 +96,7 @@ gene_list_expr.nest.TNgrouped %>%
   dplyr::filter(cancer_types %in% normal_10samples_in_cancers$cancer_types) %>%
   dplyr::inner_join(gene_list_normal_mean_expr,by=c("cancer_types","symbol")) %>%
   dplyr::rename("normal_mean_exp" = "mean_exp") %>%
-  dplyr::mutate(`log2(T/N)` = log2(exp/normal_mean_exp)) %>%
+  dplyr::mutate(`log2(T/N)` = log2((exp+1)/(normal_mean_exp+1))) %>%
   dplyr::select(cancer_types,symbol,barcode,exp,normal_mean_exp,`log2(T/N)`) -> gene_list_expr.T_N.by_mean
 
 # compare expression in tumor samples with [density peak exp] in normal samples  --------------
@@ -218,6 +218,23 @@ gene_list_expr.T_N.only_paired.gene_score %>%
 gene_list_expr.T_N.only_paired.sample_score %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_FCProduct","tumor_class_by_T_N.only_paired"))
 
+# all tumor samples grouping ----
+gene_list_expr.T_N.by_mean %>%
+  dplyr::inner_join(ICP_expr_pattern) %>%
+  dplyr::mutate(score = purrr::map2(`log2(T/N)`,`log2FC(I/T)`,fn_score_samples_byFC)) %>%
+  dplyr::select(cancer_types,symbol,barcode,score) %>%
+  tidyr::unnest() -> gene_list_expr.T_N.by_mean.gene_score
+
+gene_list_expr.T_N.by_mean.gene_score %>%
+  dplyr::group_by(barcode) %>%
+  dplyr::mutate(score = ifelse(is.na(score),0,score))%>%
+  dplyr::mutate(score_mean = mean(score)) %>%
+  dplyr::select(cancer_types,barcode,score_mean) %>%
+  unique() %>%
+  dplyr::ungroup()-> gene_list_expr.T_N.by_mean.sample_score
+
+gene_list_expr.T_N.by_mean.sample_score %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.all-by-mean.by_FCProduct","tumor_class_by_T_N.only_paired"))
 #### following code was not used anymore
 #### not run
 # using peak exp value compare with every tumor samples to group tumor samples ----
