@@ -234,7 +234,7 @@ gene_list_expr.T_N.by_mean.gene_score %>%
   dplyr::ungroup()-> gene_list_expr.T_N.by_mean.sample_score
 
 gene_list_expr.T_N.by_mean.sample_score %>%
-  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.all-by-mean.by_FCProduct","tumor_class_by_T_N.only_paired"))
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.all-by-mean.by_FCProduct","tumor_class_by_T_N.all_tumor.by_mean"))
 #### following code was not used anymore
 #### not run
 # using peak exp value compare with every tumor samples to group tumor samples ----
