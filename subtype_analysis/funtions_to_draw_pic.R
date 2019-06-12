@@ -54,6 +54,15 @@ fn_survival <- function(data,title,color,group,sur_name,xlab,result_path,h,w,lx=
   ggsave(filename = paste(sur_name,signif(kmp, 2),"pdf",sep = "."), plot = p, path = result_path,device = "pdf",height = h,width = w)
 }
 
+
+fn_survival_res_table <- function(data,title,color,group,sur_name,xlab,result_path,h,w,lx=0.8,ly=0.6){
+  library(survival)
+  fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
+  diff <- survdiff(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
+  kmp <- 1 - pchisq(diff$chisq, df = length(levels(as.factor(data$group))) - 1)
+  tibble::tibble(kmp=kmp)
+}
+
 fn_mutation_burden <- function(data,group,facet="~ cancer_types",value,color,xlab,comp_list,m_name,result_path,w=7,h=10){
   data %>%
     ggpubr::ggboxplot(x = group, y = value,fill="white",alpha = 0,width = 0.1,
