@@ -665,7 +665,7 @@ for(cancer in cancer_to_do_survival.only_paired){
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
-  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -675,17 +675,20 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> tumor_class_by_T_N.only_paired.Score.PFS_res
 tumor_class_by_T_N.only_paired.Score.PFS_res %>%
-  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR.tsv"))
+  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR-bygroup.tsv"))
 tumor_class_by_T_N.only_paired.Score.PFS_res %>% 
-  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(cox_sig = ifelse(coxp<=0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))%>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1)-> plot_ready
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
   geom_pointrange(aes(color=cox_sig)) +
   scale_color_manual(values=c("red","black")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
@@ -696,14 +699,14 @@ plot_ready %>%
     text = element_text(color = "black")
   ) +
   labs(y = "Hazard Ratio", x = "Cancers",title = "Progression-free survival") -> p;p
-ggsave(file.path(res_path,"PFS_COXph_HR.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"PFS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
 ### OS
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
-  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -714,12 +717,13 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   tidyr::unnest() -> tumor_class_by_T_N.only_paired.Score.OS_res
 
 tumor_class_by_T_N.only_paired.Score.OS_res %>%
-  readr::write_tsv(file.path(res_path,"OS_COXph_KM.tsv"))
+  readr::write_tsv(file.path(res_path,"OS_COXph_KM-bygroup.tsv"))
 
 tumor_class_by_T_N.only_paired.Score.OS_res %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))%>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1)-> plot_ready
 
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
@@ -727,6 +731,8 @@ plot_ready %>%
   scale_color_manual(values=c("red","black")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
@@ -737,8 +743,8 @@ plot_ready %>%
     text = element_text(color = "black")
   ) +
   labs(y = "Hazard Ratio", x = "Cancers",title = "Overall survival") -> p;p
-ggsave(file.path(res_path,"OS_COXph_HR.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"OS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
+ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
 ### OS and PFS res combine
 tumor_class_by_T_N.only_paired.Score.PFS_res %>%
@@ -748,22 +754,16 @@ tumor_class_by_T_N.only_paired.Score.PFS_res %>%
   dplyr::select(cancer_types,hr,coxp,kmp,class) %>%
   tidyr::gather(-cancer_types,-hr,-class,key="type",value="p.value") %>%
   tidyr::unite("class_type",class,type,sep="_") -> plot_ready
-fn_hrclass <- function(.x){
-  if(.x<0.1){
-    class <-"1" 
-  }else if(.x>=0.1 & .x<0.3){
-    class <-"2" 
-  }else if(.x>=0.3 & .x<1){
-    class <-"3" 
-  }else if(.x>=1 & .x<3){
-    class <-"4" 
-  }else if(.x>=3 & .x<10){
-    class <-"5" 
-  }else if(.x>10){
-    class <-"6" 
-  }
-  class
-}
+
+plot_ready %>%
+  dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
+  tidyr::unnest() %>%
+  dplyr::select(HR_class) %>%
+  unique() %>%
+  dplyr::inner_join(tibble::tibble(values=c("#00008B","#104E8B", "#1874CD", "#87CEFF", "#FFC0CB", "#FF6A6A", "#FF0000"),
+                                   HR_class=c("0","1","2","3","4","5","6"),
+                                   labels = c("<=1/8","1/8-1/4","1/4-1/2","1/2-1","1-2","2-3",">3")),by="HR_class") %>%
+  dplyr::arrange(HR_class)-> color
 plot_ready %>%
   dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
   tidyr::unnest() %>%
@@ -801,8 +801,8 @@ plot_ready %>%
     legend.key = element_rect(fill = "white", colour = "black"),
     axis.text = element_text(colour = "black")
   )
-ggsave(file.path(res_path,"survival_merge_res.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"survival_merge_res.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"survival_merge_res-bygroup.png"),device = "png",width = 4,height = 3)
+ggsave(file.path(res_path,"survival_merge_res-bygroup.pdf"),device = "pdf",width = 4,height = 3)
 
 # 1.2.only paired gene FC score analysis ----------------------------------------
 # sum of log2FC ----
@@ -1008,7 +1008,7 @@ for(cancer in cancer_to_do_survival.only_paired){
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
-  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -1018,35 +1018,38 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> tumor_class_by_T_N.only_paired.Score.PFS_res
 tumor_class_by_T_N.only_paired.Score.PFS_res %>%
-  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR.tsv"))
+  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR--bygroup.tsv"))
 tumor_class_by_T_N.only_paired.Score.PFS_res %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1)-> plot_ready
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
   geom_pointrange(aes(color=cox_sig)) +
-  scale_color_manual(values=c("red","black")) +
+  scale_color_manual(name = "P value",values=c("red","black"),labels = c("<=0.1",">0.1")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
-    legend.position = "none",
+    # legend.position = "none",
     axis.line.y = element_line(color="black"),
     axis.text = element_text(color = "black",size=8),
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
   labs(y = "Hazard Ratio", x = "Cancers",title = "Progression-free survival") -> p;p
-ggsave(file.path(res_path,"PFS_COXph_HR.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"PFS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
 ### OS
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
-  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -1057,23 +1060,26 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   tidyr::unnest() -> tumor_class_by_T_N.only_paired.Score.OS_res
 
 tumor_class_by_T_N.only_paired.Score.OS_res %>%
-  readr::write_tsv(file.path(res_path,"OS_COXph_KM.tsv"))
+  readr::write_tsv(file.path(res_path,"OS_COXph_KM-bygroup.tsv"))
 
 tumor_class_by_T_N.only_paired.Score.OS_res %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) -> plot_ready
 
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
   geom_pointrange(aes(color=cox_sig)) +
-  scale_color_manual(values=c("red","black")) +
+  scale_color_manual(name = "P value",values=c("red","black"),labels = c("<=0.1",">0.1")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
-    legend.position = "none",
+    # legend.position = "none",
     axis.line.y = element_line(color="black"),
     axis.text = element_text(color = "black",size=8),
     axis.title = element_text(color = "black",size=10),
@@ -1091,31 +1097,17 @@ tumor_class_by_T_N.only_paired.Score.PFS_res %>%
   dplyr::select(cancer_types,hr,coxp,kmp,class) %>%
   tidyr::gather(-cancer_types,-hr,-class,key="type",value="p.value") %>%
   tidyr::unite("class_type",class,type,sep="_") -> plot_ready
-fn_hrclass <- function(.x){
-  if(.x<0.1){
-    class <-"1" 
-  }else if(.x>=0.1 & .x<0.3){
-    class <-"2" 
-  }else if(.x>=0.3 & .x<1){
-    class <-"3" 
-  }else if(.x>=1 & .x<3){
-    class <-"4" 
-  }else if(.x>=3 & .x<10){
-    class <-"5" 
-  }else if(.x>10){
-    class <-"6" 
-  }
-  class
-}
+
 plot_ready %>%
   dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
   tidyr::unnest() %>%
   dplyr::select(HR_class) %>%
   unique() %>%
-  dplyr::inner_join(tibble::tibble(values=c("#104E8B", "#1874CD", "#87CEFF", "#FFC0CB", "#FF6A6A", "#FF0000"),
-                                   HR_class=c("1","2","3","4","5","6"),
-                                   labels = c("<0.1","0.1-0.3","0.3-1","1-3","3-10",">10")),by="HR_class") %>%
+  dplyr::inner_join(tibble::tibble(values=c("#00008B","#104E8B", "#1874CD", "#87CEFF", "#FFC0CB", "#FF6A6A", "#FF0000"),
+                                   HR_class=c("0","1","2","3","4","5","6"),
+                                   labels = c("<=1/8","1/8-1/4","1/4-1/2","1/2-1","1-2","2-3",">3")),by="HR_class") %>%
   dplyr::arrange(HR_class)-> color
+
 plot_ready %>%
   dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
   tidyr::unnest() %>%
@@ -1144,8 +1136,8 @@ plot_ready %>%
     legend.key = element_rect(fill = "white", colour = "black"),
     axis.text = element_text(colour = "black")
   )
-ggsave(file.path(res_path,"survival_merge_res.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"survival_merge_res.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"survival_merge_res-bygroup.png"),device = "png",width = 4,height = 3)
+ggsave(file.path(res_path,"survival_merge_res-bygroup.pdf"),device = "pdf",width = 4,height = 3)
 
 # 2.by peak sample score analysis ----------------------------------------
 # by peak means in /project/huff/huff/github/immune-cp/Exp_pattern/ICP_exp_between_tumor_normal_group_samples.R, use peak value of gene expression density in normal samples to compare with tumor sample, by which group tumor samples into immune hot and cold.
@@ -1429,7 +1421,7 @@ for(cancer in cancer_to_do_survival.by_mean){
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
-  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -1439,35 +1431,38 @@ tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> tumor_class_by_T_N.by_mean.Score.PFS_res
 tumor_class_by_T_N.by_mean.Score.PFS_res %>%
-  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR.tsv"))
+  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR-bygroup.tsv"))
 tumor_class_by_T_N.by_mean.Score.PFS_res %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1)-> plot_ready
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
   geom_pointrange(aes(color=cox_sig)) +
-  scale_color_manual(values=c("red","black")) +
+  scale_color_manual(name = "P value",values=c("red","black"),labels = c("<=0.1",">0.1")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
-    legend.position = "none",
+    # legend.position = "none",
     axis.line.y = element_line(color="black"),
     axis.text = element_text(color = "black",size=8),
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
   labs(y = "Hazard Ratio", x = "Cancers",title = "Progression-free survival") -> p;p
-ggsave(file.path(res_path,"PFS_COXph_HR.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"PFS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
 ### OS
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
-  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -1478,31 +1473,34 @@ tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   tidyr::unnest() -> tumor_class_by_T_N.by_mean.Score.OS_res
 
 tumor_class_by_T_N.by_mean.Score.OS_res %>%
-  readr::write_tsv(file.path(res_path,"OS_COXph_KM.tsv"))
+  readr::write_tsv(file.path(res_path,"OS_COXph_KM-bygroup.tsv"))
 
 tumor_class_by_T_N.by_mean.Score.OS_res %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1)-> plot_ready
 
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
   geom_pointrange(aes(color=cox_sig)) +
-  scale_color_manual(values=c("red","black")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_color_manual(name = "P value",values=c("red","black"),labels = c("<=0.1",">0.1")) +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
-    legend.position = "none",
+    # legend.position = "none",
     axis.line.y = element_line(color="black"),
     axis.text = element_text(color = "black",size=8),
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
   labs(y = "Hazard Ratio", x = "Cancers",title = "Overall survival") -> p;p
-ggsave(file.path(res_path,"OS_COXph_HR.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"OS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
+ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
 ### OS and PFS res combine
 tumor_class_by_T_N.by_mean.Score.PFS_res %>%
@@ -1512,30 +1510,15 @@ tumor_class_by_T_N.by_mean.Score.PFS_res %>%
   dplyr::select(cancer_types,hr,coxp,kmp,class) %>%
   tidyr::gather(-cancer_types,-hr,-class,key="type",value="p.value") %>%
   tidyr::unite("class_type",class,type,sep="_") -> plot_ready
-fn_hrclass <- function(.x){
-  if(.x<0.1){
-    class <-"1" 
-  }else if(.x>=0.1 & .x<0.3){
-    class <-"2" 
-  }else if(.x>=0.3 & .x<1){
-    class <-"3" 
-  }else if(.x>=1 & .x<3){
-    class <-"4" 
-  }else if(.x>=3 & .x<10){
-    class <-"5" 
-  }else if(.x>10){
-    class <-"6" 
-  }
-  class
-}
+
 plot_ready %>%
   dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
   tidyr::unnest() %>%
   dplyr::select(HR_class) %>%
   unique() %>%
-  dplyr::inner_join(tibble::tibble(values=c("#104E8B", "#1874CD", "#87CEFF", "#FFC0CB", "#FF6A6A", "#FF0000"),
-                                   HR_class=c("1","2","3","4","5","6"),
-                                   labels = c("<0.1","0.1-0.3","0.3-1","1-3","3-10",">10")),by="HR_class") %>%
+  dplyr::inner_join(tibble::tibble(values=c("#00008B","#104E8B", "#1874CD", "#87CEFF", "#FFC0CB", "#FF6A6A", "#FF0000"),
+                                   HR_class=c("0","1","2","3","4","5","6"),
+                                   labels = c("<=1/8","1/8-1/4","1/4-1/2","1/2-1","1-2","2-3",">3")),by="HR_class") %>%
   dplyr::arrange(HR_class)-> color
 plot_ready %>%
   dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
@@ -1565,8 +1548,8 @@ plot_ready %>%
     legend.key = element_rect(fill = "white", colour = "black"),
     axis.text = element_text(colour = "black")
   )
-ggsave(file.path(res_path,"survival_merge_res.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"survival_merge_res.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"survival_merge_res-bygroup.png"),device = "png",width = 4,height = 3)
+ggsave(file.path(res_path,"survival_merge_res-bygroup.pdf"),device = "pdf",width = 4,height = 3)
 
 
 # 4. by sum sample score analysis ----------------------------------------
@@ -1721,7 +1704,7 @@ for(cancer in cancer_to_do_survival.by_mean){
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
-  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -1731,35 +1714,38 @@ tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> tumor_class_by_T_N.by_mean.Score.PFS_res
 tumor_class_by_T_N.by_mean.Score.PFS_res %>%
-  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR.tsv"))
+  readr::write_tsv(file.path(res_path,"PFS_COXph_KM_HR-bygroup.tsv"))
 tumor_class_by_T_N.by_mean.Score.PFS_res %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1)-> plot_ready
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
   geom_pointrange(aes(color=cox_sig)) +
-  scale_color_manual(values=c("red","black")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_color_manual(name = "P value",values=c("red","black"),labels = c("<=0.1",">0.1")) +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
-    legend.position = "none",
+    # legend.position = "none",
     axis.line.y = element_line(color="black"),
     axis.text = element_text(color = "black",size=8),
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
   labs(y = "Hazard Ratio", x = "Cancers",title = "Progression-free survival") -> p;p
-ggsave(file.path(res_path,"PFS_COXph_HR.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"PFS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
+ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
 ### OS
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
-  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(score_sum>quantile(score_sum,0.5),"2High","1Low")) %>%
   dplyr::mutate(n=n()) %>%
   dplyr::filter(n>=10) %>%
   dplyr::ungroup() %>%
@@ -1770,31 +1756,34 @@ tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   tidyr::unnest() -> tumor_class_by_T_N.by_mean.Score.OS_res
 
 tumor_class_by_T_N.by_mean.Score.OS_res %>%
-  readr::write_tsv(file.path(res_path,"OS_COXph_KM.tsv"))
+  readr::write_tsv(file.path(res_path,"OS_COXph_KM-bygroup.tsv"))
 
 tumor_class_by_T_N.by_mean.Score.OS_res %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::filter(hr_h<10) %>%
-  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))-> plot_ready
+  dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))%>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1)-> plot_ready
 
 plot_ready %>% 
   ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
   geom_pointrange(aes(color=cox_sig)) +
-  scale_color_manual(values=c("red","black")) +
   geom_hline(aes(yintercept = 1)) +
   scale_size(name = "p-value") +
+  scale_color_manual(name = "P value",values=c("red","black"),labels = c("<=0.1",">0.1")) +
+  scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                     labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
   coord_flip() +
   ggthemes::theme_gdocs() +
   theme(
-    legend.position = "none",
+    # legend.position = "none",
     axis.line.y = element_line(color="black"),
     axis.text = element_text(color = "black",size=8),
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
   labs(y = "Hazard Ratio", x = "Cancers",title = "Overall survival") -> p;p
-ggsave(file.path(res_path,"OS_COXph_HR.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"OS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
+ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
 ### OS and PFS res combine
 tumor_class_by_T_N.by_mean.Score.PFS_res %>%
@@ -1804,31 +1793,18 @@ tumor_class_by_T_N.by_mean.Score.PFS_res %>%
   dplyr::select(cancer_types,hr,coxp,kmp,class) %>%
   tidyr::gather(-cancer_types,-hr,-class,key="type",value="p.value") %>%
   tidyr::unite("class_type",class,type,sep="_") -> plot_ready
-fn_hrclass <- function(.x){
-  if(.x<0.1){
-    class <-"1" 
-  }else if(.x>=0.1 & .x<0.3){
-    class <-"2" 
-  }else if(.x>=0.3 & .x<1){
-    class <-"3" 
-  }else if(.x>=1 & .x<3){
-    class <-"4" 
-  }else if(.x>=3 & .x<10){
-    class <-"5" 
-  }else if(.x>10){
-    class <-"6" 
-  }
-  class
-}
+
+
 plot_ready %>%
   dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
   tidyr::unnest() %>%
   dplyr::select(HR_class) %>%
   unique() %>%
-  dplyr::inner_join(tibble::tibble(values=c("#104E8B", "#1874CD", "#87CEFF", "#FFC0CB", "#FF6A6A", "#FF0000"),
-                                   HR_class=c("1","2","3","4","5","6"),
-                                   labels = c("<0.1","0.1-0.3","0.3-1","1-3","3-10",">10")),by="HR_class") %>%
+  dplyr::inner_join(tibble::tibble(values=c("#00008B","#104E8B", "#1874CD", "#87CEFF", "#FFC0CB", "#FF6A6A", "#FF0000"),
+                                   HR_class=c("0","1","2","3","4","5","6"),
+                                   labels = c("<=1/8","1/8-1/4","1/4-1/2","1/2-1","1-2","2-3",">3")),by="HR_class") %>%
   dplyr::arrange(HR_class)-> color
+
 plot_ready %>%
   dplyr::mutate(HR_class = purrr::map(hr,fn_hrclass)) %>%
   tidyr::unnest() %>%
@@ -1857,6 +1833,6 @@ plot_ready %>%
     legend.key = element_rect(fill = "white", colour = "black"),
     axis.text = element_text(colour = "black")
   )
-ggsave(file.path(res_path,"survival_merge_res.png"),device = "png",width = 4,height = 4)
-ggsave(file.path(res_path,"survival_merge_res.pdf"),device = "pdf",width = 4,height = 4)
+ggsave(file.path(res_path,"survival_merge_res.png"),device = "png",width = 4,height = 3)
+ggsave(file.path(res_path,"survival_merge_res.pdf"),device = "pdf",width = 4,height = 3)
 
