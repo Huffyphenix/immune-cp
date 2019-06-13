@@ -90,7 +90,7 @@ library(curl)
 fantom_sample_info %>%
   dplyr::filter(`Characteristics [Category]` %in% c("cell lines","primary cells")) %>%
   dplyr::mutate(sample = toupper(paste(curl_escape(`Charateristics [description]`),`Source Name`,sep="."))) %>%
-  dplyr::select(sample,`Characteristics[Tissue]`,`Characteristics [Cell type]`,`Characteristics [Category]`) -> fantom_sample_info_transcode
+  dplyr::select(sample,`Charateristics [description]`,`Characteristics[Tissue]`,`Characteristics [Cell type]`,`Characteristics [Category]`) -> fantom_sample_info_transcode
 # immune cell statistic
 ICP_fantom_exp.gene.substr %>%
   dplyr::select(sample) %>%
@@ -109,6 +109,18 @@ ICP_fantom_exp.gene.substr %>%
   dplyr::mutate(Type_n = sum(n)) %>%
   dplyr::arrange(Type) %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","xCell_Fantom_cellname_adjust.immune-stromal-cells.statistic.tsv"))
+
+ICP_fantom_exp.gene.substr %>%
+  dplyr::select(sample) %>%
+  unique() %>%
+  dplyr::inner_join(fantom_sample_info_transcode, by="sample") %>%
+  dplyr::filter(`Characteristics [Category]` == "primary cells") %>%
+  dplyr::select(sample,`Characteristics[Tissue]`,`Characteristics [Cell type]`,`Charateristics [description]`) %>%
+  dplyr::rename("Fantom5_cellname" = "Characteristics [Cell type]") %>%
+  dplyr::inner_join(xCell_Fantom_cellname_adjust,by = "Fantom5_cellname") %>%
+  dplyr::filter(Type=="Immune Cell") %>%
+  dplyr::rename("Characteristics [Cell type]"="Fantom5_cellname") %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","xCell_Fantom_cellname_adjust.immune-cells.detailed-info.tsv"))
 
 # cell line statistic
 ICP_fantom_exp.gene.substr %>%
@@ -129,6 +141,13 @@ ICP_fantom_exp.gene.substr %>%
   dplyr::mutate(all_n = sum(cell_type_n)) %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","cell_lines.statistic.tsv"))
 
+ICP_fantom_exp.gene.substr %>%
+  dplyr::select(sample) %>%
+  unique() %>%
+  dplyr::inner_join(fantom_sample_info_transcode, by="sample") %>%
+  dplyr::filter(`Characteristics [Category]` == "cell lines") %>%
+  dplyr::select(sample,`Characteristics[Tissue]`,`Characteristics [Cell type]`,`Charateristics [description]`) %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/cell_type_info","sample_cell_lines.detailed-info.tsv"))
 # merge expression data and sample info by sample keys [mean expression]--------------------
 
 # cell lines = tumor expression ----
