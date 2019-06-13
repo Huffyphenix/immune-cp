@@ -150,11 +150,11 @@ ggplot(ready_for_draw,
     plot.title = element_text(size = 20),
     axis.text = element_text(colour = "black"),
     strip.background = element_rect(fill = "white",colour = "black"),
-    strip.text = element_text(size = 12),
+    strip.text = element_text(size = 10),
     text = element_text(color = "black")
 ) 
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.png"),device = "png",height = 10,width = 15)  
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.pdf"),device = "pdf",height = 10,width = 15)  
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.png"),device = "png",height = 10,width = 20)  
+ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.pdf"),device = "pdf",height = 10,width = 20)  
 
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.png"),device = "png",height = 10,width = 15)  
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.pdf"),device = "pdf",height = 10,width = 15)
