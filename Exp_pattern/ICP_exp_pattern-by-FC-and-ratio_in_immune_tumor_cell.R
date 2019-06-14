@@ -69,7 +69,7 @@ fn_define_exp_site <- function(symbol,fc,pvalue,tumor_ratio,immune_ratio,ratio_d
     tmp <- "Not_sure"
   } else {
     if(fc>=1 && pvalue<=0.05){
-      if(tumor_ratio<=0.05){
+      if(tumor_ratio<0.05){
         if(immune_ratio>=0.25){
           if(mean_cell_line<1){
             tmp <- "Only_exp_on_Immune"
@@ -95,7 +95,7 @@ fn_define_exp_site <- function(symbol,fc,pvalue,tumor_ratio,immune_ratio,ratio_d
         }
       }
     }else if(fc<=(-1) && pvalue<=0.05){
-      if(immune_ratio<=0.05){
+      if(immune_ratio<0.05){
         if(tumor_ratio>=0.25){
           if(mean_immune_exp<1){
             tmp <- "Only_exp_on_Tumor"
@@ -153,7 +153,7 @@ fn_define_exp_site <- function(symbol,fc,pvalue,tumor_ratio,immune_ratio,ratio_d
       #   tmp <- "Only_exp_on_Tumor"
       # }
     } else {
-      tmp <- "Not_known"
+      tmp <- "Both_exp_on_Tumor_Immune"
     }
   }
   
