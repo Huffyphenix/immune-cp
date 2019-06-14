@@ -166,11 +166,12 @@ fn_exp_pantern_classify <- function(.n,.x){
     .$gene_tpm -> Stromal_exp
   .x %>% 
     dplyr::filter(Group == "Immune Cell") %>%
-    .$gene_tpm -> Immune_exp
+    .$gene_tpm %>%
+    mean()-> Immune_exp
   .x %>% 
     dplyr::filter(Group == "Tumor Cell") %>%
     .$gene_tpm  %>%
-    quantile(0.5) %>%
+    mean() %>%
     as.numeric()-> Tumor_exp
   # if(Tumor_exp==0){Tumor_exp <- 0.01}
   # if(Immune_exp==0){Immune_exp <- 0.01}
