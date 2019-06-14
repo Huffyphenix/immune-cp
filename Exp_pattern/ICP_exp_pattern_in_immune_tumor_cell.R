@@ -156,8 +156,6 @@ ggplot(ready_for_draw,
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.png"),device = "png",height = 10,width = 20)  
 ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.pdf"),device = "pdf",height = 10,width = 20)  
 
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.png"),device = "png",height = 10,width = 15)  
-ggsave(file.path(result_path,"FANTOM5.ICP_exp_in_tumor_immune_stroma-all.tissue.pdf"),device = "pdf",height = 10,width = 15)
 
 # global exp pattern ------------------------------------------------------
 
@@ -174,9 +172,9 @@ fn_exp_pantern_classify <- function(.n,.x){
     .$gene_tpm  %>%
     quantile(0.5) %>%
     as.numeric()-> Tumor_exp
-  if(Tumor_exp==0){Tumor_exp <- 0.01}
-  if(Immune_exp==0){Immune_exp <- 0.01}
-  log2fc <- log2(Immune_exp/Tumor_exp)
+  # if(Tumor_exp==0){Tumor_exp <- 0.01}
+  # if(Immune_exp==0){Immune_exp <- 0.01}
+  log2fc <- log2((Immune_exp+1)/(Tumor_exp+1))
   
   if(log2fc >= 1){
     patt <- "Immune Higher"
@@ -221,9 +219,9 @@ fn_exp_detailed_pantern_classify <- function(.n,.x){
     dplyr::mutate(gene_tpm = mean(gene_tpm)) %>%
     dplyr::select(`Characteristics[Tissue]`,gene_tpm) %>%
     unique() %>%
-    dplyr::mutate(Immune_exp = ifelse(Immune_exp==0,0.01,Immune_exp)) %>%
-    dplyr::mutate(gene_tpm = ifelse(gene_tpm==0,0.01,gene_tpm)) %>%
-    dplyr::mutate(log2FC = log2(Immune_exp/gene_tpm)) %>%
+    # dplyr::mutate(Immune_exp = ifelse(Immune_exp==0,0.01,Immune_exp)) %>%
+    # dplyr::mutate(gene_tpm = ifelse(gene_tpm==0,0.01,gene_tpm)) %>%
+    dplyr::mutate(log2FC = log2((Immune_exp+1)/(gene_tpm+1))) %>%
     dplyr::mutate(Exp_patern = purrr::map(log2FC,.f=function(log2fc){
       if(log2fc >= 1){
         "Immune Higher"
