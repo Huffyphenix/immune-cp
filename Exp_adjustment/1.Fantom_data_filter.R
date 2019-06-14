@@ -25,7 +25,7 @@ fantom_exp %>%
   tidyr::separate(entrezgene_id,paste("entrez",1:10,sep="_")," ") %>%
   tidyr::gather(-`00Annotation`,key="entrez_i",value="entrez_ID") %>%
   dplyr::filter(!is.na(entrez_ID)) %>%
-  dplyr::select(-entrez_i) -> fantom_exp.entrezid.seperate
+  dplyr::select(-entrez_i) -> fantom_exp.entrezid.seperate # this option treat fusion genes as two genes, such as p1@SPECC1L,p1@SPECC1L-ADORA2A
 
 fantom_exp %>%
   dplyr::inner_join(fantom_exp.entrezid.seperate,by="00Annotation") -> fantom_exp.id.dealing
@@ -55,6 +55,7 @@ xCell_Fantom_cellname_adjust %>%
 # filter ICP genes
 fantom_exp.id.dealing %>%
   dplyr::filter(entrez_ID %in% gene_list$GeneID) %>%
+  dplyr::filter(short_description!="p1@SPECC1L,p1@SPECC1L-ADORA2A") %>% # upon option treat fusion genes as two genes, such as p1@SPECC1L,p1@SPECC1L-ADORA2A, filter it out
   dplyr::select(-`00Annotation`,-description,-association_with_transcript,-entrezgene_id,-uniprot_id,-hgnc_id) %>%
   tidyr::gather(-entrez_ID,-short_description,key="sample",value="TPM") -> ICP_fantom_exp
 
@@ -221,4 +222,10 @@ ICP_fantom_gene.exp.Immune_Stromal_cell.rawexp %>%
 
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rawexp %>%
   readr::write_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.raw.exp.rds.gz"),compress = "gz")
+
+ICP_fantom.gene_exp.cell_line.Immune_cell.combine.rawexp %>%
+  tidyr::unite(symbol_entrez,c("symbol","entrez_ID")) %>%
+  tidyr::spread(key = symbol_entrez,value="gene_tpm") %>%
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern/exp_data","ICP_exp_in_samples_celllines-immune-stromal.tsv"))
+
 # all_cancer_TIL <- readr::read_rds("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction_for_all_samples/All_TCGA_sample_TIL.rds.gz")
