@@ -93,3 +93,5 @@ GTEX_sym <- readr::read_rds(file.path(basic_path,"data/id_corresponding/id_corre
   .$GTEX_sym %>% unique()
 GTEx_expr <- readr::read_tsv(file.path(basic_path,"data/GSCALite/GTEx/expression","GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct")) %>%
   dplyr::filter(Description %in% GTEX_sym)
+
+save.image(file.path(res_path,"pattern_validation","ICP_exp.Rdata"))
