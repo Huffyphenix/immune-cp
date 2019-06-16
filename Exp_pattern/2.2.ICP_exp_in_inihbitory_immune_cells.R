@@ -83,4 +83,4 @@ ready_for_draw %>%
     text = element_text(color = "black")
   ) 
 ggsave(file.path(result_path,"pattern_validation","1.FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_Activate-Inhibitory-immune.png"),device = "png",height = 10,width = 20)  
-ggsave(file.path(result_path,"pattern_validation","1.FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_Activate-Inhibitory-immune.png"),device = "pdf",height = 10,width = 20)  
+ggsave(file.path(result_path,"pattern_validation","1.FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_Activate-Inhibitory-immune.pdf"),device = "pdf",height = 10,width = 20)  
