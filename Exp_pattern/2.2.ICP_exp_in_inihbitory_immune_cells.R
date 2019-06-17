@@ -23,7 +23,7 @@ fantom_sample_info <- readr::read_tsv(file.path(fantom_path,"HumanSamples2.0.cla
   dplyr::filter(sample %in% unique(ICP_fantom.gene_exp.Immune_cell.combine$sample))
 
 
-# ICP in each cell types ----------------------------------------------
+# ICP exp in each cell types ----------------------------------------------
 
 
 ICP_exp_site <- readr::read_tsv(file.path(result_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
@@ -64,7 +64,7 @@ ready_for_draw %>%
   rotate() +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin = -Inf,xmax = Inf,ymin = -Inf,ymax = Inf,alpha = 0.1) +
   facet_wrap(~symbol,scales = "free_x")  +
-  xlab("log2(TPM)") +
+  ylab("log2(TPM)") +
   scale_fill_manual(
     # values = site_cplor,
     values = c("yellow",  "green","pink","blue", "red"),
@@ -75,7 +75,7 @@ ready_for_draw %>%
     panel.background = element_rect(fill = "white",colour = "black"),
     axis.text.y = element_text(size = 10),
     axis.text.x = element_text(size = 10),
-    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
     # legend.position = "none",
     legend.text = element_text(size = 10),
     legend.title = element_text(size = 12),
@@ -89,3 +89,54 @@ ready_for_draw %>%
   ) 
 ggsave(file.path(result_path,"pattern_validation","1.FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_Activate-Inhibitory-immune.png"),device = "png",height = 10,width = 20)  
 ggsave(file.path(result_path,"pattern_validation","1.FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_Activate-Inhibitory-immune.pdf"),device = "pdf",height = 10,width = 20)  
+
+
+# PCA analysis of blood tumor immune cells and primary immune cells -------
+
+library("FactoMineR")
+library("factoextra")
+ready_for_draw %>%
+  # dplyr::filter(Group %in% c("Immune Cell","blood")) %>%
+  dplyr::select(sample,Role,gene_tpm,symbol) %>%
+  dplyr::mutate(gene_tpm=2^gene_tpm) %>%
+  tidyr::spread(key="symbol",value="gene_tpm") -> ready_for_PCA
+
+ready_for_PCA.df <- as.data.frame(ready_for_PCA[,-c(1)])
+rownames(ready_for_PCA.df) <- ready_for_PCA$sample
+
+res.pca <- PCA(ready_for_PCA.df[,-1], scale.unit = T,graph = FALSE)
+
+# As described in previous sections, the eigenvalues measure the amount of variation retained by each principal component. Eigenvalues are large for the first PCs and small for the subsequent PCs. That is, the first PCs corresponds to the directions with the maximum amount of variation in the data set. We examine the eigenvalues to determine the number of principal components to be considered. The eigenvalues and the proportion of variances (i.e., information) retained by the principal components (PCs) can be extracted using the function get_eigenvalue() [factoextra package].
+eig.val <- get_eigenvalue(res.pca)
+var <- get_pca_var(res.pca)
+
+# PCA biplot
+# http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/112-pca-principal-component-analysis-essentials/
+fviz_pca_biplot(res.pca, 
+                # Fill individuals by groups
+                geom.ind = "point",
+                pointshape = 21,
+                pointsize = 2.5,
+                fill.ind = ready_for_PCA.df$Role,
+                col.ind = "black",
+                # Color variable by groups
+                col.var = ICP_exp_site %>%
+                  dplyr::inner_join(data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
+                                               rank = c(5,4,3,2,1)), by = "Exp_site") %>%
+                  dplyr::filter(Exp_site!="Not_sure") %>%
+                  dplyr::arrange(rank,`log2FC(I/T)`) %>%
+                  .$Exp_site,
+                # gradient.cols =c("yellow",  "green","pink","blue", "red"),
+                legend.title = list(fill = "Sample class", color = "Exp_site"),
+                repel = TRUE        # Avoid label overplotting
+)+
+  ggpubr::fill_palette("jco")+      # Indiviual fill color
+  ggpubr::color_palette("npg")     # Variable colors
+
+ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.png"),device = "png",height = 6,width = 8)
+ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.pdf"),device = "pdf",height = 6,width = 8)
+
+
+# correlation between blood tumor immune cell and primary immune cell --------
+
+ready_for_draw
