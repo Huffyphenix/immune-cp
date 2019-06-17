@@ -133,10 +133,6 @@ fviz_pca_biplot(res.pca,
   ggpubr::fill_palette("jco")+      # Indiviual fill color
   ggpubr::color_palette("npg")     # Variable colors
 
-ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.png"),device = "png",height = 6,width = 8)
-ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.pdf"),device = "pdf",height = 6,width = 8)
+ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.png"),device = "png",height = 8,width = 10)
+ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.pdf"),device = "pdf",height = 8,width = 10)
 
-
-# correlation between blood tumor immune cell and primary immune cell --------
-
-ready_for_draw
