@@ -13,8 +13,8 @@ fantom_path <- file.path(basic_path,"data/FANTOM5/extra")
 
 ICP_fantom.gene_exp.Immune_cell.combine <-
   readr::read_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.raw.exp.rds.gz")) %>%
-  dplyr::filter(Group != "Stromal Cell") %>%
-  dplyr::filter(`Characteristics[Tissue]` != "blood")
+  dplyr::filter(Group != "Stromal Cell") 
+  # dplyr::filter(`Characteristics[Tissue]` != "blood")
 
 fantom_sample_info <- readr::read_tsv(file.path(fantom_path,"HumanSamples2.0.classification.txt")) %>%
   # dplyr::filter(`Characteristics [Category]` %in% c("primary cells")) %>%
@@ -28,11 +28,15 @@ fantom_sample_info <- readr::read_tsv(file.path(fantom_path,"HumanSamples2.0.cla
 
 ICP_exp_site <- readr::read_tsv(file.path(result_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
 
-inhibitory_immune_cell<- c("monocyte","neutrophil")
+inhibitory_immune_cell<- c("monocyte","neutrophil","monoblast")
 ICP_fantom.gene_exp.Immune_cell.combine %>%
   dplyr::inner_join(fantom_sample_info,by="sample") %>%
-  dplyr::mutate(Role = ifelse(`Characteristics [Cell type]` %in% inhibitory_immune_cell, "Inhibitory_Immune", "Activate_Immune")) %>%
-  dplyr::mutate(Role = ifelse(Group=="Tumor Cell","Tumor",Role)) %>%
+  dplyr::mutate(`Characteristics[Tissue].x` = ifelse(is.na(`Characteristics[Tissue].x`),"notsure",`Characteristics[Tissue].x`)) %>%
+  dplyr::mutate(Group = ifelse(`Characteristics[Tissue].x`=="blood","blood",Group)) %>%
+  # dplyr::mutate(Group = ifelse(`Characteristics [Category]`=="cell lines" & Group!="blood","Tumor Cell",Group)) %>%
+  dplyr::mutate(Role = ifelse(`Characteristics [Cell type]` %in% inhibitory_immune_cell, "Immune cells(Inhibitory)", "Immune cells(Activate)")) %>%
+  dplyr::mutate(Role = ifelse(Group=="Tumor Cell","Tumor cells(non-blood)",Role)) %>%
+  dplyr::mutate(Role = ifelse(Group=="blood",paste("Tumor cells(blood)",Role,sep="-"),Role)) %>%
   dplyr::inner_join(ICP_exp_site,by="symbol") %>%
   dplyr::mutate(gene_tpm = log2(gene_tpm+1) ) %>%
   dplyr::filter(Exp_site!="Not_sure") -> ready_for_draw
@@ -41,7 +45,7 @@ ICP_fantom.gene_exp.Immune_cell.combine %>%
 ICP_exp_site %>%
   dplyr::inner_join(data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
                                rank = c(5,4,3,2,1)), by = "Exp_site") %>%
-  dplyr::inner_join(ready_for_draw,by="symbol") %>%
+  dplyr::filter(Exp_site!="Not_sure") %>%
   dplyr::arrange(rank,`log2FC(I/T)`) %>%
   .$symbol -> symbol_rank
 
@@ -57,9 +61,10 @@ color_bac$Role <- color_bac$gene_tpm <- 1
 ready_for_draw %>%
   ggplot(aes(x=Role,y=gene_tpm)) +
   geom_boxplot() +
+  rotate() +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin = -Inf,xmax = Inf,ymin = -Inf,ymax = Inf,alpha = 0.1) +
-  facet_wrap(~symbol,scales = "free_y")  +
-  ylab("log2(TPM)") +
+  facet_wrap(~symbol,scales = "free_x")  +
+  xlab("log2(TPM)") +
   scale_fill_manual(
     # values = site_cplor,
     values = c("yellow",  "green","pink","blue", "red"),
@@ -69,7 +74,7 @@ ready_for_draw %>%
   theme(
     panel.background = element_rect(fill = "white",colour = "black"),
     axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(vjust = 1, hjust = 1, size = 10,angle = 90),
+    axis.text.x = element_text(size = 10),
     axis.title.x = element_blank(),
     # legend.position = "none",
     legend.text = element_text(size = 10),
