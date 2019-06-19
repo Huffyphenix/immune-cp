@@ -29,12 +29,14 @@ liver_Tcell_ICP_exp %>%
   dplyr::inner_join(liver_Tcell_sample,by="sample") -> liver_Tcell_ICP_exp.gather
 
 #### GSE22886, array Expression profiles from a variety of resting and activated human immune cells -----
-# gene info
-GSE22886_gene <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GPL96_gene_anno.txt")) %>%
+
+################ GPL97 
+# gene info 
+GSE22886_gene.gpl97 <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GPL97_gene_anno.txt")) %>%
   dplyr::select(ID,`Gene Symbol`,`ENTREZ_GENE_ID`)
 
 # sample info
-GSE22886_sample_info <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","sample_anno.txt"),col_names = F) %>%
+GSE22886_sample_info.gpl97 <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GPL97.sample_anno.txt"),col_names = F) %>%
   t() %>%
   as.data.frame() %>%
   dplyr::as.tbl() %>%
@@ -43,15 +45,15 @@ GSE22886_sample_info <- readr::read_tsv(file.path(basic_path,"data/immune_cell_e
   .[-1,]
 
 # load exp data
-GSE22886_immunecell_ICP_exp <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GSE22886-GPL96_series_matrix_RNA-expression-filter.txt")) %>%
+GSE22886_immunecell_ICP_exp.gpl97 <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GSE22886-GPL97_series_RNA-expression-filter.txt")) %>%
   dplyr::rename("ID"="ID_REF") %>%
-  dplyr::inner_join(GSE22886_gene,by="ID") %>%
+  dplyr::inner_join(GSE22886_gene.gpl97,by="ID") %>%
   dplyr::filter(ENTREZ_GENE_ID %in% gene_list_exp_site$entrez_ID)
 
-GSE22886_immunecell_ICP_exp$ENTREZ_GENE_ID %>% unique() %>% length() #57 genes 
+GSE22886_immunecell_ICP_exp.gpl97$ENTREZ_GENE_ID %>% unique() %>% length() #18 genes 
 
 # select transcript with biggest expression, and add sample info
-GSE22886_immunecell_ICP_exp %>%
+GSE22886_immunecell_ICP_exp.gpl97 %>%
   dplyr::select(-ID) %>%
   tidyr::gather(-ENTREZ_GENE_ID,-`Gene Symbol`,key="sample",value="Exp") %>%
   dplyr::group_by(ENTREZ_GENE_ID,sample) %>%
@@ -59,8 +61,42 @@ GSE22886_immunecell_ICP_exp %>%
   dplyr::select(-Exp) %>%
   unique() %>%
   dplyr::rename("Exp" = "Exp_max") %>%
-  dplyr::inner_join(GSE22886_sample_info,by="sample") %>%
-  dplyr::ungroup()-> GSE22886_immunecell_ICP_exp.filter
+  dplyr::inner_join(GSE22886_sample_info.gpl97,by="sample") %>%
+  dplyr::ungroup() -> GSE22886_immunecell_ICP_exp.gpl97.filter
+
+################ GPL96 
+# gene info 
+GSE22886_gene.gpl96 <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GPL96_gene_anno.txt")) %>%
+  dplyr::select(ID,`Gene Symbol`,`ENTREZ_GENE_ID`)
+
+# sample info
+GSE22886_sample_info.gpl96 <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GPL96.sample_anno.txt"),col_names = F) %>%
+  t() %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  dplyr::select(V1,V2,V8) %>%
+  dplyr::rename("title"="V1","sample"="V2","source_name"="V8") %>%
+  .[-1,]
+
+# load exp data
+GSE22886_immunecell_ICP_exp.gpl96 <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE22886","GSE22886-GPL96_series_matrix_RNA-expression-filter.txt")) %>%
+  dplyr::rename("ID"="ID_REF") %>%
+  dplyr::inner_join(GSE22886_gene.gpl96,by="ID") %>%
+  dplyr::filter(ENTREZ_GENE_ID %in% gene_list_exp_site$entrez_ID)
+
+GSE22886_immunecell_ICP_exp.gpl96$ENTREZ_GENE_ID %>% unique() %>% length() #57 genes 
+
+# select transcript with biggest expression, and add sample info
+GSE22886_immunecell_ICP_exp.gpl96 %>%
+  dplyr::select(-ID) %>%
+  tidyr::gather(-ENTREZ_GENE_ID,-`Gene Symbol`,key="sample",value="Exp") %>%
+  dplyr::group_by(ENTREZ_GENE_ID,sample) %>%
+  dplyr::mutate(Exp_max = max(Exp)) %>%
+  dplyr::select(-Exp) %>%
+  unique() %>%
+  dplyr::rename("Exp" = "Exp_max") %>%
+  dplyr::inner_join(GSE22886_sample_info.gpl96,by="sample") %>%
+  dplyr::ungroup() -> GSE22886_immunecell_ICP_exp.gpl96.filter
 
 #### GSE49910, An Expression Atlas of Human Primary Cells: Inference of Gene Function from Coexpression Networks -----
 # gene info
@@ -78,10 +114,10 @@ GSE49910_sample_info <- readr::read_tsv(file.path(basic_path,"data/immune_cell_e
 # load exp data
 GSE49910_immunecell_ICP_exp <- readr::read_tsv(file.path(basic_path,"data/immune_cell_exp_data/GSE49910","GSE49910_series_matrix_RNA-expression-filter.txt")) %>%
   dplyr::rename("ID"="ID_REF") %>%
-  dplyr::inner_join(GSE22886_gene,by="ID") %>%
+  dplyr::inner_join(GSE49910_gene,by="ID") %>%
   dplyr::filter(ENTREZ_GENE_ID %in% gene_list_exp_site$entrez_ID)
 
-GSE49910_immunecell_ICP_exp$ENTREZ_GENE_ID %>% unique() %>% length() #57 genes 
+GSE49910_immunecell_ICP_exp$ENTREZ_GENE_ID %>% unique() %>% length() #65 genes 
 
 # select transcript with biggest expression, and add sample info
 GSE49910_immunecell_ICP_exp %>%
@@ -141,7 +177,7 @@ GTEx_expr %>%
   dplyr::inner_join(Gtex.sample,by="sample") -> ICP_GTEx_expr
 
 
-# validation function -----------------------------------------------------
+################# validation function -----------------------------------------------------
 ICP_GTEx_expr -> .data
 library(ggplot2)
 library(ggpubr)
@@ -165,6 +201,8 @@ my_theme <-   theme(
 strip_color <- data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
                           site_cplor = c("blue", "green", "yellow", "pink","red"),
                           rank = c(5,4,3,2,1))
+
+############# overall exp of ICP in all samples(no classify)
 fn_plot_ICP_exp_in_dataset <- function(.data,ylab,title,filename){
   .data %>%
     dplyr::group_by(symbol) %>%
@@ -179,13 +217,14 @@ fn_plot_ICP_exp_in_dataset <- function(.data,ylab,title,filename){
     ggplot(aes(x=symbol,y=Exp)) +
     geom_boxplot(outlier.colour = "grey",outlier.size = 0.5) +
     rotate() +
-    # ylab(ylab) +
+    ggtitle(title) +
+    ylab(ylab) +
     xlab("Symbol") +
-    # title(main = title) +
     scale_x_discrete(limits = .symbol_rank$symbol) +
     my_theme +
     theme(
-      axis.text.y = element_text(size = 10,colour = .symbol_rank$site_cplor)
+      axis.text.y = element_text(size = 10,colour = .symbol_rank$site_cplor),
+      plot.title = element_text(size=12)
     )
   ggsave(file.path(res_path,"pattern_validation",paste(filename,"pdf",sep=".")),device = "pdf",width = 4, height = 10)
   ggsave(file.path(res_path,"pattern_validation",paste(filename,"png",sep=".")),device = "png", width = 4, height = 10)
@@ -198,13 +237,54 @@ fn_plot_ICP_exp_in_dataset <- function(.data,ylab,title,filename){
     dplyr::select(symbol,n)
 }
 
+############ ICP exp in each dataset of each cell type
+fn_plot_ICP_exp_in_dataset_classify <- function(.data,facet,ylab,title,filename){
+  .data %>%
+    dplyr::mutate(Exp = log2(Exp+1)) -> ready_for_draw
+  
+  .data %>%
+    dplyr::select(symbol) %>%
+    unique() %>%
+    dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
+    dplyr::inner_join(data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
+                                 rank = c(5,4,3,2,1)), by = "Exp_site") %>%
+    dplyr::filter(Exp_site!="Not_sure") %>%
+    dplyr::arrange(rank,`log2FC(I/T)`) %>%
+    .$symbol -> symbol_rank
+  
+  ready_for_draw <- within(ready_for_draw, symbol <- factor(symbol, levels = unique(symbol_rank))) # change symbol's factor level to rank the facets on plot
+  with(ready_for_draw, levels(symbol))
+  
+  ready_for_draw %>%
+    ggplot(aes(x=Class,y=Exp)) +
+    geom_boxplot(outlier.colour = "grey",outlier.size = 0.5) +
+    rotate() +
+    facet_wrap(as.formula(facet)) +
+    ggtitle(title) +
+    ylab(ylab) +
+    xlab("Immune cell types") +
+    # scale_x_discrete(limits = .symbol_rank$symbol) +
+    my_theme +
+    theme(
+      plot.title = element_text(size=12)
+    )
+  ggsave(file.path(res_path,"pattern_validation",paste(filename,"pdf",sep=".")),device = "pdf",width = 10, height = 10)
+  ggsave(file.path(res_path,"pattern_validation",paste(filename,"png",sep=".")),device = "png", width = 10, height = 10)
+}
 
 # validation --------------------------------------------------------------
-fn_plot_ICP_exp_in_dataset(.data=GSE22886_immunecell_ICP_exp.filter %>%
+### overall validation ----
+fn_plot_ICP_exp_in_dataset(.data=GSE22886_immunecell_ICP_exp.gpl96.filter %>%
                              dplyr::rename("symbol"="Gene Symbol"),
                            ylab="log2(Array exp)",
                            title = "GSE22886, array, 20 immune cells",
-                           filename = "3.1.GSE22886.20immunecells.overall") -> GSE22886.ICP_rank
+                           filename = "3.1.GSE22886.gpl96.20immunecells.overall") -> GSE22886.gpl96.ICP_rank
+
+fn_plot_ICP_exp_in_dataset(.data=GSE22886_immunecell_ICP_exp.gpl97.filter %>%
+                             dplyr::rename("symbol"="Gene Symbol"),
+                           ylab="log2(Array exp)",
+                           title = "GSE22886, array, 20 immune cells",
+                           filename = "3.1.GSE22886.gpl97.20immunecells.overall") -> GSE22886.gpl97.ICP_rank
 
 fn_plot_ICP_exp_in_dataset(.data=GSE49910_immunecell_ICP_exp.filter %>%
                              dplyr::rename("symbol"="Gene Symbol"),
@@ -225,9 +305,77 @@ fn_plot_ICP_exp_in_dataset(.data=ICP_ccle_exp_data %>%
 
 fn_plot_ICP_exp_in_dataset(.data=ICP_GTEx_expr,
                            ylab="log2(Array exp)",
-                           title = "GTEx, array, 20 immune cells",
+                           title = "GTEx, RNAseq, 20 immune cells",
                            filename = "3.5.GTEx.NormalTissue.overall") -> GTEx.ICP_rank
 
+### ICP exp in specific cell type ---- 
+GSE22886_immunecell_ICP_exp.gpl96.filter$source_name %>% table()
+GSE22886_immunecell_ICP_exp.gpl96.filter %>%
+  dplyr::mutate(Class = ifelse(source_name %in% c("Monocytes from PBMC","Neutrophils from PBMC"),"Inhibitory","Activate")) %>%
+  dplyr::rename("symbol"="Gene Symbol") %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(Array exp)",
+                                      title = "GSE22886, array, Activate/inhibitory immune cells",
+                                      filename = "4.1.1.GSE22886.gpl96.20immunecells.specify")
 
+GSE22886_immunecell_ICP_exp.gpl97.filter$source_name %>% table()
+GSE22886_immunecell_ICP_exp.gpl97.filter %>%
+  dplyr::mutate(Class = ifelse(source_name %in% c("Monocytes from PBMC","Neutrophils from PBMC"),"Inhibitory","Activate")) %>%
+  dplyr::rename("symbol"="Gene Symbol") %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(Array exp)",
+                                      title = "GSE22886, array, Activate/inhibitory immune cells",
+                                      filename = "4.1.2.GSE22886.gpl97.20immunecells.specify")
+
+GSE49910_immunecell_ICP_exp.filter$source_name %>% table()
+GSE49910_immunecell_ICP_exp.filter %>%
+  dplyr::mutate(Class = ifelse(source_name %in% c("Monocyte","Neutrophil"),"Inhibitory","Activate")) %>%
+  dplyr::rename("symbol"="Gene Symbol") %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(Array exp)",
+                                      title = "GSE49910, array, Activate/inhibitory immune cells",
+                                      filename = "4.2.GSE49910.11immunecells.specify")
+
+liver_Tcell_ICP_exp.gather$source_name %>% table()
+# liver tumor samples
+liver_Tcell_ICP_exp.gather %>%
+  dplyr::filter( substr(source_name,1,1)=="T") %>%
+  dplyr::mutate(Class = substr(source_name,2,3)) %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(TPM)",
+                                      title = "cell.2017.05.035, single cell sequence, Activate/inhibitory T cells in tumor samples",
+                                      filename = "4.3.1.cell.2017.05.035.Tcells.specify.Tumor")
+# liver normal samples
+liver_Tcell_ICP_exp.gather %>%
+  dplyr::filter( substr(source_name,1,1)=="N") %>%
+  dplyr::mutate(Class = substr(source_name,2,3)) %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(TPM)",
+                                      title = "cell.2017.05.035, single cell sequence, Activate/inhibitory T cells in normal samples",
+                                      filename = "4.3.2.cell.2017.05.035.Tcells.specify.Normal")
+# joint area between tumor and normal
+liver_Tcell_ICP_exp.gather %>%
+  dplyr::filter( substr(source_name,1,1)=="J") %>%
+  dplyr::mutate(Class = substr(source_name,2,3)) %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(TPM)",
+                                      title = "cell.2017.05.035, single cell sequence, Activate/inhibitory T cells in joint area samples",
+                                      filename = "4.3.2.cell.2017.05.035.Tcells.specify.JointArea")
+# peripheral blood samples
+liver_Tcell_ICP_exp.gather %>%
+  dplyr::filter( substr(source_name,1,1)=="P") %>%
+  dplyr::mutate(Class = substr(source_name,2,3)) %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(TPM)",
+                                      title = "cell.2017.05.035, single cell sequence, Activate/inhibitory T cells in blood samples",
+                                      filename = "4.3.2.cell.2017.05.035.Tcells.specify.blood")
+# sall samples
+liver_Tcell_ICP_exp.gather %>%
+  # dplyr::filter( substr(source_name,1,1)=="P") %>%
+  dplyr::mutate(Class = source_name) %>%
+  fn_plot_ICP_exp_in_dataset_classify(facet = "~symbol",
+                                      ylab="log2(TPM)",
+                                      title = "cell.2017.05.035, single cell sequence, Activate/inhibitory T cells in blood samples",
+                                      filename = "4.3.2.cell.2017.05.035.Tcells.specify.ALL")
 
 save.image(file.path(res_path,"pattern_validation","ICP_exp.Rdata"))
