@@ -36,7 +36,7 @@ sample_info.class <- readr::read_tsv(file.path(basic_path,"data/melanoma_single_
                                    `malignant(1=no,2=yes,0=unresolved)`=c(2,1,0)),by="malignant(1=no,2=yes,0=unresolved)") %>%
   dplyr::inner_join(tibble::tibble(cell_type = c("Tumor cell","T cell","B cell","Macrophage","Endothelial","CAF","NK"),
                                    `non-malignant cell type (1=T,2=B,3=Macro.4=Endo.,5=CAF;6=NK)`= c(0,1,2,3,4,5,6),
-                                   cell_source = c("Tumor","Immune","Immune","Immune","Stromal","Stromal","Immune")),by="non-malignant cell type (1=T,2=B,3=Macro.4=Endo.,5=CAF;6=NK)") %>%
+                                   cell_source = c("Tumor","Immune","Immune","Immune","Endothelial","Stromal","Immune")),by="non-malignant cell type (1=T,2=B,3=Macro.4=Endo.,5=CAF;6=NK)") %>%
   dplyr::select(sample,sample_type,cell_type,cell_source,tumor) 
 
 # exp data
@@ -52,7 +52,7 @@ ICP_exp_in_GSE72056 %>%
 fn_compare_TI_FC <- function(.data){
   # data filter
   .data %>%
-    dplyr::filter(cell_source != "Stromal") -> .data
+    dplyr::filter(cell_source  %in% c("Tumor","Immune")) -> .data
   # mean exp
   .data %>%
     dplyr::filter(cell_source == "Immune") %>%
@@ -84,7 +84,7 @@ ICP_exp_in_GSE72056 %>%
   dplyr::filter(symbol != "BTNL3") %>%
   tidyr::gather(-symbol,key="sample",value="Exp") %>%
   dplyr::inner_join(sample_info.class,by="sample") %>%
-  dplyr::filter(cell_source != "Stromal") %>%
+  dplyr::filter(cell_source %in% c("Tumor","Immune")) %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol") -> ready_for_draw
 
 ready_for_draw %>%
@@ -150,7 +150,7 @@ library(ggpubr)
 
 my_theme <-   theme(
   panel.background = element_rect(fill = "white",colour = "black"),
-  panel.grid.major=element_line(colour=NA),
+  panel.grid.major=element_blank(),
   axis.text.y = element_text(size = 10,colour = "black"),
   axis.text.x = element_text(size = 10,colour = "black"),
   # legend.position = "none",
@@ -190,6 +190,101 @@ correlation.ready %>%
 ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.pdf"),device = "pdf",height = 4,width = 10)
 ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.png"),device = "png",height = 4,width = 10)
 
+
+# tSNE: use ICP exp to distingrush tumor and immune cells -----------------
+library("Rtsne")
+# filter repeat samples
+ICP_exp_in_GSE72056 %>%
+  tidyr::gather(-symbol,key="sample",value="exp") %>% 
+  dplyr::group_by(sample) %>% 
+  dplyr::mutate(mean = mean(exp)) %>% 
+  dplyr::select(sample,mean) %>% 
+  dplyr::filter(mean == 0) %>% 
+  unique() -> duplicated_samples # with same ICP exp
+# data prepare
+ICP_exp_in_GSE72056 %>%
+  tidyr::gather(-symbol,key="sample",value="exp") %>%
+  dplyr::filter(!sample %in% duplicated_samples$sample) %>%
+  tidyr::spread(key="symbol",value="exp") %>%
+  dplyr::inner_join(sample_info.class,by="sample") %>%
+  dplyr::filter(cell_source %in% c("Tumor","Immune")) -> data_for_tSNE
+  
+# data_for_tSNE %>%
+#   dplyr::select(-sample,-sample_type,-cell_type,-cell_source,-tumor) %>%
+#   as.data.frame() %>%
+#   as.matrix() -> data_for_tSNE.matx
+# normalization
+data_for_tSNE.matx.normalize <- normalize_input(data_for_tSNE[,2:66] %>% as.matrix())
+# colMeans(data_for_tSNE.matx.normalize)
+# range(data_for_tSNE.matx.normalize)
+# do tSNE
+tsne_res <- Rtsne(data_for_tSNE.matx.normalize,dims=2,pca=FALSE,theta=0.0)
+# Show the objects in the 2D tsne representation
+plot(tsne_res$Y,col=factor(data_for_tSNE$cell_source), asp=1)
+tsne_res$Y %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  # dplyr::rename("tSNE 1"="V1","tSNE 2"="V2") %>%
+  dplyr::mutate(sample = data_for_tSNE$sample,
+                cell_source = data_for_tSNE$cell_source,
+                cell_type = data_for_tSNE$cell_type) %>%
+  ggplot(aes(x=V1,y= V2)) +
+  geom_jitter(aes(color=cell_type),size=0.5) +
+  xlab("tSNE 1") +
+  ylab("tSNE 2") +
+  ggpubr::color_palette("jco") +
+  my_theme
+ggsave(filename = file.path(res_path,"pattern_validation","5.3.GSE72056.ICP_exp-T-I_tSNE.png"),device = "png",width = 6,height = 4)
+ggsave(filename = file.path(res_path,"pattern_validation","5.3.GSE72056.ICP_exp-T-I_tSNE.pdf"),device = "pdf",width = 6,height = 4)
+
+
+# PCA analysis ------------------------------------------------------------
+
+library("FactoMineR")
+library("factoextra")
+ICP_exp_in_GSE72056 %>%
+  tidyr::gather(-symbol,key="sample",value="exp") %>%
+  dplyr::arrange(symbol) %>%
+  dplyr::filter(!sample %in% duplicated_samples$sample) %>%
+  tidyr::spread(key="symbol",value="exp") %>%
+  dplyr::inner_join(sample_info.class,by="sample") %>%
+  dplyr::filter(cell_source %in% c("Tumor","Immune")) -> data_for_PCA
+
+res.pca <- PCA(data_for_PCA[,2:66] %>% as.matrix(), scale.unit = T,graph = FALSE)
+# plot -- variables
+fviz_pca_var(res.pca, 
+             # geom.var = "text",
+             labelsize = 2, 
+             col.var = ICP_exp_in_GSE72056 %>%
+               dplyr::select(symbol) %>%
+               dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
+               dplyr::inner_join(data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor","Not_sure"),
+                                            rank = c(5,4,3,2,1,0)), by = "Exp_site") %>%
+               # dplyr::filter(Exp_site!="Not_sure") %>%
+               dplyr::arrange(symbol) %>%
+               .$Exp_site,
+             repel = TRUE,
+             legend.title = list(color = "Exp. site")
+             ) +
+  my_theme +
+  ggpubr::color_palette("npg")     # Variable colors
+ggsave(filename = file.path(res_path,"pattern_validation","5.4.1.GSE72056.ICP_exp-T-I_PCA-variables.png"),device = "png",width = 6,height = 4)
+ggsave(filename = file.path(res_path,"pattern_validation","5.4.1.GSE72056.ICP_exp-T-I_PCA-variables.pdf"),device = "pdf",width = 6,height = 4)
+
+# plot -- Individuas
+fviz_pca_ind(res.pca, 
+             geom.ind = "point",
+             pointsize = 2.5,
+             pointshape = 21,
+             fill.ind = data_for_PCA$cell_type,
+             legend.title = list(fill = "Cell type")
+)+
+  my_theme +
+  ggpubr::fill_palette("jco")
+ggsave(filename = file.path(res_path,"pattern_validation","5.4.2.GSE72056.ICP_exp-T-I_PCA-Individuals.png"),device = "png",width = 6,height = 4)
+ggsave(filename = file.path(res_path,"pattern_validation","5.4.2.GSE72056.ICP_exp-T-I_PCA-Individuals.pdf"),device = "pdf",width = 6,height = 4)
+
+# save image --------------------------------------------------------------
 save.image(file.path(
   res_path,"pattern_validation","GSE72056.melenoma.TI.compare.Rdata")
 )
