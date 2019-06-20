@@ -9,6 +9,11 @@ immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio")
 
+# load image --------------------------------------------------------------
+save.image(file.path(
+  res_path,"pattern_validation","GSE72056.melenoma.TI.compare.Rdata")
+)
+
 #### gene list ------------------------------------------------------------------------
 gene_list <- read.table(file.path(gene_list_path, "all.entrez_id-gene_id"),header=T)
 gene_list_exp_site <- readr::read_tsv(file.path(res_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
@@ -227,7 +232,8 @@ tsne_res$Y %>%
   # dplyr::rename("tSNE 1"="V1","tSNE 2"="V2") %>%
   dplyr::mutate(sample = data_for_tSNE$sample,
                 cell_source = data_for_tSNE$cell_source,
-                cell_type = data_for_tSNE$cell_type) %>%
+                cell_type = data_for_tSNE$cell_type,
+                tumor = data_for_tSNE$tumor) %>%
   ggplot(aes(x=V1,y= V2)) +
   geom_jitter(aes(color=cell_type),size=0.5) +
   xlab("tSNE 1") +
@@ -237,7 +243,25 @@ tsne_res$Y %>%
 ggsave(filename = file.path(res_path,"pattern_validation","5.3.GSE72056.ICP_exp-T-I_tSNE.png"),device = "png",width = 6,height = 4)
 ggsave(filename = file.path(res_path,"pattern_validation","5.3.GSE72056.ICP_exp-T-I_tSNE.pdf"),device = "pdf",width = 6,height = 4)
 
-
+# why some tumor cells overlap with immune cell?
+tsne_res$Y %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  # dplyr::rename("tSNE 1"="V1","tSNE 2"="V2") %>%
+  dplyr::mutate(sample = data_for_tSNE$sample,
+                cell_source = data_for_tSNE$cell_source,
+                cell_type = data_for_tSNE$cell_type,
+                tumor = paste("Mel",data_for_tSNE$tumor)) %>%
+  dplyr::mutate(cell_type = ifelse(cell_type!="Tumor cell","Immune cell",cell_type)) %>%
+  dplyr::mutate(tumor = ifelse(cell_type== "Immune cell","Immune cell",tumor)) %>%
+  ggplot(aes(x=V1,y= V2)) +
+  geom_jitter(aes(color=tumor),size=0.2) +
+  xlab("tSNE 1") +
+  ylab("tSNE 2") +
+  ggpubr::color_palette(palette = c("grey77", "#000000", "#0000FF", "#8B2323", "#CDAA7D", "#8EE5EE", "#76EE00","#D2691E", "#8B008B", "#6E8B3D","#FAEBD7", "#006400", "#FFD700", "#EE00EE", "#FFB6C1", "#FFBBFF", "#00F5FF", "#76EEC6","#DB7093", "#FF3030"),name="Sample type") +
+  my_theme
+ggsave(filename = file.path(res_path,"pattern_validation","5.3.GSE72056.ICP_exp-T-I_tSNE-patients-colored.png"),device = "png",width = 10,height = 6)
+ggsave(filename = file.path(res_path,"pattern_validation","5.3.GSE72056.ICP_exp-T-I_tSNE-patients-colored.pdf"),device = "pdf",width = 10,height = 6)
 # PCA analysis ------------------------------------------------------------
 
 library("FactoMineR")
