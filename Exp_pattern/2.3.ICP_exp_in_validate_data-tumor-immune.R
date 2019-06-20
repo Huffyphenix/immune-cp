@@ -170,7 +170,7 @@ my_theme <-   theme(
   text = element_text(color = "black")
 )
 strip_color <- data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
-                          site_cplor = c("blue", "green", "yellow", "pink","red"),
+                          site_cplor = c("blue", "green", "orange", "pink","red"),
                           rank = c(5,4,3,2,1))
 correlation.ready %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol") %>% 
@@ -307,6 +307,103 @@ fviz_pca_ind(res.pca,
   ggpubr::fill_palette("jco")
 ggsave(filename = file.path(res_path,"pattern_validation","5.4.2.GSE72056.ICP_exp-T-I_PCA-Individuals.png"),device = "png",width = 6,height = 4)
 ggsave(filename = file.path(res_path,"pattern_validation","5.4.2.GSE72056.ICP_exp-T-I_PCA-Individuals.pdf"),device = "pdf",width = 6,height = 4)
+
+
+# vertical comparison of ICPs in tumor and immune -------------------------
+fn_plot_ICP_exp_in_dataset <- function(.data,ylab,facet,title,filename){
+  .data %>%
+    dplyr::group_by(symbol) %>%
+    dplyr::mutate(mid = quantile(Exp,0.5)) %>%
+    dplyr::arrange(mid) %>%
+    dplyr::select(symbol,mid) %>%
+    unique() %>%
+    dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
+    dplyr::inner_join(strip_color,by="Exp_site") -> .symbol_rank
+  .data %>%
+    dplyr::mutate(Exp = log2(Exp+1)) %>%
+    ggplot(aes(x=symbol,y=Exp)) +
+    geom_boxplot(outlier.colour = "grey",outlier.size = 0.5) +
+    facet_wrap(as.formula(facet)) +
+    rotate() +
+    ggtitle(title) +
+    ylab(ylab) +
+    xlab("Symbol") +
+    scale_x_discrete(limits = .symbol_rank$symbol) +
+    my_theme +
+    theme(
+      axis.text.y = element_text(size = 10,colour = .symbol_rank$site_cplor),
+      plot.title = element_text(size=12)
+    )
+  ggsave(file.path(res_path,"pattern_validation",paste(filename,"pdf",sep=".")),device = "pdf",width = 4, height = 10)
+  ggsave(file.path(res_path,"pattern_validation",paste(filename,"png",sep=".")),device = "png", width = 4, height = 10)
+}
+
+ICP_exp_in_GSE72056 %>%
+  tidyr::gather(-symbol,key="sample",value="Exp") %>%
+  dplyr::arrange(symbol) %>%
+  dplyr::filter(!sample %in% duplicated_samples$sample) %>%
+  dplyr::inner_join(sample_info.class,by="sample") %>%
+  dplyr::filter(cell_source %in% c("Tumor","Immune")) %>%
+  fn_plot_ICP_exp_in_dataset(ylab="Expression",facet="~cell_source",title="GSE72056, ICP expression",filename="5.5.GSE72056.ICP_exp.T-I")
+
+
+# correlation between ICP exp in tumor and immune -------------------------
+ICP_exp_in_GSE72056 %>%
+  tidyr::gather(-symbol,key="sample",value="Exp") %>%
+  dplyr::arrange(symbol) %>%
+  dplyr::filter(!sample %in% duplicated_samples$sample) %>%
+  dplyr::inner_join(sample_info.class,by="sample") %>%
+  dplyr::filter(cell_source %in% c("Tumor","Immune")) %>%
+  dplyr::group_by(symbol,cell_source) %>%
+  dplyr::mutate(Mean_exp = mean(Exp)) %>%
+  dplyr::select(symbol,cell_source,Mean_exp) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key="cell_source",value="Mean_exp") -> ready_for_cor
+
+broom::tidy(
+  cor.test(ready_for_cor$Immune,ready_for_cor$Tumor,method = "spearman")
+) %>%
+  dplyr::mutate(y=(max(ready_for_cor$Immune)-min(ready_for_cor$Immune))*0.85+min(ready_for_cor$Immune),x=min(ready_for_cor$Tumor)+(max(ready_for_cor$Tumor)-min(ready_for_cor$Tumor))*0.4) %>%
+  dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2))) -> cor_anno
+
+ready_for_cor %>%
+  dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
+  tidyr::nest(-Exp_site) %>%
+  dplyr::mutate(spm = purrr::map(data,.f=function(.x){
+    if(nrow(.x)>5){
+      broom::tidy(
+      cor.test(.x$Immune,.x$Tumor,method = "spearman")) %>%
+        dplyr::mutate(y=(max(.x$Immune)-min(.x$Immune))*0.85+min(.x$Immune),
+                      x=2.72) %>%
+        dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2)))
+      }else{
+      tibble::tibble()
+    }
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> cor_anno.specific
+broom::tidy(
+  cor.test(ready_for_cor$Immune,ready_for_cor$Tumor,method = "spearman")
+) %>%
+  dplyr::mutate(y=(max(ready_for_cor$Immune)-min(ready_for_cor$Immune))*0.75+min(ready_for_cor$Immune),x=min(ready_for_cor$Tumor)+(max(ready_for_cor$Tumor)-min(ready_for_cor$Tumor))*0.4) %>%
+  dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2))) -> cor_anno
+
+ready_for_cor %>%
+  dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
+  dplyr::filter(Exp_site!="Not_sure") %>%
+  ggplot(aes(x=Tumor,y=Immune)) +
+  geom_jitter(aes(color=Exp_site),size=0.5) +
+  geom_smooth(se= F, method = "lm", aes(color=Exp_site,group=Exp_site)) +
+  geom_smooth(se = F, method = "lm",color= "black") +
+  geom_text(aes(x=x,y=y,label = label),data=cor_anno,color="black") +
+  geom_text(aes(x=x,y=y,label = label,color=Exp_site),data = cor_anno.specific) +
+  scale_color_manual(values=c("#CD661D",  "#008B00", "#FF69B4", "#1874CD","#CD3333")) +
+  my_theme +
+  xlab("Mean exppression in tumor cells") +
+  ylab("Mean exppression in immune cells") 
+ggsave(file.path(res_path,"pattern_validation","5.6.GSE72056-T-I-meanExp.correlation.pdf"),device = "pdf",height = 6,width = 8)
+ggsave(file.path(res_path,"pattern_validation","5.6.GSE72056-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
 
 # save image --------------------------------------------------------------
 save.image(file.path(
