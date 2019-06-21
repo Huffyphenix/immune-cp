@@ -10,7 +10,7 @@ gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio")
 
 # load image --------------------------------------------------------------
-save.image(file.path(
+load(file.path(
   res_path,"pattern_validation","GSE72056.melenoma.TI.compare.Rdata")
 )
 
