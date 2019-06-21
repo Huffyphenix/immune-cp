@@ -11,6 +11,11 @@ result_path <- file.path(immune_path,"result_20171025","ICP_exp_patthern-byratio
 fantom_path <- file.path(basic_path,"data/FANTOM5/extra")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 
+
+# load image --------------------------------------------------------------
+
+load(file.path(result_path,"pattern_validation","FANTOM5.validation.Rdata"))
+
 # load data ---------------------------------------------------------------
 
 ICP_fantom.gene_exp.Immune_cell.combine <-
@@ -290,3 +295,8 @@ ready_for_cor %>%
   ylab("Mean exppression in immune cells") 
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.pdf"),device = "pdf",height = 6,width = 8)
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
+
+
+# save image --------------------------------------------------------------
+
+save.image(file.path(result_path,"pattern_validation","FANTOM5.validation.Rdata"))
