@@ -11,11 +11,6 @@ result_path <- file.path(immune_path,"result_20171025","ICP_exp_patthern-byratio
 fantom_path <- file.path(basic_path,"data/FANTOM5/extra")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 
-
-# load image --------------------------------------------------------------
-
-load(file.path(result_path,"pattern_validation","FANTOM5.validation.Rdata"))
-
 # load data ---------------------------------------------------------------
 
 ICP_fantom.gene_exp.Immune_cell.combine <-
@@ -42,7 +37,8 @@ gene_list_exp_site <- readr::read_tsv(file.path(result_path,"pattern_info","ICP_
 inhibitory_immune_cell<- c("monocyte","neutrophil","monoblast")
 ICP_fantom.gene_exp.Immune_cell.combine %>%
   dplyr::inner_join(fantom_sample_info,by="sample") %>%
-  dplyr::mutate(`Characteristics[Tissue].x` = ifelse(is.na(`Characteristics[Tissue].x`),"notsure",`Characteristics[Tissue].x`)) %>%
+  dplyr::mutate(`Characteristics[Tissue].x` = ifelse(is.na(`Characteristics[Tissue].x`),"notsure",`Characteristics[Tissue].x`)) %>% # cell lines tissue type, not include immune cell. Cause replaced by "PrimaryCell" in ICP_fantom.gene_exp.Immune_cell.combine
+  dplyr::filter(`Characteristics[Tissue].x`!="notsure") %>%
   dplyr::mutate(Group = ifelse(`Characteristics[Tissue].x`=="blood","blood",Group)) %>%
   # dplyr::mutate(Group = ifelse(`Characteristics [Category]`=="cell lines" & Group!="blood","Tumor Cell",Group)) %>%
   dplyr::mutate(Role = ifelse(`Characteristics [Cell type]` %in% inhibitory_immune_cell, "Immune cells(Inhibitory)", "Immune cells(Activate)")) %>%
@@ -52,9 +48,11 @@ ICP_fantom.gene_exp.Immune_cell.combine %>%
   dplyr::mutate(Role = ifelse(Role =="Tumor cells(blood)-Immune cells(Inhibitory)","Immune cells of blood tumor(Inhibitory)",Role)) %>%
   dplyr::inner_join(ICP_exp_site,by="symbol") %>%
   dplyr::mutate(log2gene_tpm = log2(gene_tpm+1) ) %>%
-  dplyr::filter(Exp_site!="Not_sure") -> ready_for_draw
+  dplyr::filter(Exp_site!="Not_sure") -> ready_for_analysis
 
+# exp profile between immune and tumor, blood activate and inhibit immne cells---------------------------
 
+ready_for_draw <- ready_for_analysis
 ICP_exp_site %>%
   dplyr::inner_join(data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
                                rank = c(5,4,3,2,1)), by = "Exp_site") %>%
@@ -107,19 +105,7 @@ ggsave(file.path(result_path,"pattern_validation","1.FANTOM5.ICP_exp_in_tumor(no
 # tSNE --------------------------------------------------------------------
 
 library("Rtsne")
-ICP_fantom.gene_exp.Immune_cell.combine %>%
-  dplyr::inner_join(fantom_sample_info,by="sample") %>%
-  dplyr::mutate(`Characteristics[Tissue].x` = ifelse(is.na(`Characteristics[Tissue].x`),"notsure",`Characteristics[Tissue].x`)) %>%
-  dplyr::mutate(Group = ifelse(`Characteristics[Tissue].x`=="blood","blood",Group)) %>%
-  # dplyr::mutate(Group = ifelse(`Characteristics [Category]`=="cell lines" & Group!="blood","Tumor Cell",Group)) %>%
-  dplyr::mutate(Role = ifelse(`Characteristics [Cell type]` %in% inhibitory_immune_cell, "Immune cells(Inhibitory)", "Immune cells(Activate)")) %>%
-  dplyr::mutate(Role = ifelse(Group=="Tumor Cell","Tumor cells(non-blood)",Role)) %>%
-  dplyr::mutate(Role = ifelse(Group=="blood",paste("Tumor cells(blood)",Role,sep="-"),Role)) %>%
-  dplyr::mutate(Role = ifelse(Role =="Tumor cells(blood)-Immune cells(Activate)","Immune cells of blood tumor(Activate)",Role)) %>%
-  dplyr::mutate(Role = ifelse(Role =="Tumor cells(blood)-Immune cells(Inhibitory)","Immune cells of blood tumor(Inhibitory)",Role)) %>%
-  dplyr::inner_join(ICP_exp_site,by="symbol") %>%
-  dplyr::mutate(log2gene_tpm = log2(gene_tpm+1) ) %>%
-  dplyr::filter(Exp_site!="Not_sure") %>%
+ready_for_analysis %>%
   dplyr::select(sample,gene_tpm,symbol,Group,Role) %>%
   tidyr::spread(key="symbol",value="gene_tpm") -> data_for_tSNE
 
@@ -155,10 +141,8 @@ ggsave(filename = file.path(result_path,"pattern_validation","1.3.FANTOME5.ICP_e
 
 library("FactoMineR")
 library("factoextra")
-ready_for_draw %>%
-  # dplyr::filter(Group %in% c("Immune Cell","blood")) %>%
+ready_for_analysis %>%
   dplyr::select(sample,Role,gene_tpm,symbol) %>%
-  dplyr::mutate(gene_tpm=2^gene_tpm) %>%
   tidyr::spread(key="symbol",value="gene_tpm") -> ready_for_PCA
 
 ready_for_PCA.df <- as.data.frame(ready_for_PCA[,-c(1)])
@@ -177,6 +161,7 @@ fviz_pca_biplot(res.pca,
                 geom.ind = "point",
                 pointshape = 21,
                 pointsize = 2.5,
+                labelsize = 2,
                 fill.ind = ready_for_PCA.df$Role,
                 col.ind = "black",
                 # Color variable by groups
@@ -190,8 +175,8 @@ fviz_pca_biplot(res.pca,
                 legend.title = list(fill = "Sample class", color = "Exp_site"),
                 repel = TRUE        # Avoid label overplotting
 )+
-  ggpubr::fill_palette("jco")+      # Indiviual fill color
-  ggpubr::color_palette("npg")     # Variable colors
+  ggpubr::fill_palette("npg")+      # Indiviual fill color
+  ggpubr::color_palette("jco")     # Variable colors
 
 ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.png"),device = "png",height = 8,width = 10)
 ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.pdf"),device = "pdf",height = 8,width = 10)
@@ -247,7 +232,7 @@ fn_plot_ICP_exp_in_dataset <- function(.data,ylab,facet,title,filename){
   ggsave(file.path(result_path,"pattern_validation",paste(filename,"png",sep=".")),device = "png", width = 4, height = 10)
 }
 
-ready_for_draw %>%
+ready_for_analysis %>%
   dplyr::mutate(Exp = gene_tpm) %>%
   dplyr::mutate(cell_source = ifelse(Role %in% c("Immune cells(Activate)","Immune cells(Inhibitory)"),"Immune cell","Tumor cell")) %>%
   dplyr::filter(! Role %in% c("Tumor cells(blood)-Immune cells(Activate)","Tumor cells(blood)-Immune cells(Inhibitory)")) %>%
@@ -255,7 +240,7 @@ ready_for_draw %>%
 
 
 # correlation of ICP mean exp between immune and tumor --------------------
-ready_for_draw %>%
+ready_for_analysis %>%
   dplyr::select(symbol,mean_cell_line,mean_immune_exp,Exp_site) %>%
   unique() %>%
   dplyr::mutate(mean_immune_exp=log2(mean_immune_exp+1),mean_cell_line=log2(mean_cell_line+1))-> ready_for_cor
@@ -291,8 +276,8 @@ ready_for_cor %>%
   geom_text(aes(x=x,y=y,label = label,color=Exp_site),data = cor_anno.specific) +
   scale_color_manual(values=c("#CD661D",  "#008B00", "#FF69B4", "#1874CD","#CD3333")) +
   my_theme +
-  xlab("Mean exppression in tumor cells") +
-  ylab("Mean exppression in immune cells") 
+  xlab("log2(Mean exppression in tumor cells)") +
+  ylab("log2(Mean exppression in immune cells)") 
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.pdf"),device = "pdf",height = 6,width = 8)
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
 
