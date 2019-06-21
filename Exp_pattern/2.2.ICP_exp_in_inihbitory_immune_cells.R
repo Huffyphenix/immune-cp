@@ -178,8 +178,8 @@ fviz_pca_biplot(res.pca,
   ggpubr::fill_palette("npg")+      # Indiviual fill color
   ggpubr::color_palette("jco")     # Variable colors
 
-ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.png"),device = "png",height = 8,width = 10)
-ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.pdf"),device = "pdf",height = 8,width = 10)
+ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.png"),device = "png",height = 6,width = 8)
+ggsave(file.path(result_path,"pattern_validation","2.PCA_analysis_of_ICPs_in_different_cell_types.pdf"),device = "pdf",height = 6,width = 8)
 
 
 # vertical comparison of ICPs in tumor and immune -------------------------
@@ -231,13 +231,27 @@ fn_plot_ICP_exp_in_dataset <- function(.data,ylab,facet,title,filename){
   ggsave(file.path(result_path,"pattern_validation",paste(filename,"pdf",sep=".")),device = "pdf",width = 4, height = 10)
   ggsave(file.path(result_path,"pattern_validation",paste(filename,"png",sep=".")),device = "png", width = 4, height = 10)
 }
-
+# immune and tumor cell together
 ready_for_analysis %>%
   dplyr::mutate(Exp = gene_tpm) %>%
   dplyr::mutate(cell_source = ifelse(Role %in% c("Immune cells(Activate)","Immune cells(Inhibitory)"),"Immune cell","Tumor cell")) %>%
   dplyr::filter(! Role %in% c("Tumor cells(blood)-Immune cells(Activate)","Tumor cells(blood)-Immune cells(Inhibitory)")) %>%
   fn_plot_ICP_exp_in_dataset(ylab="log2(TPM)",facet="~cell_source",title="FANTOM 5, ICP expression",filename="1.1.FANTOM5.ICP_exp.T-I")
 
+# only tumor cell
+ready_for_analysis %>%
+  dplyr::mutate(Exp = gene_tpm) %>%
+  dplyr::mutate(cell_source = ifelse(Role %in% c("Immune cells(Activate)","Immune cells(Inhibitory)"),"Immune cell","Tumor cell")) %>%
+  dplyr::filter(! Role %in% c("Tumor cells(blood)-Immune cells(Activate)","Tumor cells(blood)-Immune cells(Inhibitory)")) %>%
+  dplyr::filter(cell_source == "Tumor cell") %>%
+  fn_plot_ICP_exp_in_dataset(ylab="log2(TPM)",facet="~cell_source",title="FANTOM 5, ICP expression",filename="1.1.1.FANTOM5.ICP_exp.Tumor")
+
+ready_for_analysis %>%
+  dplyr::mutate(Exp = gene_tpm) %>%
+  dplyr::mutate(cell_source = ifelse(Role %in% c("Immune cells(Activate)","Immune cells(Inhibitory)"),"Immune cell","Tumor cell")) %>%
+  dplyr::filter(! Role %in% c("Tumor cells(blood)-Immune cells(Activate)","Tumor cells(blood)-Immune cells(Inhibitory)")) %>%
+  dplyr::filter(cell_source == "Immune cell") %>%
+  fn_plot_ICP_exp_in_dataset(ylab="log2(TPM)",facet="~cell_source",title="FANTOM 5, ICP expression",filename="1.1.2.FANTOM5.ICP_exp.Immune")
 
 # correlation of ICP mean exp between immune and tumor --------------------
 ready_for_analysis %>%
@@ -281,7 +295,48 @@ ready_for_cor %>%
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.pdf"),device = "pdf",height = 6,width = 8)
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
 
+# correlation of ICP rank between immune and tumor --------------------
+ready_for_cor %>%
+  dplyr::arrange(mean_cell_line) %>%
+  dplyr::mutate(Tumor_rank=rank(mean_cell_line)) %>%
+  dplyr::arrange(mean_immune_exp) %>%
+  dplyr::mutate(Immune_rank=1:nrow(ready_for_cor)) -> ready_for_rank.cor
 
+broom::tidy(
+  cor.test(ready_for_rank.cor$Immune_rank,ready_for_rank.cor$Tumor_rank,method = "spearman")
+) %>%
+  dplyr::mutate(y=(max(ready_for_rank.cor$Immune_rank)-min(ready_for_rank.cor$Immune_rank))*0.75+min(ready_for_rank.cor$Immune_rank),x=min(ready_for_rank.cor$Tumor_rank)+(max(ready_for_rank.cor$Tumor_rank)-min(ready_for_rank.cor$Tumor_rank))*0.4) %>%
+  dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2))) -> cor_anno
+
+ready_for_rank.cor %>%
+  tidyr::nest(-Exp_site) %>%
+  dplyr::mutate(spm = purrr::map(data,.f=function(.x){
+    if(nrow(.x)>5){
+      broom::tidy(
+        cor.test(.x$Immune_rank,.x$Tumor_rank,method = "spearman")) %>%
+        dplyr::mutate(y=(max(.x$Immune_rank)-min(.x$Immune_rank))*0.85+min(.x$Immune_rank),x=cor_anno$x) %>%
+        dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2)))
+    }else{
+      tibble::tibble()
+    }
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> cor_anno.specific
+
+ready_for_rank.cor %>%
+  dplyr::filter(Exp_site!="Not_sure") %>%
+  ggplot(aes(x=Tumor_rank,y=Immune_rank)) +
+  geom_jitter(aes(color=Exp_site),size=0.5) +
+  geom_smooth(se= F, method = "lm", aes(color=Exp_site,group=Exp_site)) +
+  geom_smooth(se = F, method = "lm",color= "black") +
+  geom_text(aes(x=x,y=y,label = label),data=cor_anno,color="black") +
+  geom_text(aes(x=x,y=y,label = label,color=Exp_site),data = cor_anno.specific) +
+  scale_color_manual(values=c("#CD661D",  "#008B00", "#FF69B4", "#1874CD","#CD3333")) +
+  my_theme +
+  xlab("log2(Mean exppression in tumor cells)") +
+  ylab("log2(Mean exppression in immune cells)") 
+ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.pdf"),device = "pdf",height = 6,width = 8)
+ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
 # save image --------------------------------------------------------------
 
 save.image(file.path(result_path,"pattern_validation","FANTOM5.validation.Rdata"))
