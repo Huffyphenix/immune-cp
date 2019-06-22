@@ -361,6 +361,9 @@ ICP_exp_in_GSE72056 %>%
   dplyr::ungroup() %>%
   tidyr::spread(key="cell_source",value="Mean_exp") -> ready_for_cor
 
+ready_for_cor %>%
+  readr::write_tsv(file.path(res_path,"pattern_validation","ICP_mean_exp_in_GSE72056.tsv"))
+
 broom::tidy(
   cor.test(ready_for_cor$Immune,ready_for_cor$Tumor,method = "spearman")
 ) %>%
@@ -404,6 +407,7 @@ ready_for_cor %>%
   ylab("Mean exppression in immune cells") 
 ggsave(file.path(res_path,"pattern_validation","5.6.GSE72056-T-I-meanExp.correlation.pdf"),device = "pdf",height = 6,width = 8)
 ggsave(file.path(res_path,"pattern_validation","5.6.GSE72056-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
+
 
 # save image --------------------------------------------------------------
 save.image(file.path(
