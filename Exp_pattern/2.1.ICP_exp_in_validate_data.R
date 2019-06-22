@@ -379,4 +379,97 @@ liver_Tcell_ICP_exp.gather %>%
                                       filename = "4.3.2.cell.2017.05.035.Tcells.specify.ALL")
 
 
+# all data set mean expression tSNE ---------------------------------------
+
+ICP_mean_exp_in_GSE72056 <- readr::read_tsv(file.path(res_path,"pattern_validation","ICP_mean_exp_in_GSE72056.tsv")) %>%
+  dplyr::rename("GSE72056_Immune"="Immune","GSE72056_Tumor"="Tumor")
+
+GSE22886_immunecell_ICP_exp.gpl96.filter %>%
+  dplyr::group_by(`Gene Symbol`) %>%
+  dplyr::mutate(GSE22886_Immune = mean(Exp)) %>%
+  dplyr::rename("symbol"="Gene Symbol") %>%  
+  dplyr::ungroup() %>%
+  dplyr::select(symbol,GSE22886_Immune) %>%
+  unique() -> ICP_mean_exp_in_GSE22886
+
+GSE22886_immunecell_ICP_exp.gpl97.filter %>%
+  dplyr::group_by(`Gene Symbol`) %>%
+  dplyr::mutate(GSE22886_Immune = mean(Exp)) %>%
+  dplyr::rename("symbol"="Gene Symbol") %>%  
+  dplyr::ungroup() %>%
+  dplyr::select(symbol,GSE22886_Immune) %>%
+  unique() -> ICP_mean_exp_in_GSE22886.gpl97
+ICP_mean_exp_in_GSE22886.gpl97 %>%
+  dplyr::filter(!symbol %in% ICP_mean_exp_in_GSE22886$symbol) %>%
+  rbind(ICP_mean_exp_in_GSE22886) -> ICP_mean_exp_in_GSE22886.all
+
+GSE49910_immunecell_ICP_exp.filter %>%
+  dplyr::group_by(`Gene Symbol`) %>%
+  dplyr::mutate(GSE49910_Immune = mean(Exp)) %>%
+  dplyr::rename("symbol"="Gene Symbol") %>%
+  dplyr::ungroup() %>%
+  dplyr::select(symbol,GSE49910_Immune) %>%
+  unique() -> ICP_mean_exp_in_GSE49910
+
+liver_Tcell_ICP_exp.gather %>%
+  dplyr::group_by(symbol,source_name) %>%
+  dplyr::mutate(liver_mean_exp = mean(Exp)) %>%
+  dplyr::select(symbol,source_name,liver_mean_exp) %>%
+  unique() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key="source_name",value="liver_mean_exp") ->  ICP_mean_exp_in_liver_Tcell
+
+ICP_ccle_exp_data %>%
+  dplyr::mutate(Exp = ifelse(is.na(Exp),0,Exp)) %>%
+  dplyr::group_by(symbol) %>%
+  dplyr::mutate(ccle_mean_Exp=mean(Exp)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(symbol,ccle_mean_Exp) %>%
+  unique() -> ICP_mean_exp_in_ccle
+
+ICP_GTEx_expr %>%
+  dplyr::mutate(Exp = ifelse(is.na(Exp),0,Exp)) %>%
+  dplyr::group_by(symbol) %>%
+  dplyr::mutate(gtex_mean_Exp=mean(Exp)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(symbol,gtex_mean_Exp) %>%
+  unique() -> ICP_mean_exp_in_gtex
+
+gene_list_exp_site %>%
+  dplyr::select(symbol,Exp_site) %>%
+  dplyr::inner_join(ICP_mean_exp_in_GSE49910, by="symbol") %>%
+  dplyr::inner_join(ICP_mean_exp_in_liver_Tcell, by="symbol") %>%
+  dplyr::inner_join(ICP_mean_exp_in_ccle, by="symbol") %>%
+  dplyr::inner_join(ICP_mean_exp_in_gtex, by="symbol") %>%
+  dplyr::inner_join(ICP_mean_exp_in_GSE72056, by="symbol") %>%
+  dplyr::inner_join(ICP_mean_exp_in_GSE22886.all, by="symbol") -> ICP_mean_exp_in_all_datasets
+
+# normalization
+ICP_mean_exp_in_all_datasets.matx.normalize <- normalize_input(ICP_mean_exp_in_all_datasets[,-c(1:2)] %>% as.matrix())
+
+# do tSNE
+tsne_res <- Rtsne(ICP_mean_exp_in_all_datasets.matx.normalize,dims = 2,perplexity = 19, pca = FALSE,theta = 0.0)
+
+# Show the objects in the 2D tsne representation
+plot(tsne_res$Y,col=factor(ICP_mean_exp_in_all_datasets$Exp_site), asp=1)
+tsne_res$Y %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  # dplyr::rename("tSNE 1"="V1","tSNE 2"="V2") %>%
+  dplyr::mutate(sample = ICP_mean_exp_in_all_datasets$sample,
+                Exp_site = ICP_mean_exp_in_all_datasets$Exp_site) %>%
+  ggplot(aes(x=V1,y= V2)) +
+  geom_jitter(aes(color=Exp_site),size=1) +
+  xlab("tSNE 1") +
+  ylab("tSNE 2") +
+  ggpubr::color_palette("npg") +
+  my_theme +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank()
+  ) 
+# save image --------------------------------------------------------------
+
+
 save.image(file.path(res_path,"pattern_validation","ICP_exp.Rdata"))
