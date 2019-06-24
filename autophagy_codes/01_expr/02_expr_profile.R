@@ -16,25 +16,28 @@ out_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
 gene_list$symbol <- as.character(gene_list$symbol)
 gene_list_expr <- readr::read_rds(path = file.path(expr_path, ".rds_03_a_gene_list_expr.rds.gz"))
-ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
-fn_site_color <- function(.n,.x){
-  print(.n)
-  if(.x=="Mainly_Tumor"){
+# ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern-byratio/pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
+  dplyr::select(entrez_ID,symbol,Exp_site,`log2FC(I/T)`) 
+
+fn_site_color <- function(.x){
+  # print(.n)
+  if(.x=="Mainly_exp_on_Tumor"){
     "red"
-  }else if(.x=="Mainly_Immune"){
+  }else if(.x=="Mainly_exp_on_Immune"){
     "Blue"
-  }else if(.x=="Both"){
+  }else if(.x=="Only_exp_on_Immune"){
+    "Blue"
+  }else if(.x=="Both_exp_on_Tumor_Immune"){
     c("#9A32CD")
   }else{
     "grey"
   }
 }
 gene_list %>%
-  dplyr::inner_join(ICP_expr_pattern,by="symbol") %>%
-  dplyr::rename("Exp_site"="Exp site") %>%
+  dplyr::left_join(ICP_expr_pattern,by="symbol") %>%
   dplyr::mutate(Exp_site=ifelse(is.na(Exp_site),"N",Exp_site)) %>%
-  dplyr::mutate(site_col = purrr::map2(symbol,Exp_site,fn_site_color)) %>%
-  tidyr::unnest() -> gene_list
+  dplyr::mutate(site_col = purrr::map(Exp_site,fn_site_color)) -> gene_list
 # calculation of average expression of genes of samples-----
 # 3 groups by function: activate, inhibit and two sides-----
 # 样本中在各基因的平均表达量
@@ -87,7 +90,32 @@ ICP_mean_expr_in_cancers %>%
     panel.grid = element_line(linetype = "dashed")
   )
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_cancers.pdf"),device = "pdf", width = 6,height = 6)  
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_cancers.png"),device = "png",width = 6,height = 6)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_cancers.png"),device = "png",width = 6,height = 6)
+
+# class by cancers
+ICP_mean_expr_in_cancers %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(average_exp = log2(average_exp)) %>%
+  ggplot(aes(x=functionWithImmune,y=average_exp)) +
+  geom_violin(aes(fill=cancer_types),alpha=0.5) +
+  facet_wrap(~cancer_types) +
+  coord_flip() +
+  # scale_x_discrete(limits= cancer_rank$cancer_types) +
+  # scale_fill_manual(values = c( "#1C86EE", "#EE3B3B","#EE7600")) +
+  theme_bw() +
+  xlab("Funtional class of ICPs") +
+  ylab("log2 (Expression)") +
+  theme(
+    strip.background = element_rect(colour = "black", fill = "white"),
+    strip.text = element_text(size = 12,color = "black"),
+    axis.text = element_text(size = 10, colour = "black"),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.border = element_rect(fill='transparent',colour = "black"),
+    panel.grid = element_line(linetype = "dashed")
+  )
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancers.pdf"),device = "pdf", width = 6,height = 5)
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancer.png"),device = "png",width = 6,height =5)
 
 # 3 groups by function: exp site Mainly_Tumor, Mainly_Immune, both -----
 # 样本中在各基因的平均表达量
@@ -97,6 +125,10 @@ fn_average.by_expsite <- function(.data){
     tidyr::gather(-symbol,-entrez_id,key="barcode",value="expr") %>%
     dplyr::left_join(gene_list,by="symbol") %>%
     dplyr::filter(!is.na(expr)) %>%
+    dplyr::filter(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor")) %>%
+    dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
+    dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
+    dplyr::mutate(Exp_site = Exp_site.1) %>%
     dplyr::group_by(barcode,Exp_site) %>%
     dplyr::mutate(average_exp = mean(expr)) %>%
     dplyr::select(barcode,Exp_site,average_exp) %>%
@@ -118,6 +150,7 @@ ICP_mean_expr_in_cancers.by_expsite %>%
   dplyr::select(cancer_types,sum) %>%
   unique() %>%
   dplyr::arrange(sum) -> cancer_rank.by_expsite
+
 ICP_mean_expr_in_cancers.by_expsite %>%
   tidyr::unnest() %>%
   dplyr::filter(Exp_site!="N") %>%
@@ -127,7 +160,7 @@ ICP_mean_expr_in_cancers.by_expsite %>%
   facet_wrap(~Exp_site) +
   coord_flip() +
   scale_x_discrete(limits= cancer_rank$cancer_types) +
-  scale_fill_manual(values = c("#9A32CD", "Blue" ,"red")) +
+  scale_fill_manual(values = c("#9A32CD", "Blue" ,"red","pink","orange","grey")) +
   theme_bw() +
   xlab("Cancer Types") +
   ylab("log2 (Expression)") +
@@ -142,6 +175,41 @@ ICP_mean_expr_in_cancers.by_expsite %>%
   )
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_cancers-by_expsite.pdf"),device = "pdf", width = 6,height = 6)  
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_cancers-by_expsite.png"),device = "png",width = 6,height = 6)  
+
+# class by cancers
+ICP_mean_expr_in_cancers.by_expsite %>%
+  tidyr::unnest() %>%
+  dplyr::filter(!Exp_site %in% c("N","Not_sure")) -> plot_ready
+
+plot_ready %>%
+  dplyr::select(Exp_site) %>%
+  dplyr::inner_join(data.frame(Exp_site = c("Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor"),
+                               rank = c(3,2,1)), by = "Exp_site") %>%
+  dplyr::arrange(rank) %>%
+  .$Exp_site -> Exp_site.rank
+plot_ready <- within(plot_ready,Exp_site <- factor(Exp_site,levels = unique(Exp_site.rank)))
+with(plot_ready, levels(Exp_site))
+
+plot_ready %>%
+  dplyr::mutate(average_exp = log2(average_exp)) %>%
+  ggplot(aes(x=Exp_site,y=average_exp)) +
+  geom_violin(aes(fill=cancer_types),alpha=0.5) +
+  facet_wrap(~cancer_types) +
+  coord_flip() +
+  theme_bw() +
+  xlab("Expression site of ICPs") +
+  ylab("log2 (Expression)") +
+  theme(
+    strip.background = element_rect(colour = "black", fill = "white"),
+    strip.text = element_text(size = 12,color = "black"),
+    axis.text = element_text(size = 10, colour = "black"),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.border = element_rect(fill='transparent',colour = "black"),
+    panel.grid = element_line(linetype = "dashed")
+  )
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 6,height = 5)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 6,height = 5)  
 
 # calculation of average expression of samples of genes ----
 # 基因在各样本中的平均表达量
@@ -175,6 +243,7 @@ mean_exp_of_ICP_in_cancers_samples %>%
   dplyr::arrange(symbol) %>%
   dplyr::select(symbol,type,functionWithImmune,Exp_site) %>%
   unique() %>%
+  dplyr::mutate(Exp_site = ifelse(Exp_site=="N","Not_sure",Exp_site)) %>%
   as.data.frame() -> symbol_anno
 rownames(symbol_anno) <- symbol_anno[,1]
 symbol_anno <- symbol_anno[,-1]
@@ -184,10 +253,12 @@ gene_anno <- HeatmapAnnotation(df=symbol_anno,
                                col = list(functionWithImmune=c("Inhibit" = "#EE3B3B",
                                                                "Activate" = "#1C86EE",
                                                                "TwoSide" = "#EE7600"),
-                                          Exp_site=c("Mainly_Tumor" = "red",
-                                                     "Both" = "#9A32CD",
-                                                     "Mainly_Immune" = "Blue",
-                                                     "N" = "grey"),
+                                          Exp_site=c("Mainly_exp_on_Tumor" = "pink",
+                                                     "Only_exp_on_Tumor" = "red",
+                                                     "Both_exp_on_Tumor_Immune" = "#9A32CD",
+                                                     "Mainly_exp_on_Immune" = "green",
+                                                     "Only_exp_on_Immune" = "blue",
+                                                     "Not_sure" = "grey"),
                                           type = c("Receptor" = "black",
                                                    "Ligand" = "red",
                                                    "Ligand&Receptor" = "purple")),
@@ -208,22 +279,28 @@ library(circlize)
 library(dendextend)
 
 col_dend = hclust(dist(t(mean_exp_of_ICP_in_cancers_samples.df.scaled))) # column clustering
+row_dend = hclust(dist((mean_exp_of_ICP_in_cancers_samples.df.scaled))) # row clustering 
 pdf(file.path(out_path,"e_6_exp_profile","ICP_cluster_tree.pdf"),width = 12,height = 4)
 plot(col_dend)
 dev.off()
 
-
+plot(row_dend)
 he = Heatmap(mean_exp_of_ICP_in_cancers_samples.df.scaled,
              col = colorRamp2(c(-2, 0, 4), c("blue", "white", "red")),
              row_names_gp = gpar(fontsize = 8),
              show_row_names = T, 
              show_column_names = FALSE,
-             cluster_rows = F,
              show_row_dend = T, # whether show row clusters.
              top_annotation = gene_anno,
              row_names_side = c("left"),
              cluster_columns = color_branches(col_dend, k = 6),   # add color on the column tree branches
+             cluster_rows = color_branches(row_dend, k = 4), 
              heatmap_legend_param = list(title = c("Scaled Exp.")))
 pdf(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.pdf"),width = 6,height = 4)
 he
 dev.off()
+
+
+# save image --------------------------------------------------------------
+
+save.image(file.path(out_path,"e_6_exp_profile","e_6_exp_profile.rdata"))
