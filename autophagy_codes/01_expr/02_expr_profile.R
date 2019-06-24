@@ -38,8 +38,30 @@ gene_list %>%
   dplyr::left_join(ICP_expr_pattern,by="symbol") %>%
   dplyr::mutate(Exp_site=ifelse(is.na(Exp_site),"N",Exp_site)) %>%
   dplyr::mutate(site_col = purrr::map(Exp_site,fn_site_color)) -> gene_list
-# calculation of average expression of genes of samples-----
-# 3 groups by function: activate, inhibit and two sides-----
+
+survival_path <- "/home/huff/project/data/TCGA-survival-time/cell.2018.survival"
+survival_data <- readr::read_rds(file.path(survival_path, "TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
+  dplyr::rename("cancer_types" = "type")
+
+clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+  tidyr::unnest() %>%
+  dplyr::select(-cancer_types) %>%
+  unique() %>%
+  dplyr::mutate(OS=as.numeric(OS),Status=as.numeric(Status),Age=as.numeric(Age)) %>%
+  dplyr::group_by(barcode) %>%
+  dplyr::mutate(OS= max(OS)) %>%
+  dplyr::mutate(Status =  max(Status)) %>%
+  dplyr::ungroup()
+
+clinical <- readr::read_rds(file.path(basic_path,"data/TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
+  tidyr::unnest() %>%
+  dplyr::select(bcr_patient_barcode,PFS,PFS.time) %>%
+  tidyr::drop_na() %>%
+  dplyr::rename("barcode" = "bcr_patient_barcode") %>%
+  unique()
+
+# calculation of average expression of genes of samples --------------------------------
+# 3 groups by function: activate, inhibit and two sides -----
 # 样本中在各基因的平均表达量
 
 fn_average <- function(.data){
@@ -116,6 +138,160 @@ ICP_mean_expr_in_cancers %>%
   )
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancers.pdf"),device = "pdf", width = 6,height = 5)
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancer.png"),device = "png",width = 6,height =5)
+
+# survival analysis
+fun_clinical_test <- function(expr_clinical_ready, cancer_types){
+  if(nrow(expr_clinical_ready %>% dplyr::filter(status!=0)) < 5){return(tibble::tibble())}
+  print(cancer_types)
+  
+  # cox p
+  .cox <- survival::coxph(survival::Surv(time, status) ~ group, data = expr_clinical_ready, na.action = na.exclude)
+  summary(.cox) -> .z
+  
+  # cox p
+  .cox <- survival::coxph(survival::Surv(time, status) ~ average_exp, data = expr_clinical_ready, na.action = na.exclude)
+  summary(.cox) -> .z.continus
+  
+  # kmp
+  kmp <- 1 - pchisq(survival::survdiff(survival::Surv(time, status) ~ group, data = expr_clinical_ready, na.action = na.exclude)$chisq,df = length(levels(as.factor(expr_clinical_ready$group))) - 1)
+  
+  tibble::tibble(
+    n = .z$n,
+    hr = .z$conf.int[1],
+    hr_l = .z$conf.int[3],
+    hr_h = .z$conf.int[4],
+    coxp = .z$waldtest[3],
+    hr.c = .z.continus$conf.int[1],
+    hr.c.l = .z.continus$conf.int[3],
+    hr.c.h = .z.continus$conf.int[4],
+    hr.c.coxp = .z.continus$waldtest[3],
+    kmp = kmp) %>%
+    dplyr::mutate(status = ifelse(hr > 1, "High_risk", "Low_risk"))
+}
+## PFS
+ICP_mean_expr_in_cancers %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  dplyr::inner_join(clinical,by="barcode") %>%
+  dplyr::rename("time" = "PFS.time", "status" = "PFS") %>%
+  dplyr::group_by(cancer_types,functionWithImmune) %>%
+  dplyr::mutate(group = ifelse(average_exp >= quantile(average_exp,0.5),"2High","1Low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types,-functionWithImmune) %>%
+  dplyr::mutate(survival = purrr::map2(data,cancer_types,fun_clinical_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> ICP_mean_expr_in_cancers.byfunction.PFS
+
+ICP_mean_expr_in_cancers.byfunction.PFS  %>%
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival","PFS_survival.ICP_mean_expr_in_cancers.byfunction.tsv"))
+## OS
+ICP_mean_expr_in_cancers %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  dplyr::inner_join(clinical_tcga,by="barcode") %>%
+  dplyr::rename("time" = "OS", "status" = "Status") %>%
+  dplyr::group_by(cancer_types,functionWithImmune) %>%
+  dplyr::mutate(group = ifelse(average_exp >= quantile(average_exp,0.5),"2High","1Low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types,-functionWithImmune) %>%
+  dplyr::mutate(survival = purrr::map2(data,cancer_types,fun_clinical_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> ICP_mean_expr_in_cancers.byfunction.OS
+ICP_mean_expr_in_cancers.byfunction.OS  %>%
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival","OS_survival.ICP_mean_expr_in_cancers.byfunction.tsv"))
+
+## survival plot, cox
+# plot function
+my_theme <-   theme(
+  panel.background = element_rect(fill = "white",colour = "black"),
+  panel.grid.major=element_line(colour=NA),
+  axis.text.y = element_text(size = 10,colour = "black"),
+  axis.text.x = element_text(size = 10,colour = "black"),
+  # legend.position = "none",
+  legend.text = element_text(size = 10),
+  legend.title = element_text(size = 12),
+  legend.background = element_blank(),
+  legend.key = element_rect(fill = "white", colour = "black"),
+  plot.title = element_text(size = 20),
+  axis.text = element_text(colour = "black"),
+  strip.background = element_rect(fill = "white",colour = "black"),
+  strip.text = element_text(size = 10),
+  text = element_text(color = "black")
+)
+fn_cox_plot <- function(functionWithImmune,data,filename,hr,hr_l,hr_h,title,facet, dir,w=4,h=4){
+  data %>% 
+    dplyr::mutate(functionWithImmune=functionWithImmune) %>%
+    dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+    ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
+    geom_pointrange(aes(color=cox_sig),size=0.5) +
+    scale_color_manual(values=c("red","black")) +
+    geom_hline(aes(yintercept = 1), linetype =2) +
+    scale_size(name = "p-value") +
+    scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                       labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
+    facet_wrap(as.formula(facet)) +
+    coord_flip() +
+    ggthemes::theme_gdocs() +
+    my_theme +
+    theme(
+      legend.position = "none",
+      axis.line.y = element_line(color="black"),
+      axis.text = element_text(color = "black",size=8),
+      axis.title = element_text(color = "black",size=10),
+      text = element_text(color = "black")
+    ) +
+    labs(y = "Hazard Ratio (High vs. low expression)", x = "Cancers",title = title) -> p
+  ggsave(file.path(out_path,"e_6_exp_profile",dir,paste(filename,"png",sep=".")),device = "png",width = w,height = h)
+  ggsave(file.path(out_path,"e_6_exp_profile",dir,paste(filename,"pdf",sep=".")),device = "pdf",width = w,height = h)
+}
+
+# PFS, cox, group
+ICP_mean_expr_in_cancers.byfunction.PFS %>% 
+  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
+  tidyr::nest(-functionWithImmune) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-functionRole",functionWithImmune,sep=".")) %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival",w = 4, h = 6)
+
+# PFS, cox, continus
+ICP_mean_expr_in_cancers.byfunction.PFS %>% 
+  dplyr::mutate(cox_sig = ifelse(hr.c.coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr.c=log2(hr.c)+1,hr.c.l=log2(hr.c.l)+1,hr.c.h=log2(hr.c.h)+1) %>%
+  tidyr::nest(-functionWithImmune) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr.c,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-functionRole.continus",functionWithImmune,sep=".")) %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr.c",hr_l="hr.c.l",hr_h="hr.c.h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival",w = 4, h = 6)
+
+# OS, cox, group
+ICP_mean_expr_in_cancers.byfunction.OS %>% 
+  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
+  tidyr::nest(-functionWithImmune) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_OS.by-functionRole",functionWithImmune,sep=".")) %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival",w = 4, h = 6)
+
+# OS, cox, continus
+ICP_mean_expr_in_cancers.byfunction.OS %>% 
+  dplyr::mutate(cox_sig = ifelse(hr.c.coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr.c=log2(hr.c)+1,hr.c.l=log2(hr.c.l)+1,hr.c.h=log2(hr.c.h)+1) %>%
+  tidyr::nest(-functionWithImmune) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr.c,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_OS.by-functionRole.continus",functionWithImmune,sep=".")) %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr.c",hr_l="hr.c.l",hr_h="hr.c.h",title="Overall survival",facet="~ functionWithImmune",dir = "survival",w= 4, h = 6)
 
 # 3 groups by function: exp site Mainly_Tumor, Mainly_Immune, both -----
 # 样本中在各基因的平均表达量
@@ -210,6 +386,93 @@ plot_ready %>%
   )
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 6,height = 5)  
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 6,height = 5)  
+
+# survival analysis
+## PFS
+ICP_mean_expr_in_cancers.by_expsite %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  dplyr::inner_join(clinical,by="barcode") %>%
+  dplyr::rename("time" = "PFS.time", "status" = "PFS") %>%
+  dplyr::group_by(cancer_types,Exp_site) %>%
+  dplyr::mutate(group = ifelse(average_exp >= quantile(average_exp,0.5),"2High","1Low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types,-Exp_site) %>%
+  dplyr::mutate(survival = purrr::map2(data,cancer_types,fun_clinical_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> ICP_mean_expr_in_cancers.byexpsite.PFS
+ICP_mean_expr_in_cancers.byexpsite.PFS  %>%
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival_byExpsite","PFS_survival.ICP_mean_expr_in_cancers.byexpsite.tsv"))
+
+## OS
+ICP_mean_expr_in_cancers.by_expsite %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  dplyr::inner_join(clinical_tcga,by="barcode") %>%
+  dplyr::rename("time" = "OS", "status" = "Status") %>%
+  dplyr::group_by(cancer_types,Exp_site) %>%
+  dplyr::mutate(group = ifelse(average_exp >= quantile(average_exp,0.5),"2High","1Low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types,-Exp_site) %>%
+  dplyr::mutate(survival = purrr::map2(data,cancer_types,fun_clinical_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> ICP_mean_expr_in_cancers.byexpsite.OS
+
+ICP_mean_expr_in_cancers.byexpsite.OS  %>%
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival_byExpsite","OS_survival.ICP_mean_expr_in_cancers.byexpsite.tsv"))
+## survival plot, cox
+
+# PFS, cox, group
+ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
+  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
+  tidyr::nest(-Exp_site) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-Expsite",Exp_site,sep=".")) %>%
+  dplyr::rename("functionWithImmune"="Exp_site") %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
+
+# PFS, cox, continus
+ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
+  dplyr::rename("functionWithImmune"="Exp_site") %>%
+  dplyr::mutate(cox_sig = ifelse(hr.c.coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr.c=log2(hr.c)+1,hr.c.l=log2(hr.c.l)+1,hr.c.h=log2(hr.c.h)+1) %>%
+  tidyr::nest(-functionWithImmune) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr.c,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-Expsite.continus",functionWithImmune,sep=".")) %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr.c",hr_l="hr.c.l",hr_h="hr.c.h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
+
+# OS, cox, group
+ICP_mean_expr_in_cancers.byexpsite.OS %>% 
+  dplyr::rename("functionWithImmune"="Exp_site") %>%
+  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
+  tidyr::nest(-functionWithImmune) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_OS.by-Expsite",functionWithImmune,sep=".")) %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
+
+# OS, cox, continus
+ICP_mean_expr_in_cancers.byexpsite.OS %>% 
+  dplyr::rename("functionWithImmune"="Exp_site") %>%
+  dplyr::mutate(cox_sig = ifelse(hr.c.coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr.c=log2(hr.c)+1,hr.c.l=log2(hr.c.l)+1,hr.c.h=log2(hr.c.h)+1) %>%
+  tidyr::nest(-functionWithImmune) %>%
+  dplyr::mutate(data = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::mutate(cancer_types = reorder(cancer_types,hr.c,sort))
+  })) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_OS.by-Expsite.continus",functionWithImmune,sep=".")) %>%
+  purrr::pwalk(.f=fn_cox_plot,hr="hr.c",hr_l="hr.c.l",hr_h="hr.c.h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
 
 # calculation of average expression of samples of genes ----
 # 基因在各样本中的平均表达量
