@@ -451,15 +451,15 @@ plot_ready %>%
   ggpubr::stat_compare_means(comparisons = list(c("Mainly_exp_on_Tumor","Mainly_exp_on_Immune")),label = "p.signif") +
   theme(
     strip.background = element_rect(colour = "black", fill = "white"),
-    strip.text = element_text(size = 8,color = "black"),
+    strip.text = element_text(size = 10,color = "black"),
     axis.text = element_text(size = 10, colour = "black"),
     legend.position = "none",
     panel.background = element_blank(),
     panel.border = element_rect(fill='transparent',colour = "black"),
     panel.grid = element_line(linetype = "dashed")
   )
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 8,height = 5)  
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 8,height = 5)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 12,height = 7)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 12,height = 7)  
 
 # survival analysis
 ## PFS
@@ -513,7 +513,7 @@ ICP_mean_expr_in_cancers.byexpsite.PFS %>%
   dplyr::rename("functionWithImmune"="Exp_site") %>%
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-functionRole.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
+  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-Expsite.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
 
 # PFS, cox, continus
 ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
@@ -551,7 +551,7 @@ ICP_mean_expr_in_cancers.byexpsite.OS %>%
   dplyr::rename("functionWithImmune"="Exp_site") %>%
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_OS.by-functionRole.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
+  fn_cox_plot.all(filename="Meanexp.COX_OS.by-Expsite.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
 
 # OS, cox, continus
 ICP_mean_expr_in_cancers.byexpsite.OS %>% 
