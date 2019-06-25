@@ -245,3 +245,10 @@ fn_histrom_line <- function(data,title,filename,w=6,h=5){
 }
 fn_histrom_line(data=PFS.pancan.rank,title = "Progression-free survival",filename = "Pan-can.PFS.rank")
 fn_histrom_line(data=OS.pancan.rank,title = "Overall survival",filename = "Pan-can.OS.rank")
+
+
+# save image --------------------------------------------------------------
+
+save.image(
+  file.path(out_path,"pan-can_survival.rds")
+)
