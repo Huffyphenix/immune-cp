@@ -69,6 +69,7 @@ fn_average <- function(.data){
     tidyr::gather(-symbol,-entrez_id,key="barcode",value="expr") %>%
     dplyr::left_join(gene_list,by="symbol") %>%
     dplyr::filter(!is.na(expr)) %>%
+    dplyr::filter(substr(barcode,14,14)==0) %>%
     dplyr::group_by(barcode,functionWithImmune) %>%
     dplyr::mutate(average_exp = mean(expr)) %>%
     dplyr::select(barcode,functionWithImmune,average_exp) %>%
@@ -81,6 +82,8 @@ gene_list_expr %>%
   dplyr::mutate(ICP_mean_expr = purrr::map(filter_expr,fn_average)) %>%
   dplyr::select(-filter_expr) %>%
   dplyr::ungroup() -> ICP_mean_expr_in_cancers
+ICP_mean_expr_in_cancers %>%
+  readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_cancers.by_functionalRole.rds.gz"),compress = "gz")
 
 ICP_mean_expr_in_cancers %>%
   tidyr::unnest() %>%
@@ -301,6 +304,7 @@ fn_average.by_expsite <- function(.data){
     tidyr::gather(-symbol,-entrez_id,key="barcode",value="expr") %>%
     dplyr::left_join(gene_list,by="symbol") %>%
     dplyr::filter(!is.na(expr)) %>%
+    dplyr::filter(substr(barcode,14,14)==0) %>%
     dplyr::filter(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor")) %>%
     dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
     dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
@@ -317,6 +321,9 @@ gene_list_expr %>%
   dplyr::mutate(ICP_mean_expr = purrr::map(filter_expr,fn_average.by_expsite)) %>%
   dplyr::select(-filter_expr) %>%
   dplyr::ungroup() -> ICP_mean_expr_in_cancers.by_expsite
+
+ICP_mean_expr_in_cancers.by_expsite %>%
+  readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_cancers.by_expsite.rds.gz"),compress = "gz") 
 
 ICP_mean_expr_in_cancers.by_expsite %>%
   tidyr::unnest() %>%
@@ -358,6 +365,18 @@ ICP_mean_expr_in_cancers.by_expsite %>%
   dplyr::filter(!Exp_site %in% c("N","Not_sure")) -> plot_ready
 
 plot_ready %>%
+  dplyr::group_by(cancer_types, Exp_site) %>%
+  dplyr::mutate(mean = mean(average_exp)) %>%
+  dplyr::select(cancer_types, Exp_site,mean)%>%
+  unique() %>%
+  tidyr::spread(key="Exp_site",value="mean") %>%
+  dplyr::mutate(`log2FC(I/T)`=log2(Mainly_exp_on_Immune/Mainly_exp_on_Tumor)) %>%
+  dplyr::mutate(title = paste(cancer_types,", log2FC=",signif(`log2FC(I/T)`,2),sep="")) %>%
+  dplyr::select(cancer_types,title,`log2FC(I/T)`) -> label
+plot_ready %>%
+  dplyr::inner_join(label,by="cancer_types") -> plot_ready
+
+plot_ready %>%
   dplyr::select(Exp_site) %>%
   dplyr::inner_join(data.frame(Exp_site = c("Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor"),
                                rank = c(3,2,1)), by = "Exp_site") %>%
@@ -367,25 +386,32 @@ plot_ready <- within(plot_ready,Exp_site <- factor(Exp_site,levels = unique(Exp_
 with(plot_ready, levels(Exp_site))
 
 plot_ready %>%
+  dplyr::arrange(`log2FC(I/T)`) %>%
+  .$title -> title.rank
+plot_ready <- within(plot_ready,title <- factor(title,levels = unique(title.rank)))
+with(plot_ready, levels(title))
+
+plot_ready %>%
   dplyr::mutate(average_exp = log2(average_exp)) %>%
   ggplot(aes(x=Exp_site,y=average_exp)) +
   geom_violin(aes(fill=cancer_types),alpha=0.5) +
-  facet_wrap(~cancer_types) +
+  facet_wrap(~title) +
   coord_flip() +
   theme_bw() +
   xlab("Expression site of ICPs") +
   ylab("log2 (Expression)") +
+  ggpubr::stat_compare_means(comparisons = list(c("Mainly_exp_on_Tumor","Mainly_exp_on_Immune")),label = "p.signif") +
   theme(
     strip.background = element_rect(colour = "black", fill = "white"),
-    strip.text = element_text(size = 12,color = "black"),
+    strip.text = element_text(size = 8,color = "black"),
     axis.text = element_text(size = 10, colour = "black"),
     legend.position = "none",
     panel.background = element_blank(),
     panel.border = element_rect(fill='transparent',colour = "black"),
     panel.grid = element_line(linetype = "dashed")
   )
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 6,height = 5)  
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 6,height = 5)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 8,height = 5)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 8,height = 5)  
 
 # survival analysis
 ## PFS
@@ -480,6 +506,7 @@ fn_average_a <- function(.data){
   .data %>%
     tidyr::gather(-symbol,-entrez_id,key="barcode",value="expr") %>%
     dplyr::filter(!is.na(expr)) %>%
+    dplyr::filter(substr(barcode,14,14)==0) %>%
     dplyr::group_by(symbol) %>%
     dplyr::mutate(average_exp = mean(expr)) %>%
     dplyr::select(symbol,average_exp) %>%
@@ -563,6 +590,9 @@ pdf(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.pdf"),width = 6,hei
 he
 dev.off()
 
+tiff(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.tiff"),width = 6,height = 4)
+he
+dev.off()
 
 # save image --------------------------------------------------------------
 
