@@ -28,7 +28,7 @@ tumor_class_by_T_N.only_paired.count %>%
 #   dplyr::mutate(hot_per = Immunity_hot/(Immunity_hot+Immunity_cold)) -> tumor_class_by_T_N.by_peak.immunityScore
 
 
-# survival analysis -------------------------------------------------------
+# survival data -------------------------------------------------------
 clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-cancer_types) %>%
@@ -67,10 +67,11 @@ fun_clinical_test <- function(expr_clinical_ready, cancer_types){
     kmp = kmp) %>%
     dplyr::mutate(status = ifelse(hr > 1, "High_risk", "Low_risk"))
 }
+
 # 1.only paired gene percent score analysis ----------------------------------------
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio/tumor_class_by_T_N.only_paired.by_geneCounts/")
 
-# distribution ------------------------------------------------------------
+# 1.1.distribution ------------------------------------------------------------
 my_theme <-   theme(
   panel.background = element_rect(fill = "white",colour = "black"),
   panel.grid.major=element_line(colour=NA),
@@ -144,8 +145,8 @@ tumor_class_by_T_N.only_paired.genePercent %>%
 ggsave(file.path(res_path,"score_distribution_in_cancers.png"),device = "png",height = 6,width = 8)
 ggsave(file.path(res_path,"score_distribution_in_cancers.pdf"),device = "pdf",height = 6,width = 8)
 
-##### all sample together survival -----------------------------------
-# 1.only paired sample score survival -----
+##### 1.2.all sample together survival -----------------------------------
+# 1.2.1.only paired sample score survival -----
 
 tumor_class_by_T_N.only_paired.genePercent %>%
   dplyr::rename("barcode" = "Participant") %>%
@@ -199,9 +200,8 @@ tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
-##### cancer specific survival -----------------------------------
-# only paired sample score cacner specific survival -----
-
+##### 1.2.2.cancer specific survival -----------------------------------
+# 1.2.2.1.group samples into 2groups by middle score ----
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::filter(!is.na(hot_per)) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -240,49 +240,51 @@ for(cancer in cancer_to_do_survival.only_paired){
     fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers"),3,4,0.7,0.9)
 }
 
-##### cancer specific survival -----------------------------------
-# only paired sample score cacner specific survival -----
-# group samples into 2groups by middle score ----
+# 1.2.2.2.group samples into 3groups by quantile 0.75 and 0.25 score ----
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::filter(!is.na(hot_per)) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
   dplyr::group_by(cancer_types) %>%
-  dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
+  dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.75),"High","Mid")) %>%
+  dplyr::mutate(group = ifelse(hot_per<quantile(hot_per,0.75),"Low",group)) %>%
+  dplyr::group_by(cancer_types,group) %>%
   dplyr::mutate(n=n()) %>%
+  dplyr::ungroup() %>%
   dplyr::select(cancer_types,group,n) %>%
   unique() %>%
-  dplyr::ungroup() %>%
   tidyr::spread(key="group",value="n") %>%
   dplyr::filter(High >5) %>%
   .$cancer_types -> cancer_to_do_survival.only_paired
 
-color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE"),
-                             group=c("High","Low"))
+color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE",c("#CDAD00")),
+                             group=c("High","Low","Mid"))
 for(cancer in cancer_to_do_survival.only_paired){
-  if(!dir.exists(file.path(res_path,"survival_cancers"))){
-    dir.create(file.path(res_path,"survival_cancers"))
+  if(!dir.exists(file.path(res_path,"survival_cancers.3groups"))){
+    dir.create(file.path(res_path,"survival_cancers.3groups"))
   }
-  sur_name <- paste(cancer,"Score_0.5_Tumor_allyear_PFS_from_OnlyPaired",sep="-")
+  sur_name <- paste(cancer,"Score_0.75-0.25_Tumor_allyear_PFS_from_OnlyPaired",sep="-")
   tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
     dplyr::filter(cancer_types == cancer) %>%
     dplyr::filter(!is.na(hot_per)) %>%
     dplyr::rename("time"="PFS.time","status"="PFS") %>%
-    dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
+    dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.75),"High","Mid")) %>%
+    dplyr::mutate(group = ifelse(hot_per<quantile(hot_per,0.25),"Low",group)) %>%
     # dplyr::filter(time<=1825) %>%
-    fn_survival(paste(cancer,"PFS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers"),3,4,0.7,0.9)
+    fn_survival(paste(cancer,"PFS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers.3groups"),3,4,0.7,0.9)
   
-  sur_name <- paste(cancer,"Score_0.5_Tumor_allyear_OS_from_OnlyPaired",sep="-")
+  sur_name <- paste(cancer,"Score_0.75-0.25_Tumor_allyear_OS_from_OnlyPaired",sep="-")
   tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
     dplyr::filter(cancer_types == cancer) %>%
     dplyr::filter(!is.na(hot_per)) %>%
     dplyr::rename("time"="OS","status"="Status") %>%
-    dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
+    dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.75),"High","Mid")) %>%
+    dplyr::mutate(group = ifelse(hot_per<quantile(hot_per,0.25),"Low",group)) %>%
     # dplyr::filter(time<=1825) %>%
-    fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers"),3,4,0.7,0.9)
+    fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers.3groups"),3,4,0.7,0.9)
 }
 
-# kmp and coxp result table -------------------
-### PFS
+# 1.3.kmp and coxp result table -------------------
+### 1.3.1.PFS -----
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::filter(!is.na(hot_per)) %>%
@@ -324,7 +326,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS
+### 1.3.2.OS ----
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::filter(!is.na(hot_per)) %>%
@@ -369,7 +371,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS and PFS res combine
+### 1.3.3. OS and PFS res combine--------
 tumor_class_by_T_N.only_paired.immunityScore.PFS_res %>%
   dplyr::mutate(class = "PFS") %>%
   rbind(tumor_class_by_T_N.only_paired.immunityScore.OS_res %>%
@@ -435,55 +437,12 @@ plot_ready %>%
 ggsave(file.path(res_path,"survival_merge_res-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"survival_merge_res-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-# group samples into 3groups by quantile 0.75 and 0.25 score ----
-tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
-  dplyr::filter(!is.na(hot_per)) %>%
-  dplyr::rename("time"="OS","status"="Status") %>%
-  dplyr::group_by(cancer_types) %>%
-  dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.75),"High","Mid")) %>%
-  dplyr::mutate(group = ifelse(hot_per<quantile(hot_per,0.75),"Low",group)) %>%
-  dplyr::group_by(cancer_types,group) %>%
-  dplyr::mutate(n=n()) %>%
-  dplyr::ungroup() %>%
-  dplyr::select(cancer_types,group,n) %>%
-  unique() %>%
-  tidyr::spread(key="group",value="n") %>%
-  dplyr::filter(High >5) %>%
-  .$cancer_types -> cancer_to_do_survival.only_paired
 
-color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE",c("#CDAD00")),
-                             group=c("High","Low","Mid"))
-for(cancer in cancer_to_do_survival.only_paired){
-  if(!dir.exists(file.path(res_path,"survival_cancers.3groups"))){
-    dir.create(file.path(res_path,"survival_cancers.3groups"))
-  }
-  sur_name <- paste(cancer,"Score_0.75-0.25_Tumor_allyear_PFS_from_OnlyPaired",sep="-")
-  tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
-    dplyr::filter(cancer_types == cancer) %>%
-    dplyr::filter(!is.na(hot_per)) %>%
-    dplyr::rename("time"="PFS.time","status"="PFS") %>%
-    dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.75),"High","Mid")) %>%
-    dplyr::mutate(group = ifelse(hot_per<quantile(hot_per,0.25),"Low",group)) %>%
-    # dplyr::filter(time<=1825) %>%
-    fn_survival(paste(cancer,"PFS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers.3groups"),3,4,0.7,0.9)
-  
-  sur_name <- paste(cancer,"Score_0.75-0.25_Tumor_allyear_OS_from_OnlyPaired",sep="-")
-  tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
-    dplyr::filter(cancer_types == cancer) %>%
-    dplyr::filter(!is.na(hot_per)) %>%
-    dplyr::rename("time"="OS","status"="Status") %>%
-    dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.75),"High","Mid")) %>%
-    dplyr::mutate(group = ifelse(hot_per<quantile(hot_per,0.25),"Low",group)) %>%
-    # dplyr::filter(time<=1825) %>%
-    fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers.3groups"),3,4,0.7,0.9)
-}
-
-########## >>>>>>>>>>>>>>> ##############
-# 1.1.only paired gene FC score analysis ----------------------------------------
+# 2.only paired gene FC score analysis [FC in fantom * FC in TCGA]----------------------
 # mean value of each genes FC in fantom * FC in TCGA
-res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern/tumor_class_by_T_N.only_paired.by_FCProduct")
+res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio/tumor_class_by_T_N.only_paired.by_FCProduct")
 
-# distribution ------------------------------------------------------------
+# 2.1.distribution ------------------------------------------------------------
 tumor_class_by_T_N.only_paired.score %>%
   dplyr::filter(score_mean!=0) %>%
   dplyr::group_by(cancer_types) %>%
@@ -539,8 +498,8 @@ tumor_class_by_T_N.only_paired.score %>%
 ggsave(file.path(res_path,"score_distribution_in_cancers.png"),device = "png",height = 6,width = 8)
 ggsave(file.path(res_path,"score_distribution_in_cancers.pdf"),device = "pdf",height = 6,width = 8)
 
-##### all sample together survival -----------------------------------
-# 1.only paired sample score survival -----
+##### 2.2.all sample together survival -----------------------------------
+# 2.2.1.only paired sample score survival -----
 
 tumor_class_by_T_N.only_paired.score %>%
   dplyr::rename("barcode" = "Participant") %>%
@@ -594,9 +553,8 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
-##### cancer specific survival -----------------------------------
-# only paired sample score cacner specific survival -----
-# middle value classify samples into 2 groups(high and low)----
+##### 2.2.2.cancer specific survival -----------------------------------
+# 2.2.2.1.middle value classify samples into 2 groups(high and low)----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::filter(score_mean!=0) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -633,7 +591,7 @@ for(cancer in cancer_to_do_survival.only_paired){
     fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers"),3,4,0.7,0.9)
 }
 
-# quantile value classify samples into 3 groups(high and low, mid)----
+# 2.2.2.2.quantile value classify samples into 3 groups(high and low, mid)----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::filter(score_mean!=0) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -674,8 +632,8 @@ for(cancer in cancer_to_do_survival.only_paired){
     fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers.3groups"),3,4,0.7,0.9)
 }
 
-# kmp and coxp result table -----------
-### PFS
+# 2.3.kmp and coxp result table -----------
+### 2.3.1.PFS-----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
@@ -716,7 +674,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS
+### 2.3.2.OS ----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -760,7 +718,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS and PFS res combine
+### 2.3.3.OS and PFS res combine -----------
 tumor_class_by_T_N.only_paired.Score.PFS_res %>%
   dplyr::mutate(class = "PFS") %>%
   rbind(tumor_class_by_T_N.only_paired.Score.OS_res %>%
@@ -815,16 +773,16 @@ plot_ready %>%
     legend.background = element_blank(),
     legend.key = element_rect(fill = "white", colour = "black"),
     axis.text = element_text(colour = "black")
-  )
-ggsave(file.path(res_path,"survival_merge_res-bygroup.png"),device = "png",width = 4,height = 3)
+  )res_path
+ggsave(file.path(,"survival_merge_res-bygroup.png"),device = "png",width = 4,height = 3)
 ggsave(file.path(res_path,"survival_merge_res-bygroup.pdf"),device = "pdf",width = 4,height = 3)
 
-# 1.2.only paired gene FC score analysis ----------------------------------------
-# sum of log2FC ----
-res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern/tumor_class_by_T_N.only_paired.by_logFCProduct_sum/")
+# 3.only paired gene FC score analysis [sum of log2FC] ----------------------------------------
+
+res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio/tumor_class_by_T_N.only_paired.by_logFCProduct_sum/")
 tumor_class_by_T_N.only_paired.by_logFCProduct_sum <- readr::read_tsv(file.path(res_path,"tumor_class_by_T_N.only_paired.by_logFCProduct_sum"))
 
-# distribution ------------------------------------------------------------
+# 3.1.distribution ------------------------------------------------------------
 tumor_class_by_T_N.only_paired.by_logFCProduct_sum %>%
   dplyr::filter(score_sum!=0) %>%
   dplyr::group_by(cancer_types) %>%
@@ -841,7 +799,7 @@ tumor_class_by_T_N.only_paired.by_logFCProduct_sum %>%
   geom_jitter(aes(color=cancer_types),size=0.5,width=0.1) +
   scale_x_discrete(limits= cancer_rank$cancer_types) +
   geom_violin(aes(fill = cancer_types),alpha=0.5) +
-  rotate() +
+  # rotate() +
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
@@ -858,7 +816,7 @@ ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,hei
 
 cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
 cancer_color %>%
-  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.immunityScore$cancer_types)) -> cancer21_color
+  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.by_logFCProduct_sum$cancer_types)) -> cancer21_color
 
 tumor_class_by_T_N.only_paired.by_logFCProduct_sum %>%
   dplyr::filter(score_sum!=0) %>%
@@ -883,8 +841,8 @@ tumor_class_by_T_N.only_paired.by_logFCProduct_sum %>%
 ggsave(file.path(res_path,"score_distribution_in_cancers.png"),device = "png",height = 6,width = 8)
 ggsave(file.path(res_path,"score_distribution_in_cancers.pdf"),device = "pdf",height = 6,width = 8)
 
-##### all sample together survival -----------------------------------
-# 1.only paired sample score survival -----
+##### 3.2. survival -----------------------------------
+# 3.2.1.all sample together -------------
 
 tumor_class_by_T_N.only_paired.by_logFCProduct_sum %>%
   dplyr::rename("barcode" = "Participant") %>%
@@ -938,9 +896,8 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
-##### cancer specific survival -----------------------------------
-# only paired sample score cacner specific survival -----
-# middle value classify samples into 2 groups(high and low)----
+##### 3.2.2.cancer specific survival -----------------------------------
+# 3.2.2.1.middle value classify samples into 2 groups(high and low)----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::filter(score_sum!=0) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -977,7 +934,7 @@ for(cancer in cancer_to_do_survival.only_paired){
     fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers"),3,4,0.7,0.9)
 }
 
-# quantile value classify samples into 3 groups(high and low, mid)----
+# 3.2.2.2.quantile value classify samples into 3 groups(high and low, mid)----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::filter(score_sum!=0) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -1018,8 +975,8 @@ for(cancer in cancer_to_do_survival.only_paired){
     fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers.3groups"),3,4,0.7,0.9)
 }
 
-# kmp and coxp result table -----------
-### PFS
+# 3.3.kmp and coxp result table -----------
+### 3.3.1.PFS-----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
@@ -1060,7 +1017,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS
+### 3.3.2.OS----
 tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -1104,7 +1061,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"OS_COXph_HR.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"OS_COXph_HR.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS and PFS res combine
+### 3.3.3.OS and PFS res combine------
 tumor_class_by_T_N.only_paired.Score.PFS_res %>%
   dplyr::mutate(class = "PFS") %>%
   rbind(tumor_class_by_T_N.only_paired.Score.OS_res %>%
@@ -1154,7 +1111,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"survival_merge_res-bygroup.png"),device = "png",width = 4,height = 3)
 ggsave(file.path(res_path,"survival_merge_res-bygroup.pdf"),device = "pdf",width = 4,height = 3)
 
-# 2.by peak sample score analysis ----------------------------------------
+# 4.by peak sample score analysis ----------------------------------------
 # by peak means in /project/huff/huff/github/immune-cp/Exp_pattern/ICP_exp_between_tumor_normal_group_samples.R, use peak value of gene expression density in normal samples to compare with tumor sample, by which group tumor samples into immune hot and cold.
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern/score_from.tumor_class_by_T_N.by_peak")
 
@@ -1191,7 +1148,7 @@ ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,hei
 ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
 
 ##### all sample together survival -----------------------------------
-# 2.by peak sample score ----
+# by peak sample score ----
 color_list <- c( "#CD2626","#00B2EE",c("#CDAD00"))
 group <- c("High","Low","Mid")
 
@@ -1285,7 +1242,7 @@ for(cancer in cancer_to_do_survival.by_peak){
     fn_survival(paste(cancer,"OS"),color_list,sur_name,file.path(res_path,"survival_cancers"),3,4,0.7,0.9)
 }
 
-# 3. by mean sample score analysis ----------------------------------------
+# 5. by mean sample score analysis ----------------------------------------
 # by mean means in /project/huff/huff/github/immune-cp/Exp_pattern/ICP_exp_between_tumor_normal_group_samples.R, use mean value of gene expression density in normal samples to compare with tumor sample, by which group tumor samples into immune hot and cold.
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern/tumor_class_by_T_N.all-by-mean.by_FCProduct/")
 tumor_class_by_T_N.by_mean.immunityScore <- readr::read_tsv(file.path(res_path,"tumor_class_by_T_N.all_tumor.by_mean"))
@@ -1321,7 +1278,7 @@ ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,hei
 ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
 
 ##### all sample together survival -----------------------------------
-# 2.by mean sample score ----
+# by mean sample score ----
 
 color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE",c("#CDAD00")),
                              group = c("High","Low","Mid"))
@@ -1567,13 +1524,12 @@ ggsave(file.path(res_path,"survival_merge_res-bygroup.png"),device = "png",width
 ggsave(file.path(res_path,"survival_merge_res-bygroup.pdf"),device = "pdf",width = 4,height = 3)
 
 
-# 4. by sum sample score analysis ----------------------------------------
+# 6. by sum sample score analysis ----------------------------------------
 # by mean means in /project/huff/huff/github/immune-cp/Exp_pattern/ICP_exp_between_tumor_normal_group_samples.R, use mean value of gene expression density in normal samples to compare with tumor sample, by which group tumor samples into immune hot and cold.
-res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern/tumor_class_by_T_N.all-by-mean.by_log2FCProduct_sum")
+res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio//tumor_class_by_T_N.all-by-mean.by_log2FCProduct_sum")
 tumor_class_by_T_N.immunityScore.by_mean.by_log2FCProduct_sum <- readr::read_tsv(file.path(res_path,"tumor_class_by_T_N.all_tumor.by_mean.by_log2FCProduct_sum"))
 
-# distribution ------------------------------------------------------------
-# 2.by peak sample score
+# 6.1.istribution ------------------------------------------------------------
 tumor_class_by_T_N.immunityScore.by_mean.by_log2FCProduct_sum %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::mutate(mid = quantile(score_sum,0.5)) %>%
@@ -1587,7 +1543,8 @@ tumor_class_by_T_N.immunityScore.by_mean.by_log2FCProduct_sum %>%
   # geom_jitter(size=0.5,width = 0.1) +
   scale_x_discrete(limits= cancer_rank.by_mean$cancer_types) +
   geom_violin(aes(fill = cancer_types),alpha=0.5) +
-  rotate() +
+  # rotate() +
+  my_theme+
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
@@ -1597,14 +1554,14 @@ tumor_class_by_T_N.immunityScore.by_mean.by_log2FCProduct_sum %>%
     legend.title = element_text(size = 10),
     legend.background = element_blank(),
     legend.key = element_rect(fill = "white", colour = "black"),
-    axis.text = element_text(colour = "black",size = 12)
+    axis.text.x = element_text(colour = "black",angle = 90, vjust = 0.5)
   ) +
   labs(xlab="Score",ylab="Cancer types")
 ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,height = 6)
 ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
 
-##### all sample together survival -----------------------------------
-# 2.by mean sample score ----
+##### 6.2. survival -----------------------------------
+# 6.2.1.all sample together ----
 
 color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE",c("#CDAD00")),
                              group = c("High","Low","Mid"))
@@ -1646,6 +1603,7 @@ tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
+
 sur_name <- paste("Score_0.5_Tumor_allyear_PFS_from")
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::filter(!is.na(score_sum)) %>%
@@ -1654,7 +1612,7 @@ tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
-##### cacner specific survival -----------------------------------
+##### 6.2.2.cacner specific survival -----------------------------------
 # 2.by mean sample score
 
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
@@ -1714,8 +1672,8 @@ for(cancer in cancer_to_do_survival.by_mean){
     fn_survival(paste(cancer,"OS"),color_list,"group",sur_name,"Survival in days",file.path(res_path,"survival_cancers"),3,4,0.7,0.9)
 }
 
-# kmp and coxp result table -----------
-### PFS
+# 6.3.kmp and coxp result table -----------
+### 6.3.1.PFS ----------
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
@@ -1756,7 +1714,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS
+### 6.3.2.OS------
 tumor_class_by_T_N.by_mean.immunityScore.clinical %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
@@ -1800,7 +1758,7 @@ plot_ready %>%
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
-### OS and PFS res combine
+### 6.3.3.OS and PFS res combine------------
 tumor_class_by_T_N.by_mean.Score.PFS_res %>%
   dplyr::mutate(class = "PFS") %>%
   rbind(tumor_class_by_T_N.by_mean.Score.OS_res %>%
