@@ -461,7 +461,7 @@ plot_ready %>%
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 12,height = 7)  
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 12,height = 7)  
 
-# survival analysis
+# survival analysis [univariable survival analysis] ----------------------------
 ## PFS
 ICP_mean_expr_in_cancers.by_expsite %>%
   tidyr::unnest() %>%
@@ -494,8 +494,8 @@ ICP_mean_expr_in_cancers.by_expsite %>%
 
 ICP_mean_expr_in_cancers.byexpsite.OS  %>%
   readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival_byExpsite","OS_survival.ICP_mean_expr_in_cancers.byexpsite.tsv"))
-## survival plot, cox
 
+## survival plot, cox [univariable]
 # PFS, cox, group
 ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
@@ -571,6 +571,8 @@ ICP_mean_expr_in_cancers.byexpsite.OS %>%
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   dplyr::mutate(hr.c=log2(hr.c)+1,hr.c.l=log2(hr.c.l)+1,hr.c.h=log2(hr.c.h)+1) %>%
   fn_cox_plot.all(filename="Meanexp.COX_OS.by-expsite.all.continus",hr="hr.c",hr_l="hr.c.l",hr_h="hr.c.h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
+
+#### survival analysis [multi-variable survival analysis] ----------------------------
 
 # calculation of average expression of samples of genes ----
 # 基因在各样本中的平均表达量
