@@ -127,7 +127,7 @@ gene_list_expr.nest.TNgrouped %>%
 
 # group tumor samples by gene counts -----------------------------------------------------
 
-ICP_expr_pattern <- readr::read_tsv(file.path(immune_path,"result_20171025","ICP_exp_patthern","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
+ICP_expr_pattern <- readr::read_tsv(file.path(immune_path,"result_20171025","ICP_exp_patthern-byratio","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
 
 fn_group_sample_by_ICP_exp_in_TN_1 <- function(.name,.data){
   print(.name)
@@ -167,9 +167,9 @@ fn_group_sample_by_ICP_exp_in_TN_2 <- function(.x,.y){
 
 # paired tumor-normal samples grouping ----
 gene_list_expr.T_N.only_paired %>%
-  dplyr::inner_join(ICP_expr_pattern) %>%
+  dplyr::inner_join(ICP_expr_pattern,by="symbol") %>%
   dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_Immune","Both")) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Mainly_Tumor",Exp_site.1)) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune","Only_exp_on_Tumor"),"Mainly_Tumor",Exp_site.1)) %>%
   dplyr::mutate(Exp_site=Exp_site.1) %>%
   dplyr::select(-Exp_site.1) %>%
   tidyr::nest(-cancer_types,-Participant) %>%
@@ -190,7 +190,7 @@ tumor_class_by_T_N.only_paired %>%
   dplyr::mutate(class = ifelse(Immunity_cold==Immunity_hot,"not clear",class)) -> tumor_class_by_T_N.only_paired.class
  
 tumor_class_by_T_N.only_paired.class %>% 
-  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_geneCounts","tumor_class_by_T_N.only_paired"))
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.only_paired.by_geneCounts","tumor_class_by_T_N.only_paired"))
 
 # scored tumor samples by mean FC product of all genes-----------------------------------------------------
 # gene's FC in fantom * FC in tumor-normal
@@ -216,7 +216,7 @@ gene_list_expr.T_N.only_paired.gene_score %>%
   dplyr::ungroup()-> gene_list_expr.T_N.only_paired.sample_score
 
 gene_list_expr.T_N.only_paired.sample_score %>%
-  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_FCProduct","tumor_class_by_T_N.only_paired"))
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.only_paired.by_FCProduct","tumor_class_by_T_N.only_paired"))
 
 # all tumor samples grouping ----
 gene_list_expr.T_N.by_mean %>%
@@ -234,7 +234,7 @@ gene_list_expr.T_N.by_mean.gene_score %>%
   dplyr::ungroup()-> gene_list_expr.T_N.by_mean.sample_score
 
 gene_list_expr.T_N.by_mean.sample_score %>%
-  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.all-by-mean.by_FCProduct","tumor_class_by_T_N.all_tumor.by_mean"))
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.all-by-mean.by_FCProduct","tumor_class_by_T_N.all_tumor.by_mean"))
 
 # scored tumor samples by log2 FC product of all genes-----------------------------------------------------
 # sum(log2(FCg1.1)+log2(FCg1.2)+log2(FCg2.1)+log2(FCg2.2)+...=log2(FCg1.1*FCg1.2*FCg2.1*FCg2.2....))
@@ -261,7 +261,7 @@ gene_list_expr.T_N.only_paired.gene_score.by_log2FCproduct %>%
   dplyr::ungroup()-> gene_list_expr.T_N.only_paired.sample_score.by_log2FCproduct
 
 gene_list_expr.T_N.only_paired.sample_score.by_log2FCproduct %>%
-  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_logFCProduct_sum","tumor_class_by_T_N.only_paired.by_logFCProduct_sum"))
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.only_paired.by_logFCProduct_sum","tumor_class_by_T_N.only_paired.by_logFCProduct_sum"))
 
 # all tumor samples grouping ----
 gene_list_expr.T_N.by_mean %>%
@@ -280,7 +280,7 @@ gene_list_expr.T_N.gene_score.by_mean.by_log2FCproduct_sum %>%
   dplyr::ungroup()-> gene_list_expr.T_N.sample_score.by_mean.by_log2FCproduct_sum
 
 gene_list_expr.T_N.sample_score.by_mean.by_log2FCproduct_sum %>%
-  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.all-by-mean.by_log2FCProduct_sum","tumor_class_by_T_N.all_tumor.by_mean.by_log2FCProduct_sum"))
+  readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.all-by-mean.by_log2FCProduct_sum","tumor_class_by_T_N.all_tumor.by_mean.by_log2FCProduct_sum"))
 #### following code was not used anymore
 #### not run
 # using peak exp value compare with every tumor samples to group tumor samples ----
@@ -328,3 +328,7 @@ tumor_class_by_T_N.by_mean %>%
 tumor_class_by_T_N.by_mean.class %>%
   readr::write_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.by_mean"))
 
+
+# save image --------------------------------------------------------------
+
+save.image(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_estimation_of_TCGAsamples.rda"))
