@@ -6,8 +6,8 @@ library(ggpubr)
 basic_path <- "/home/huff/project"
 immune_path <- file.path(basic_path,"immune_checkpoint")
 
-tumor_class_by_T_N.only_paired.count <- readr::read_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_geneCounts","tumor_class_by_T_N.only_paired"))
-tumor_class_by_T_N.only_paired.score <- readr::read_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.only_paired.by_FCProduct","tumor_class_by_T_N.only_paired"))
+tumor_class_by_T_N.only_paired.count <- readr::read_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.only_paired.by_geneCounts","tumor_class_by_T_N.only_paired"))
+tumor_class_by_T_N.only_paired.score <- readr::read_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.only_paired.by_FCProduct","tumor_class_by_T_N.only_paired"))
 
 # tumor_class_by_T_N.by_mean <- readr::read_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern","tumor_class_by_T_N.by_mean"))
 
@@ -68,9 +68,26 @@ fun_clinical_test <- function(expr_clinical_ready, cancer_types){
     dplyr::mutate(status = ifelse(hr > 1, "High_risk", "Low_risk"))
 }
 # 1.only paired gene percent score analysis ----------------------------------------
-res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern/tumor_class_by_T_N.only_paired.by_geneCounts/")
+res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio/tumor_class_by_T_N.only_paired.by_geneCounts/")
 
 # distribution ------------------------------------------------------------
+my_theme <-   theme(
+  panel.background = element_rect(fill = "white",colour = "black"),
+  panel.grid.major=element_line(colour=NA),
+  axis.text.y = element_text(size = 10,colour = "black"),
+  axis.text.x = element_text(size = 10,colour = "black"),
+  # legend.position = "none",
+  legend.text = element_text(size = 10),
+  legend.title = element_text(size = 12),
+  legend.background = element_blank(),
+  legend.key = element_rect(fill = "white", colour = "black"),
+  plot.title = element_text(size = 20),
+  axis.text = element_text(colour = "black"),
+  strip.background = element_rect(fill = "white",colour = "black"),
+  strip.text = element_text(size = 10),
+  text = element_text(color = "black")
+)
+
 tumor_class_by_T_N.only_paired.genePercent %>%
   dplyr::filter(!is.na(hot_per)) %>%
   dplyr::group_by(cancer_types) %>%
@@ -86,24 +103,22 @@ tumor_class_by_T_N.only_paired.genePercent %>%
   # geom_jitter(size=0.5,width = 0.1) +
   scale_x_discrete(limits= cancer_rank$cancer_types) +
   geom_violin(aes(fill = cancer_types),alpha=0.5) +
-  rotate() +
+  # rotate() +
+  labs(y = "Ratio of ICPs indicate high immunoplasticity") +
+  my_theme +
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
-    axis.title = element_blank(),
+    axis.title.x = element_blank(),
     legend.position = "none",
-    legend.text = element_text(size = 10),
-    legend.title = element_text(size = 10),
-    legend.background = element_blank(),
-    legend.key = element_rect(fill = "white", colour = "black"),
-    axis.text = element_text(colour = "black",size = 12)
+    axis.text.x = element_text(colour = "black",vjust = 0.5, angle = 90)
   )
 ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,height = 6)
 ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
 
 cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
 cancer_color %>%
-  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.immunityScore$cancer_types)) -> cancer21_color
+  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.genePercent$cancer_types)) -> cancer21_color
 
 tumor_class_by_T_N.only_paired.genePercent %>%
   dplyr::filter(!is.na(hot_per)) %>%
@@ -118,6 +133,7 @@ tumor_class_by_T_N.only_paired.genePercent %>%
   ggtitle("Density of ratio of ICP indicate immune hot in each cancers") +
   ylab("Density") +
   xlab("Immune Activity Score") +
+  my_theme +
   theme(
     legend.position = "none",
     legend.key = element_rect(fill = "white", colour = "black"),
@@ -304,7 +320,7 @@ plot_ready %>%
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
-  labs(y = "Hazard Ratio", x = "Cancers",title = "Progression-free survival") -> p;p
+  labs(y = "Hazard ratio (High vs. low immunoplasticity)", x = "Cancers",title = "Progression-free survival") -> p;p
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
@@ -349,7 +365,7 @@ plot_ready %>%
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
-  labs(y = "Hazard Ratio", x = "Cancers",title = "Overall survival") -> p;p
+  labs(y = "Hazard ratio (High vs. low immunoplasticity)", x = "Cancers",title = "Overall survival") -> p;p
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
@@ -403,6 +419,7 @@ plot_ready %>%
     labels = c("p>0.05","p<=0.05"),
     name = NULL
   ) +
+  my_theme +
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
@@ -474,7 +491,7 @@ tumor_class_by_T_N.only_paired.score %>%
   dplyr::ungroup() %>%
   dplyr::select(cancer_types,mid) %>%
   dplyr::arrange(mid) %>%
-  unique()-> cancer_rank
+  unique() -> cancer_rank
 library(ggbeeswarm)
 tumor_class_by_T_N.only_paired.score %>%
   dplyr::filter(score_mean!=0) %>%
@@ -483,24 +500,20 @@ tumor_class_by_T_N.only_paired.score %>%
   geom_jitter(aes(color=cancer_types),size=0.5,width=0.1) +
   scale_x_discrete(limits= cancer_rank$cancer_types) +
   geom_violin(aes(fill = cancer_types),alpha=0.5) +
-  rotate() +
+  # rotate() +
+  labs(y="Immunoplasticity score") +
+  my_theme +
   theme(
-    panel.background = element_rect(fill = "white", 
-                                    colour = "black"),
-    axis.title = element_blank(),
+    axis.title.x = element_blank(),
     legend.position = "none",
-    legend.text = element_text(size = 10),
-    legend.title = element_text(size = 10),
-    legend.background = element_blank(),
-    legend.key = element_rect(fill = "white", colour = "black"),
-    axis.text = element_text(colour = "black",size = 12)
+    axis.text = element_text(colour = "black",size = 12,angle = 90, vjust = 0.5)
   )
 ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,height = 6)
 ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
 
 cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
 cancer_color %>%
-  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.immunityScore$cancer_types)) -> cancer21_color
+  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.score$cancer_types)) -> cancer21_color
 
 tumor_class_by_T_N.only_paired.score %>%
   dplyr::filter(score_mean!=0) %>%
@@ -512,9 +525,10 @@ tumor_class_by_T_N.only_paired.score %>%
     values = cancer21_color$color,
     limits = cancer21_color$cancer_types
   ) +
-  ggtitle("Density of ICP score in each cancers") +
+  ggtitle("Density of immunoplasticity score") +
   ylab("Density") +
-  xlab("Immune Activity Score") +
+  xlab("Immunoplasticity score") +
+  my_theme +
   theme(
     legend.position = "none",
     legend.key = element_rect(fill = "white", colour = "black"),
@@ -698,7 +712,7 @@ plot_ready %>%
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
-  labs(y = "Hazard Ratio", x = "Cancers",title = "Progression-free survival") -> p;p
+  labs(y = "Hazard ratio (High vs. low immunoplasticity score)", x = "Cancers",title = "Progression-free survival") -> p;p
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"PFS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
@@ -742,7 +756,7 @@ plot_ready %>%
     axis.title = element_text(color = "black",size=10),
     text = element_text(color = "black")
   ) +
-  labs(y = "Hazard Ratio", x = "Cancers",title = "Overall survival") -> p;p
+  labs(y = "Hazard ratio (High vs. low immunoplasticity score)", x = "Cancers",title = "Overall survival") -> p;p
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.png"),device = "png",width = 4,height = 4)
 ggsave(file.path(res_path,"OS_COXph_HR-bygroup.pdf"),device = "pdf",width = 4,height = 4)
 
@@ -789,6 +803,7 @@ plot_ready %>%
     labels = c("p>0.05","p<=0.05"),
     name = NULL
   ) +
+  my_theme +
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
