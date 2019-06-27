@@ -12,7 +12,9 @@ tcga_path <- file.path(basic_path,"/data/TCGA")
 # expr_path <- file.path(basic_path,"immune_checkpoint/result_20171025/expr_rds")
 out_path <- file.path(basic_path,"immune_checkpoint/result_20171025/c_3_survival")
 
-
+load(
+  file.path(out_path,"pan-can_survival.rds")
+)
 # load data ---------------------------------------------------------------
 
 clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
