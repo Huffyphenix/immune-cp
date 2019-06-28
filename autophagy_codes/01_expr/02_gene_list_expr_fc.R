@@ -11,35 +11,32 @@ expr_path<-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 # Read gene list
 # Gene list was compress as rds
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
-gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
-gene_list$symbol<-as.character(gene_list$symbol)
-ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"ICP_exp_patthern-byratio","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
-  dplyr::select(symbol,Exp_site)
-fn_site_color <- function(.n,.x){
-  print(.n)
-  if(.x=="Mainly_exp_on_Tumor"){
-    "red"
-  }else if(.x=="Only_exp_on_Tumor"){
-    "red"
-  }else if(.x=="Mainly_exp_on_Immune"){
-    "Blue"
-  }else if(.x=="Only_exp_on_Immune"){
-    "Blue"
-  }else if(.x=="Both_exp_on_Tumor_Immune"){
-    c("#9A32CD")
-  }else{
-    "grey"
-  }
-}
-gene_list %>%
-  dplyr::inner_join(ICP_expr_pattern,by="symbol") %>%
-  dplyr::mutate(Exp_site=ifelse(is.na(Exp_site),"N",Exp_site)) %>%
-  dplyr::mutate(site_col = purrr::map2(symbol,Exp_site,fn_site_color)) %>%
-  tidyr::unnest() -> gene_list
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv"))
+# gene_list$symbol<-as.character(gene_list$symbol)
+
+# ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"ICP_exp_patthern-byratio","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
+#   dplyr::select(symbol,Exp_site)
+# fn_site_color <- function(.n,.x){
+#   print(.n)
+#   if(.x=="Mainly_exp_on_Tumor"){
+#     "red"
+#   }else if(.x=="Only_exp_on_Tumor"){
+#     "red"
+#   }else if(.x=="Mainly_exp_on_Immune"){
+#     "Blue"
+#   }else if(.x=="Only_exp_on_Immune"){
+#     "Blue"
+#   }else if(.x=="Both_exp_on_Tumor_Immune"){
+#     c("#9A32CD")
+#   }else{
+#     "grey"
+#   }
+# }
 
 #output path
 out_path<-c(file.path(result_path,"e_2_DE"))
 
+load(file = file.path(out_path, "rda_00_gene_expr.rda"))
 #######################
 # filter out genes
 #######################
@@ -397,24 +394,28 @@ readr::write_rds(
 ##################
 gene_list_fc_pvalue_simplified_filter %>%
   dplyr::inner_join(gene_rank,by="symbol") %>%
-  dplyr::mutate(fun = "functionWithImmune") %>%
-  ggplot(aes(y=symbol,x=fun)) +
-  geom_tile(aes(fill = functionWithImmune),color="grey",size=1) +
+  dplyr::rename('Immune_type' = "functionWithImmune","Gene_family"="family") %>%
+  dplyr::select(symbol,Immune_type,Gene_family) %>%
+  tidyr::gather(-symbol,key="type",value="value") -> DE_gene_anno
+DE_gene_anno %>%
+  dplyr::filter(type =="Immune_type") %>%
+  .$value -> value.1
+DE_gene_anno %>%
+  dplyr::filter(type =="Gene_family") %>%
+  .$value -> value.2
+DE_gene_anno <- within(DE_gene_anno,value<- factor(value, levels = unique(c(value.1,value.2))))
+DE_gene_anno %>%
+  ggplot(aes(y=symbol,x=type)) +
+  geom_tile(aes(fill = value),color="grey",size=0.5,width=0.9) +
   scale_y_discrete(limit = gene_rank$symbol) +
   scale_fill_manual(
     name = "Immune Checkpoint",
-    values = c("#1C86EE", "#EE3B3B", "#EE7600")
+    values = c("#1C86EE", "#EE3B3B", "#EE7600","#838B8B", "#000000", "#0000FF", "#8B2323", "#CDAA7D", "#8EE5EE")
   ) +
+  my_theme +
   theme(
-    panel.background = element_rect(colour = "black", fill = "white"),
-    panel.grid = element_line(colour = "grey", linetype = "dashed"),
-    panel.grid.major = element_line(
-      colour = "grey",
-      linetype = "dashed",
-      size = 0.2
-    ),
+    axis.text.x = element_text(angle=90,vjust = 0.5,hjust = 1),
     axis.text.y = element_blank(),
-    axis.text.x = element_blank(),
     axis.title = element_blank(),
     axis.ticks = element_blank(),
     legend.text = element_text(size = 12),
@@ -435,7 +436,7 @@ p3 + theme(axis.text.x = element_blank(),
            plot.margin=unit(c(-0,-0,-0,-0), "cm")) -> p1.1
 ggarrange(NULL,p1.1,NULL,p2.1,p3.1,p4.1,
           ncol = 3, nrow = 2,  align = "hv", 
-          widths = c(2, 12, 5), heights = c(1, 5),
+          widths = c(4, 12, 5), heights = c(1, 5),
           legend = "top",
           common.legend = TRUE) -> p;p
 ggsave(
@@ -454,6 +455,20 @@ ggsave(
   height = 10,
   path = out_path
 )
-
+my_theme <-   theme(
+  panel.background = element_rect(fill = "white",colour = "black"),
+  panel.grid.major=element_line(colour=NA),
+  axis.text.y = element_text(size = 10,colour = "black"),
+  axis.text.x = element_text(size = 10,colour = "black"),
+  # legend.position = "none",
+  legend.text = element_text(size = 10),
+  legend.title = element_text(size = 12),
+  legend.background = element_blank(),
+  legend.key = element_rect(fill = "white", colour = "black"),
+  plot.title = element_text(size = 20),
+  axis.text = element_text(colour = "black"),
+  strip.background = element_rect(fill = "white",colour = "black"),
+  strip.text = element_text(size = 10),
+  text = element_text(color = "black")
+)
 save.image(file = file.path(out_path, "rda_00_gene_expr.rda"))
-load(file = file.path(out_path, "rda_00_gene_expr.rda"))
