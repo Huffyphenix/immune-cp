@@ -19,8 +19,15 @@ gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
 gene_list$symbol <- as.character(gene_list$symbol)
 gene_list_expr <- readr::read_rds(path = file.path(expr_path, ".rds_03_a_gene_list_expr.rds.gz"))
 # ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
+
 ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern-byratio/pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
   dplyr::select(entrez_ID,symbol,Exp_site,`log2FC(I/T)`) 
+
+ICP_family <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_family.txt"))
+
+ICP_ligand_receptor_pair <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_ligand_receptor_pairs.txt")) %>%
+  dplyr::mutate(Recepter_pairs = paste("Pair",pairs)) %>%
+  dplyr::select(-pairs)
 
 fn_site_color <- function(.x){
   # print(.n)
@@ -39,7 +46,14 @@ fn_site_color <- function(.x){
 gene_list %>%
   dplyr::left_join(ICP_expr_pattern,by="symbol") %>%
   dplyr::mutate(Exp_site=ifelse(is.na(Exp_site),"N",Exp_site)) %>%
-  dplyr::mutate(site_col = purrr::map(Exp_site,fn_site_color)) -> gene_list
+  dplyr::mutate(site_col = purrr::map(Exp_site,fn_site_color)) %>%
+  tidyr::unnest() %>%
+  dplyr::left_join(ICP_family,by="symbol") %>%
+  dplyr::left_join(ICP_ligand_receptor_pair,by="symbol") %>%
+  dplyr::mutate(family = ifelse(is.na(family),"Other",family)) -> gene_list
+
+gene_list %>%
+  readr::write_tsv(file.path(gene_list_path,"ICPs_all_info_class.tsv"))
 
 survival_path <- "/home/huff/project/data/TCGA-survival-time/cell.2018.survival"
 survival_data <- readr::read_rds(file.path(survival_path, "TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
@@ -594,7 +608,7 @@ gene_list_expr %>%
   dplyr::select(-filter_expr) %>%
   dplyr::ungroup() -> mean_exp_of_ICP_in_cancers_samples
 
-# heatmap
+# heatmap -----------------
 mean_exp_of_ICP_in_cancers_samples %>%
   tidyr::unnest() %>%
   tidyr::spread(key="symbol",value="average_exp") %>%
@@ -605,29 +619,39 @@ mean_exp_of_ICP_in_cancers_samples %>%
   dplyr::select(symbol) %>%
   dplyr::inner_join(gene_list,by="symbol") %>%
   dplyr::arrange(symbol) %>%
-  dplyr::select(symbol,type,functionWithImmune,Exp_site) %>%
-  unique() %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
+  dplyr::mutate(Exp_site = Exp_site.1) %>%
   dplyr::mutate(Exp_site = ifelse(Exp_site=="N","Not_sure",Exp_site)) %>%
+  dplyr::select(symbol,type,functionWithImmune,Exp_site,family) %>%
+  unique() %>%
+  dplyr::rename("Function type"="type","Immunity"="functionWithImmune","Exp. pattern" = "Exp_site","Gene family" = "family") %>%
   as.data.frame() -> symbol_anno
 rownames(symbol_anno) <- symbol_anno[,1]
 symbol_anno <- symbol_anno[,-1]
 library(ComplexHeatmap)
 # gene row annotation
 gene_anno <- HeatmapAnnotation(df=symbol_anno,
-                               col = list(functionWithImmune=c("Inhibit" = "#EE3B3B",
+                               col = list(Immunity=c("Inhibit" = "#EE3B3B",
                                                                "Activate" = "#1C86EE",
                                                                "TwoSide" = "#EE7600"),
-                                          Exp_site=c("Mainly_exp_on_Tumor" = "pink",
+                                          `Exp. pattern`=c("Mainly_exp_on_Tumor" = "pink",
                                                      "Only_exp_on_Tumor" = "red",
                                                      "Both_exp_on_Tumor_Immune" = "#9A32CD",
-                                                     "Mainly_exp_on_Immune" = "green",
+                                                     "Mainly_exp_on_Immune" = "blue",
                                                      "Only_exp_on_Immune" = "blue",
                                                      "Not_sure" = "grey"),
-                                          type = c("Receptor" = "black",
+                                          `Function type` = c("Receptor" = "black",
                                                    "Ligand" = "red",
-                                                   "Ligand&Receptor" = "purple")),
+                                                   "Ligand&Receptor" = "purple"),
+                                          `Gene family` = c("BTN" = "#838B8B", 
+                                                     "KIR_activate"= "#000000",
+                                                     "KIR_inhibit"  ="#0000FF",
+                                                     "MHC class I"= "#8B2323",
+                                                     "MHC class II"="#CDAA7D",
+                                                     "Other"="#8EE5EE")),
                                width = unit(0.2, "cm"),
-                               name = c("Immunity","Type"))
+                               show_annotation_name =T)
 
 draw(gene_anno,1:20)
 
@@ -659,12 +683,12 @@ he = Heatmap(mean_exp_of_ICP_in_cancers_samples.df.scaled,
              row_names_side = c("left"),
              cluster_columns = color_branches(col_dend, k = 6),   # add color on the column tree branches
              cluster_rows = color_branches(row_dend, k = 4), 
-             heatmap_legend_param = list(title = c("Scaled Exp.")))
-pdf(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.pdf"),width = 6,height = 4)
+             heatmap_legend_param = list(title = c("Mean exp.")))
+pdf(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.pdf"),width = 8,height = 6)
 he
 dev.off()
 
-tiff(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.tiff"),width = 6,height = 4)
+tiff(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.tiff"),width = 800,height = 500)
 he
 dev.off()
 
