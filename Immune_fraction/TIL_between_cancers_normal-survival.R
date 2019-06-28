@@ -286,8 +286,9 @@ color_list <- tibble::tibble(group=c("High","Low"),
 sur_name <- paste("PFS_between_TILhigh-low")
 TCGA_combine_TIL_survival.PFS.TILgroups.cancerSpecific %>%
   dplyr::mutate(filename = paste(cancer_types.x,sur_name,sep=".")) %>%
+  dplyr::mutate(title = paste(cancer_types.x,"\n","Progression-free survival",sep="")) %>%
   dplyr::select(-cancer_types.x ) %>%
-  purrr::pwalk(.f=fn_durvival_plot,title="Progression-free survival",color=color_list,out_path=sur_res_path,legend.pos="none",h=3,w=4)
+  purrr::pwalk(.f=fn_durvival_plot,color=color_list,out_path=sur_res_path,legend.pos="none",h=3,w=4)
 
 ## 2.3.2.OS----
 TCGA_combine_TIL_survival %>%
@@ -312,5 +313,6 @@ color_list <- tibble::tibble(group=c("High","Low"),
 sur_name <- paste("OS_between_TILhigh-low")
 TCGA_combine_TIL_survival.OS.TILgroups.cancerSpecific %>%
   dplyr::mutate(filename = paste(cancer_types.x,sur_name,sep=".")) %>%
+  dplyr::mutate(title = paste(cancer_types.x,"\n","Overall survival",sep="")) %>%
   dplyr::select(-cancer_types.x ) %>%
-  purrr::pwalk(.f=fn_durvival_plot,title="Overall survival",color=color_list,out_path=sur_res_path,legend.pos="none",h=3,w=4)
+  purrr::pwalk(.f=fn_durvival_plot,color=color_list,out_path=sur_res_path,legend.pos="none",h=3,w=4)
