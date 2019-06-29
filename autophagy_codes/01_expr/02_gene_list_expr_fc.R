@@ -308,6 +308,7 @@ ggplot(
     expand = c(0, 0),
     breaks = seq(0, 12, length.out = 5)
   ) +
+  labs(y="Count of DE genes") +
   scale_x_discrete(limit = gene_rank$symbol, expand = c(0.01, 0.01)) +
   theme(
     panel.background = element_rect(
@@ -316,7 +317,7 @@ ggplot(
       size = 1
     ),
     panel.grid.major = element_blank(),
-    axis.title = element_blank(),
+    axis.title.y = element_blank(),
     axis.text.y = element_text(color = gene_rank$site_col),
     # axis.text.y = element_blank(),
     # axis.ticks.y = element_blank(),
@@ -353,7 +354,8 @@ ggplot(
   scale_fill_manual(
     limit = c("down", "up"),
     values = c("blue", "red"),
-    guide = FALSE
+    name = "Expression"
+    # guide = FALSE
   ) +
   scale_y_continuous(
     limit = c(0, 70),
@@ -361,6 +363,7 @@ ggplot(
     #   breaks = seq(0, 70, length.out =9)
   ) +
   scale_x_discrete(limit = cancer_types_rank$cancer_types) + #, expand = c(0.01, 0.01)
+  labs(y="Count of DE genes") +
   theme(
     panel.background = element_rect(
       colour = "black",
@@ -368,7 +371,7 @@ ggplot(
       size = 1
     ),
     panel.grid.major = element_blank(),
-    axis.title = element_blank(),
+    axis.title.x = element_blank(),
     # axis.text.x = element_blank(),
     # axis.ticks.x = element_blank(),
     legend.text = element_text(size = 12),
@@ -414,7 +417,8 @@ DE_gene_anno %>%
   ) +
   my_theme +
   theme(
-    axis.text.x = element_text(angle=90,vjust = 0.5,hjust = 1),
+    panel.border = element_rect(fill = NA),
+    axis.text.x = element_text(angle = 45,vjust = 0.7),
     axis.text.y = element_blank(),
     axis.title = element_blank(),
     axis.ticks = element_blank(),
@@ -422,21 +426,21 @@ DE_gene_anno %>%
     legend.title = element_text(size = 14),
     # legend.position = "none",
     legend.key = element_rect(fill = "white", colour = "black"),
-    plot.margin=unit(c(-0,-0,-0,-0), "cm")
+    plot.margin=unit(c(0,0,0,-0), "cm")
   ) -> p2.1
 p1 + theme(axis.ticks.y = element_blank(),
            axis.text = element_text(color = "black"),
-           plot.margin=unit(c(-0,-0,-0,-0), "cm")) -> p3.1
+           plot.margin=unit(c(-0,-0,0,-0), "cm")) -> p3.1
 p2 + theme(axis.ticks.y = element_blank(),
            axis.text = element_text(color = "black"),
-           plot.margin=unit(c(-0,-0,-0,-0), "cm")) -> p4.1
+           plot.margin=unit(c(0,0,0,-0), "cm")) -> p4.1
 p3 + theme(axis.text.x = element_blank(),
            axis.ticks.x = element_blank(),
            axis.text = element_text(color = "black"),
-           plot.margin=unit(c(-0,-0,-0,-0), "cm")) -> p1.1
+           plot.margin=margin(0,0,-0,0, "cm")) -> p1.1
 ggarrange(NULL,p1.1,NULL,p2.1,p3.1,p4.1,
           ncol = 3, nrow = 2,  align = "hv", 
-          widths = c(4, 12, 5), heights = c(1, 5),
+          widths = c(3, 12, 5), heights = c(1, 5),
           legend = "top",
           common.legend = TRUE) -> p;p
 ggsave(
