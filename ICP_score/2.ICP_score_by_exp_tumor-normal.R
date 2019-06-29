@@ -88,8 +88,13 @@ my_theme <-   theme(
   strip.text = element_text(size = 10),
   text = element_text(color = "black")
 )
-
 tumor_class_by_T_N.only_paired.genePercent %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(n=dplyr::n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(cancer_types = paste(cancer_types,"(n=",n,")",sep="")) -> tumor_class_by_T_N.only_paired.genePercent.plot
+
+tumor_class_by_T_N.only_paired.genePercent.plot %>%
   dplyr::filter(!is.na(hot_per)) %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::mutate(mid = quantile(hot_per,0.5)) %>%
@@ -98,12 +103,12 @@ tumor_class_by_T_N.only_paired.genePercent %>%
   dplyr::arrange(mid) %>%
   unique()-> cancer_rank
 
-tumor_class_by_T_N.only_paired.genePercent %>%
+tumor_class_by_T_N.only_paired.genePercent.plot %>%
   dplyr::filter(!is.na(hot_per)) %>%
   ggplot(aes(x=cancer_types,y=hot_per)) +
   # geom_jitter(size=0.5,width = 0.1) +
   scale_x_discrete(limits= cancer_rank$cancer_types) +
-  geom_violin(aes(fill = cancer_types),alpha=0.5) +
+  geom_boxplot(aes(fill = cancer_types),alpha=0.5) +
   # rotate() +
   labs(y = "Ratio of ICPs indicate high immunoplasticity") +
   my_theme +
@@ -112,10 +117,10 @@ tumor_class_by_T_N.only_paired.genePercent %>%
                                     colour = "black"),
     axis.title.x = element_blank(),
     legend.position = "none",
-    axis.text.x = element_text(colour = "black",vjust = 0.5, angle = 90)
+    axis.text.x = element_text(colour = "black",vjust = 0.5,hjust = 1, angle = 90)
   )
-ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,height = 6)
-ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
+ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 6,height = 4)
+ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 6,height = 4)
 
 cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
 cancer_color %>%
