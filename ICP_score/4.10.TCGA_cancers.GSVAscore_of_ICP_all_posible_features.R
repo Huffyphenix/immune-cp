@@ -1,5 +1,6 @@
 ########################## get GSVA score of each cancers
 ########################## features are: expression site of ICPs, gene family
+########################## and get the correlation between GSVA score and TIL, mutation burden
 library(magrittr)
 library(tidyverse)
 library(ConsensusClusterPlus)
@@ -27,7 +28,7 @@ genelist <- list()
 #### gene list feature by gene exp site #####
 for(expsite in c("Both_exp_on_Tumor_Immune","Mainly_exp_on_Immune","Mainly_exp_on_Tumor")){
   genelist[[expsite]] <- gene_list %>%
-    dplyr::filter(functionWithImmune == fun_class) %>%
+    dplyr::filter(functionWithImmune == expsite) %>%
     .$symbol
 }
 
@@ -39,9 +40,12 @@ for(fun_class in unique(gene_list$functionWithImmune)){
 }
 #### gene list feature by ligand-receptor pairs #####
 for(p in unique(gene_list$Recepter_pairs)){
-  genelist[[p]] <- gene_list %>%
-    dplyr::filter(Recepter_pairs == p) %>%
-    .$symbol
+  if(!is.na(p)){
+    genelist[[p]] <- gene_list %>%
+      dplyr::filter(Recepter_pairs == p) %>%
+      .$symbol
+  }
+  
 }
 #### gene list feature by gene family #####
 for(f in unique(gene_list$family)){
@@ -98,10 +102,10 @@ exp_data %>%
   # head(1) %>%
   dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
     .x %>%
-      dplyr::filter(symbol %in% gene_list$symbol) %>%
+      # dplyr::filter(symbol %in% gene_list$symbol) %>%
       dplyr::select(-entrez_id)
   })) %>%
-  dplyr::make_tbl(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("1","0"))) %>%
+  dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("1","0"))) %>%
   dplyr::select(-expr,-exp_filter) %>%
   dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
   dplyr::select(-exp_data) -> GSVA.score
@@ -113,7 +117,7 @@ exp_data %>%
   # head(1) %>%
   dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
     .x %>%
-      dplyr::filter(symbol %in% gene_list$symbol) %>%
+      # dplyr::filter(symbol %in% gene_list$symbol) %>%
       dplyr::select(-entrez_id)
   })) %>%
   dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("0"))) %>%
@@ -122,3 +126,6 @@ exp_data %>%
   dplyr::select(-exp_data) -> GSVA.score.onlytumor
 GSVA.score.onlytumor %>%
   readr::write_rds(file.path(res_path,"TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+
+
+
