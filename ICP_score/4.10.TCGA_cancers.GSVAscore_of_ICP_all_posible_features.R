@@ -28,7 +28,7 @@ genelist <- list()
 #### gene list feature by gene exp site #####
 for(expsite in c("Both_exp_on_Tumor_Immune","Mainly_exp_on_Immune","Mainly_exp_on_Tumor")){
   genelist[[expsite]] <- gene_list %>%
-    dplyr::filter(functionWithImmune == expsite) %>%
+    dplyr::filter(Exp_site.1 == expsite) %>%
     .$symbol
 }
 
