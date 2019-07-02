@@ -114,8 +114,43 @@ fn_get_TCGA_sample_class <- function(.x,class){
 # GSVA.score %>%
 #   readr::write_rds(file.path(res_path,"TCGA_cancer_specific.allsamples(T-N)_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
-# 1.3.1 only tumor samples ----------
-exp_data %>%
+# 1.3.2 only tumor samples ----------
+# exp_data %>%
+#   # head(1) %>%
+#   dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
+#     .x %>%
+#       # dplyr::filter(symbol %in% gene_list$symbol) %>%
+#       dplyr::select(-entrez_id)
+#   })) %>%
+#   dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("0"))) %>%
+#   dplyr::select(-expr,-exp_filter) %>%
+#   dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
+#   dplyr::select(-exp_data) -> GSVA.score.onlytumor
+# GSVA.score.onlytumor %>%
+#   readr::write_rds(file.path(res_path,"TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+
+# 1.3.3 all tumor samples togather ----------
+i <- 0
+for (cancer in exp_data$cancer_types) {
+  i=i+1
+  if(i==1){
+    exp_data %>%
+      dplyr::filter(cancer_types %in% cancer) %>%
+      tidyr::unnest() %>%
+      dplyr::select(-cancer_types) -> exp_data.merge
+  }else{
+    exp_data %>%
+      dplyr::filter(cancer_types %in% cancer) %>%
+      tidyr::unnest() %>%
+      dplyr::select(-cancer_types,-symbol)-> tmp
+    exp_data.merge %>%
+      dplyr::inner_join(tmp,by="entrez_id") -> exp_data.merge
+  }
+}
+  
+exp_data.merge %>%
+  dplyr::mutate(cancer_types = "all_cancer") %>%
+  tidyr::nest(-cancer_types,.key="expr") %>%
   # head(1) %>%
   dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
     .x %>%
@@ -125,9 +160,8 @@ exp_data %>%
   dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("0"))) %>%
   dplyr::select(-expr,-exp_filter) %>%
   dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
-  dplyr::select(-exp_data) -> GSVA.score.onlytumor
-GSVA.score.onlytumor %>%
-  readr::write_rds(file.path(res_path,"TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+  dplyr::select(-exp_data) -> GSVA.score.alltumor
 
-
+GSVA.score.alltumor %>%
+  readr::write_rds(file.path(res_path,"TCGA.All-cancer-Tumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
