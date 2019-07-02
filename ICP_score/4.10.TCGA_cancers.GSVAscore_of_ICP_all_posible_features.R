@@ -49,9 +49,11 @@ for(p in unique(gene_list$Recepter_pairs)){
 }
 #### gene list feature by gene family #####
 for(f in unique(gene_list$family)){
+  if(f != "Other"){
   genelist[[f]] <- gene_list %>%
     dplyr::filter(family == f) %>%
     .$symbol
+  }
 }
 genelist[["All_gene"]] <- gene_list$symbol
 
