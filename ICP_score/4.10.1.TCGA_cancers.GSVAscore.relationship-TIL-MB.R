@@ -2,6 +2,7 @@
 ########################## get the correlation between GSVA score and TIL, mutation burden
 library(magrittr)
 library(tidyverse)
+library(survival)
 
 # data path ---------------------------------------------------------------
 # server 1
@@ -12,6 +13,8 @@ gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_ch
 res_path <- file.path(immune_res_path,"TCGA_GSVAScore")
 tcga_path <- file.path(basic_path,"/data/TCGA")
 
+# load image --------------------------------------------------------------
+load(file.path(res_path,"TCGA.GSVA_score.ICP_features.rda"))
 
 # laod ICP feature info ---------------------------------------------------
 
@@ -339,6 +342,146 @@ GSVA.MB.cor.DE.plot %>%
 ggsave(file.path(res_path,"2.MB_with_GSVA_score","3.DE.Cor.MB-GSVAscore.allcancers-Mean.pdf"),device = "pdf",height = 4, width=5)
 ggsave(file.path(res_path,"2.MB_with_GSVA_score","3.DE.Cor.MB-GSVAscore.allcancers-Mean.png"),device = "png",height = 4, width=5)
 
+# 3.survival analysis -------------------------------------------------------
+# 3.1.load survival data ----
+clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+  tidyr::unnest() %>%
+  dplyr::select(-cancer_types) %>%
+  unique() %>%
+  dplyr::mutate(OS=as.numeric(OS),Status=as.numeric(Status),Age=as.numeric(Age)) %>%
+  dplyr::group_by(barcode) %>%
+  dplyr::mutate(OS= max(OS)) %>%
+  dplyr::mutate(Status =  max(Status)) %>%
+  dplyr::ungroup()
+
+clinical <- readr::read_rds(file.path(basic_path,"data/TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
+  tidyr::unnest() %>%
+  dplyr::select(type,bcr_patient_barcode,PFS,PFS.time) %>%
+  tidyr::drop_na() %>%
+  dplyr::rename("barcode" = "bcr_patient_barcode") %>%
+  unique()
+
+clinical %>%
+  dplyr::inner_join(clinical_tcga,by="barcode") %>%
+  dplyr::rename("cancer_types"= "type") -> clinical_all_data
+
+# 3.2.function to do cox survival analysis  ----
+# 3.2.1.univariable cox analysis ---------
+fn_survival_test <- function(data,feature){
+  print(feature)
+  .cox <- survival::coxph(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
+  summary(.cox) -> .z
+  
+  # KM pvalue
+  kmp <- 1 - pchisq(survival::survdiff(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)$chisq,df = length(levels(as.factor(data$group))) - 1)
+  
+  # mearge results
+  tibble::tibble(
+    n = .z$n,
+    hr = .z$conf.int[1],
+    hr_l = .z$conf.int[3],
+    hr_h = .z$conf.int[4],
+    coxp = .z$waldtest[3],
+    kmp = kmp) %>%
+    dplyr::mutate(status = ifelse(hr > 1, "High_risk", "Low_risk"))
+  # multi-variable cox analysis
+}
+
+# 3.2.2.multi-variable cox analysis ---------
+fn_survival_test.multiCox <- function(data,uni_sig_feature){
+  covariates <- uni_sig_feature$Features
+  if(length(covariates)>=1){
+    multi_formulas <- as.formula(paste('Surv(time, status)~', paste(covariates,collapse = " + ")))
+    model <- coxph(multi_formulas, data = data)
+    model.s <- summary(model)
+    
+    # Extract data
+    tibble::tibble(
+      Features = rownames(model.s$coefficients),
+      n = model.s$n,
+      hr = model.s$conf.int[,1],
+      hr_l = model.s$conf.int[,3],
+      hr_h = model.s$conf.int[,4],
+      coxp = model.s$coefficients[,5]) %>%
+      dplyr::mutate(status = ifelse(hr > 1, "High_risk", "Low_risk"))
+  }else{
+    tibble::tibble()
+  }
+}
+# 3.3. univariate survival analysis ------
+# 3.3.1.PFS ----
+stage_class <- tibble::tibble(Stage = c("i/ii nos","is","Not_applicable",
+                                        "stage i","stage ia","stage ib",
+                                        "stage ii","stage iia","stage iib","stage iic",
+                                        "stage iii","stage iiia","stage iiib","stage iiic",
+                                        "stage iv","stage iva","stage ivb","stage ivc",
+                                        "stage x",NA),
+                              group = c("Not_applicable","Not_applicable","Not_applicable",
+                                        "stage i","stage i","stage i",
+                                        "stage ii","stage ii","stage ii","stage ii",
+                                        "stage iii","stage iii","stage iii","stage iii",
+                                        "stage iv","stage iv","stage iv","stage iv",
+                                        "Not_applicable","Not_applicable"))
+GSVA.score.onlytumor %>%
+  dplyr::mutate(clinical_gsva = purrr::map2(GSVA,cancer_types,.f=function(.x,.y){
+    print(.y)
+    .x %>%
+      dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+      dplyr::inner_join(clinical_all_data,by="barcode")  %>%
+      dplyr::rename("status"="PFS","time"="PFS.time") %>%
+      dplyr::select(barcode,Stage,time,status) %>%
+      dplyr::inner_join(stage_class,by="Stage") %>%
+      dplyr::filter(group != "Not_applicable") %>%
+      tidyr::gather(-barcode,-status,-time,-group,key="Features",value="value") %>%
+      dplyr::select(barcode,status,time,Features,value,group) -> stage.surv.data
+    .x %>%
+      dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+      dplyr::inner_join(clinical_all_data,by="barcode") %>%
+      dplyr::rename("status"="PFS","time"="PFS.time") %>%
+      dplyr::select(-OS,-Status,-cancer_types,-Stage) %>%
+      tidyr::gather(-barcode,-status,-time,key="Features",value="value")  %>%
+      dplyr::filter(!is.na(value)) %>%
+      dplyr::group_by(Features) %>%
+      dplyr::mutate(group = ifelse(value >= quantile(value,0.5),"2high","1low")) %>%
+      dplyr::mutate(n=n()) %>%
+      dplyr::group_by(group) %>%
+      dplyr::mutate(nn=n()) %>%
+      dplyr::ungroup() %>%
+      dplyr::filter(n>10,nn>=2) %>%
+      dplyr::select(-n,-nn) %>%
+      rbind(stage.surv.data) %>%
+      tidyr::nest(-Features) 
+  })) %>%
+  dplyr::select(-GSVA) %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(surv_res = purrr::map2(data,Features,fn_survival_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS
+
+# 3.4. multi-variate survival analysis ------
+# 3.4.1.PFS ----
+GSVA.score.univarite.surv.PFS %>%
+  dplyr::filter(coxp<=0.05 & kmp <= 0.05) %>%
+  dplyr::mutate(Features = gsub(" ","_",Features)) %>%
+  dplyr::select(cancer_types,Features) %>%
+  tidyr::nest(-cancer_types,.key="sig_features") -> GSVA.score.univarite.surv.PFS.sig
+
+GSVA.score.onlytumor %>%
+  dplyr::mutate(clinical_gsva = purrr::map2(GSVA,cancer_types,.f=function(.x,.y){
+    print(.y)
+    colnames(.x) <- gsub(" ","_",colnames(.x))
+    .x %>%
+      dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+      dplyr::inner_join(clinical_all_data,by="barcode")  %>%
+      dplyr::rename("status"="PFS","time"="PFS.time") %>%
+      dplyr::inner_join(stage_class,by="Stage") %>%
+      dplyr::mutate(Stage = ifelse(group!="Not_applicable",group,NA)) 
+  })) %>%
+  dplyr::select(-GSVA) %>%
+  dplyr::inner_join(GSVA.score.univarite.surv.PFS.sig,by="cancer_types") %>%
+  dplyr::mutate(surv_res.multi = purrr::map2(clinical_gsva,sig_features,fn_survival_test.multiCox)) %>%
+  dplyr::select(-clinical_gsva,-sig_features) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi
 
 # save.image --------------------------------------------------------------
 
