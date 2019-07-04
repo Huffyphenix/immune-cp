@@ -485,6 +485,8 @@ GSVA.score.onlytumor %>%
   dplyr::mutate(surv_res = purrr::map2(data,Features,fn_survival_test)) %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> GSVA.score.univarite.surv.PFS
+GSVA.score.univarite.surv.PFS %>%
+  readr::write_tsv(file.path(res_path,"3.survival_with_GSVA_score","GSVA.score.univarite.surv.PFS.tsv"))
 
 # 3.4. multi-variate survival analysis ------
 # 3.4.1.PFS ----
@@ -510,6 +512,8 @@ GSVA.score.onlytumor %>%
   dplyr::mutate(surv_res.multi = purrr::map2(clinical_gsva,sig_features,fn_survival_test.multiCox)) %>%
   dplyr::select(-clinical_gsva,-sig_features) %>%
   tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi
+GSVA.score.univarite.surv.PFS.multi %>%
+  readr::write_tsv(file.path(res_path,"3.survival_with_GSVA_score","GSVA.score.multi-varite.surv.PFS.tsv"))
 
 # 3.4.2.PFS cox plot -------
 GSVA.score.univarite.surv.PFS.multi %>%
