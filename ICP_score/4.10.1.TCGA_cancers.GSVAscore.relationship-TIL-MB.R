@@ -408,6 +408,34 @@ fn_survival_test.multiCox <- function(data,uni_sig_feature){
     tibble::tibble()
   }
 }
+
+# 3.2.3.drawing cox plot ------
+fn_cox_plot <- function(functionWithImmune,data,filename,hr,hr_l,hr_h,title,facet, dir,w=4,h=4){
+  data %>% 
+    dplyr::mutate(functionWithImmune=functionWithImmune) %>%
+    dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+    ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
+    geom_pointrange(aes(color=cox_sig),size=0.5) +
+    scale_color_manual(values=c("red","black")) +
+    geom_hline(aes(yintercept = 1), linetype =2) +
+    scale_size(name = "p-value") +
+    scale_y_continuous(breaks = c(-3,-2,-1,0,1,2,3),
+                       labels = c("1/16","1/8","1/4","1/2",1,2,3)) +
+    facet_wrap(as.formula(facet)) +
+    coord_flip() +
+    ggthemes::theme_gdocs() +
+    my_theme +
+    theme(
+      legend.position = "none",
+      axis.line.y = element_line(color="black"),
+      axis.text = element_text(color = "black",size=8),
+      axis.title = element_text(color = "black",size=10),
+      text = element_text(color = "black")
+    ) +
+    labs(y = "Hazard Ratio (High vs. low expression)", x = "Cancers",title = title) -> p
+  ggsave(file.path(out_path,"e_6_exp_profile",dir,paste(filename,"png",sep=".")),device = "png",width = w,height = h)
+  ggsave(file.path(out_path,"e_6_exp_profile",dir,paste(filename,"pdf",sep=".")),device = "pdf",width = w,height = h)
+}
 # 3.3. univariate survival analysis ------
 # 3.3.1.PFS ----
 stage_class <- tibble::tibble(Stage = c("i/ii nos","is","Not_applicable",
@@ -483,6 +511,11 @@ GSVA.score.onlytumor %>%
   dplyr::select(-clinical_gsva,-sig_features) %>%
   tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi
 
+# 3.4.2.PFS cox plot -------
+GSVA.score.univarite.surv.PFS.multi %>%
+  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
+  fn_cox_plot("hr","hr_l","hr_h",title="Multi-variable cox model of GSVA score of features (PFS)",facet = "~cancer_types", filename="1.PFS.multi-variable.cox",dir=file.path(res_path,"3.survival_with_GSVA_score"),w=20,h=15)
 # save.image --------------------------------------------------------------
 
 save.image(file.path(res_path,"TCGA.GSVA_score.ICP_features.rda"))
