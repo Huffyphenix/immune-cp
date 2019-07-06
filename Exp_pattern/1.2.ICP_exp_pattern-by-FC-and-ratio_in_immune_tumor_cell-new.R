@@ -150,6 +150,8 @@ fn_define_exp_site <- function(symbol,fc,pvalue,tumor_ratio,immune_ratio,mean_ce
       if(immune_ratio<0.25){
         if(tumor_ratio>=0.5){
             tmp <- "Mainly_exp_on_Tumor"
+        }else{
+          tmp <- "Both_exp_on_Tumor_Immune"
           }
         } else{
           tmp <- "Both_exp_on_Tumor_Immune"
