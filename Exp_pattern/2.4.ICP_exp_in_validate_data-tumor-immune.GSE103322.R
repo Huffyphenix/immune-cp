@@ -8,6 +8,7 @@ basic_path <- "/home/huff/project"
 immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio")
+res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio.new")
 data_path <- file.path(basic_path,"data/single_cell_RNAseq/GSE103322_HNSCC")
 
 # load image --------------------------------------------------------------
@@ -71,7 +72,36 @@ fn_compare_TI_FC <- function(.data,cell_type){
     wilcox.test(Exp ~ cell_source, data = .data, alternative = "two.sided") #Comparing the means of two independent groups:Unpaired Two-Samples Wilcoxon Test (non-parametric) 
   ) %>%
     dplyr::mutate(mean_immune_exp=mean_immune_exp,mean_tumor_exp=mean_tumor_exp) %>%
-    dplyr::mutate(`log2FC(I/T)` = log2((mean_immune_exp+1)/(mean_tumor_exp+1)))
+    dplyr::mutate(`log2FC(I/T)` = log2((mean_immune_exp+0.01)/(mean_tumor_exp+0.01))) -> FC
+  
+  # ratio
+  .data %>%
+    dplyr::filter(cell_source == cell_type[1]) %>%
+    .$Exp -> immune_exp
+  immune_exp %>%
+    quantile(0.75) -> immune_max
+  immune_exp %>%
+    quantile(0.25) -> immune_min
+  
+  .data %>%
+    dplyr::filter(cell_source == cell_type[2]) %>%
+    .$Exp -> tumor_exp
+  tumor_exp %>%
+    quantile(0.75) -> tumor_max
+  tumor_exp %>%
+    quantile(0.25) -> tumor_min
+  
+  tumor_ratio_uppon = length(which(tumor_exp>immune_max))/length(tumor_exp)
+  tumor_ratio_bottom = length(which(tumor_exp<immune_min))/length(tumor_exp)
+  
+  immune_ratio_uppon = length(which(immune_exp>tumor_max))/length(immune_exp)
+  immune_ratio_bottom = length(which(immune_exp<tumor_min))/length(immune_exp)
+  
+  FC %>%
+    dplyr::mutate(tumor_ratio_uppon=tumor_ratio_uppon,tumor_ratio_bottom=tumor_ratio_bottom,
+                  immune_ratio_uppon=immune_ratio_uppon,immune_ratio_bottom=immune_ratio_bottom,
+                  `tumor_ratio_diff(U-D)`=tumor_ratio_uppon-tumor_ratio_bottom,
+                  `immune_ratio_diff(U-D)`=immune_ratio_uppon-immune_ratio_bottom)
 }
 
 ICP_exp_in_GSE103322 %>%
@@ -83,7 +113,62 @@ ICP_exp_in_GSE103322 %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> ICP_exp_in_GSE103322.wilcox.test.FC.TI
 
-# plot
+
+## define genes exp site by fold change and pvalue ----
+fn_define_exp_site <- function(symbol,fc,pvalue,tumor_ratio,immune_ratio,mean_cell_line, mean_immune_exp){
+  print(symbol)
+  if(is.na(pvalue)){
+    tmp <- "Not_sure"
+  } else {
+    if(fc>=1 && pvalue<=0.05){
+      if(tumor_ratio<0.25){
+        if(immune_ratio>=0.5){
+          tmp <- "Mainly_exp_on_Immune"
+        } else{
+          tmp <- "Both_exp_on_Tumor_Immune"
+        }
+      } else if(tumor_ratio>=0.25){
+        tmp <- "Both_exp_on_Tumor_Immune"
+      }
+    }else if(fc<=(-1) && pvalue<=0.05){
+      if(immune_ratio<0.25){
+        if(tumor_ratio>=0.5){
+          tmp <- "Mainly_exp_on_Tumor"
+        } else{
+          tmp <- "Both_exp_on_Tumor_Immune"
+        }
+      } else{
+        tmp <- "Both_exp_on_Tumor_Immune"
+      }
+    }else if(fc>(-1) && fc<1){
+      tmp <- "Both_exp_on_Tumor_Immune"
+    } else {
+      tmp <- "Both_exp_on_Tumor_Immune"
+    }
+  }
+  tmp
+}
+ICP_exp_in_GSE103322.wilcox.test.FC.TI %>%
+  dplyr::mutate(Exp_site = purrr::pmap(list(symbol,`log2FC(I/T)`,p.value,`tumor_ratio_diff(U-D)`,`immune_ratio_diff(U-D)`,mean_tumor_exp,mean_immune_exp),fn_define_exp_site)) %>%
+  tidyr::unnest() -> ICP_Exp_site_by_DE_Fc_and_ratio_in_GSE103322
+
+# get p value of ICP pattern in validation data -----
+
+fantom_res.expsite <- readr::read_tsv(file.path(res_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
+  dplyr::select(symbol,Exp_site) %>%
+  dplyr::rename("FANTOM_res"="Exp_site")
+
+ICP_Exp_site_by_DE_Fc_and_ratio_in_GSE103322 %>%
+  dplyr::select(symbol,Exp_site) %>%
+  dplyr::rename("validation_res"="Exp_site") %>%
+  dplyr::inner_join(fantom_res.expsite, by ="symbol") %>%
+  dplyr::mutate(true_pos = ifelse(validation_res==FANTOM_res,"Ture","False")) %>%
+  .$true_pos %>%
+  table() %>%
+  as.data.frame() %>%
+  readr::write_tsv(file.path(res_path,"pattern_validation","6.3.validation_accuracy.tsv"))
+
+# boxplot ------------------------
 strip_color <- data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
                           site_cplor = c("blue", "green", "orange", "pink","red"),
                           rank = c(5,4,3,2,1))
@@ -129,22 +214,24 @@ ready_for_draw %>%
   unique() -> color_bac
 color_bac$cell_source <- color_bac$Exp <- 1
 
-
-ggplot(ready_for_draw,aes(x=cell_source, y=Exp)) +
+ready_for_draw %>%
+  dplyr::mutate(cell_source = ifelse(cell_source=="Cancer cells", "Tumor","Immune")) %>%
+  ggplot(aes(x=cell_source, y=Exp)) +
   geom_quasirandom(size=0.1) +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf,alpha=0.1) +
   # geom_violin() +
   facet_wrap(~label,scales = "free_y") +
   scale_fill_manual(
     # values = site_cplor,
-    values = c("yellow",  "green","pink","blue", "red"),
+    values = c("yellow","green","pink","blue", "red"),
     # values = c("#008B00", "#00EE00", "#CD8500", "#FF4500"),
     breaks = c("Only_exp_on_Immune", "Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor")
   ) +
   my_theme +
   ylab("Expression") +
   theme(
-    axis.title.x = element_blank()
+    axis.title.x = element_blank(),
+    legend.position = "bottom"
   )
 ggsave(file.path(res_path,"pattern_validation","6.2.GSE103322.ICP_exp-T-I_compare.pdf"),device = "pdf",height = 8,width = 14)
 ggsave(file.path(res_path,"pattern_validation","6.2.GSE103322.ICP_exp-T-I_compare.png"),device = "png",height = 8,width = 14)
@@ -187,17 +274,23 @@ correlation.ready %>%
   dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2),sep="")) -> cor_text
 
 correlation.ready %>%
+  dplyr::filter(data_type == "log2FC(I/T)") %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
   dplyr::filter(Exp_site!="Not_sure") %>%
   ggplot(aes(x=GSE103322,y=Fantom5)) +
   geom_jitter(aes(color=Exp_site)) +
   geom_smooth(se = F, method = "lm") +
-  geom_text(aes(x=x,y=y,label = label),data=cor_text) +
+  geom_text(aes(x=x,y=y,label = label),data=cor_text %>% dplyr::filter(data_type == "log2FC(I/T)")) +
   facet_wrap(~data_type,scales = "free") +
   scale_color_manual(values=c("#CD661D",  "#008B00", "#FF69B4", "#1874CD","#CD3333")) +
-  my_theme 
-ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.pdf"),device = "pdf",height = 4,width = 10)
-ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.png"),device = "png",height = 4,width = 10)
+  my_theme +
+  labs(x="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [GSE103322]",
+       y="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [FANTOM5]") +
+  theme(
+    legend.position = "bottom"
+  )
+ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 5)
+ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.png"),device = "png",height = 5,width = 5)
 
 #>>>>>>>>>>>>>>>>>>>>>>> HAVE NOT RUN 
 # tSNE: use ICP exp to distingrush tumor and immune cells -----------------
