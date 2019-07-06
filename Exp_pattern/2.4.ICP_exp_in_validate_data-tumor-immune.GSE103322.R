@@ -233,8 +233,8 @@ ready_for_draw %>%
     axis.title.x = element_blank(),
     legend.position = "bottom"
   )
-ggsave(file.path(res_path,"pattern_validation","6.2.GSE103322.ICP_exp-T-I_compare.pdf"),device = "pdf",height = 8,width = 14)
-ggsave(file.path(res_path,"pattern_validation","6.2.GSE103322.ICP_exp-T-I_compare.png"),device = "png",height = 8,width = 14)
+ggsave(file.path(res_path,"pattern_validation","6.2.GSE103322.ICP_exp-T-I_compare.pdf"),device = "pdf",height = 10,width = 16)
+ggsave(file.path(res_path,"pattern_validation","6.2.GSE103322.ICP_exp-T-I_compare.png"),device = "png",height = 10,width = 16)
 
 # correlation between FC got from fantom and melanoma ---------------------------------
 fantom_res <- readr::read_tsv(file.path(res_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
@@ -291,7 +291,10 @@ correlation.ready %>%
   )
 ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 5)
 ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.png"),device = "png",height = 5,width = 5)
-
+# save image --------------------------------------------------------------
+save.image(file.path(
+  res_path,"pattern_validation","GSE103322_HNSCC.TI.compare.Rdata")
+)
 #>>>>>>>>>>>>>>>>>>>>>>> HAVE NOT RUN 
 # tSNE: use ICP exp to distingrush tumor and immune cells -----------------
 library("Rtsne")
@@ -506,7 +509,4 @@ ggsave(file.path(res_path,"pattern_validation","5.6.GSE72056-T-I-meanExp.correla
 ggsave(file.path(res_path,"pattern_validation","5.6.GSE72056-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
 
 
-# save image --------------------------------------------------------------
-save.image(file.path(
-  res_path,"pattern_validation","GSE72056.melenoma.TI.compare.Rdata")
-)
+
