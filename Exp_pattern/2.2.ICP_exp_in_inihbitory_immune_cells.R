@@ -11,6 +11,11 @@ result_path <- file.path(immune_path,"result_20171025","ICP_exp_patthern-byratio
 fantom_path <- file.path(basic_path,"data/FANTOM5/extra")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 
+
+# load image --------------------------------------------------------------
+
+load(file.path(result_path,"pattern_validation","FANTOM5.validation.Rdata"))
+
 # load data ---------------------------------------------------------------
 
 ICP_fantom.gene_exp.Immune_cell.combine <-
@@ -107,6 +112,9 @@ ggsave(file.path(result_path,"pattern_validation","1.FANTOM5.ICP_exp_in_tumor(no
 library("Rtsne")
 ready_for_analysis %>%
   dplyr::select(sample,gene_tpm,symbol,Group,Role) %>%
+  dplyr::mutate(Role = ifelse(Role %in% c("Immune cells of blood tumor(Activate)","Immune cells of blood tumor(Inhibitory)"),"Blood tumor cells",Role)) %>%
+  dplyr::mutate(Role = ifelse(Role %in% c("Tumor cells(non-blood)"),"Solid tumor cells",Role)) %>%
+  dplyr::filter(!Role %in% c("Blood tumor cells")) %>%
   tidyr::spread(key="symbol",value="gene_tpm") -> data_for_tSNE
 
 # normalization
@@ -122,20 +130,20 @@ tsne_res$Y %>%
   dplyr::as.tbl() %>%
   # dplyr::rename("tSNE 1"="V1","tSNE 2"="V2") %>%
   dplyr::mutate(sample = data_for_tSNE$sample,
-                `Cell type` = data_for_tSNE$Role) %>%
+                Cell_type = data_for_tSNE$Role) %>%
   ggplot(aes(x=V1,y= V2)) +
-  geom_jitter(aes(color=`Cell type`),size=1) +
+  geom_jitter(aes(color=Cell_type),size=1) +
   xlab("tSNE 1") +
   ylab("tSNE 2") +
-  ggpubr::color_palette("npg") +
+  ggpubr::color_palette("jco") +
   my_theme +
   theme(
     axis.text.x = element_blank(),
     axis.text.y = element_blank(),
     axis.ticks = element_blank()
   ) 
-ggsave(filename = file.path(result_path,"pattern_validation","1.3.FANTOME5.ICP_exp-T-I_tSNE.png"),device = "png",width = 6,height = 4)
-ggsave(filename = file.path(result_path,"pattern_validation","1.3.FANTOME5.ICP_exp-T-I_tSNE.pdf"),device = "pdf",width = 6,height = 4)
+ggsave(filename = file.path(result_path,"pattern_validation","1.3.FANTOME5.ICP_exp-T-I_tSNE.png"),device = "png",width = 6,height = 3)
+ggsave(filename = file.path(result_path,"pattern_validation","1.3.FANTOME5.ICP_exp-T-I_tSNE.pdf"),device = "pdf",width = 6,height = 3)
 
 # PCA analysis of blood tumor immune cells and primary immune cells -------
 
