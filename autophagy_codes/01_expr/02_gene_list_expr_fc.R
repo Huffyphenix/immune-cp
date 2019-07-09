@@ -472,4 +472,71 @@ ggsave(
   path = out_path
 )
 
+################
+#receptor and ligand heatmap
+################
+gene_list_fc_pvalue_simplified %>%
+  dplyr::inner_join(gene_list,by="symbol") %>%
+  dplyr::filter(!is.na(Recepter_pairs)) %>%
+  dplyr::filter(!Recepter_pairs %in% c("Pair 10"))-> receptor_ligand.ready
+
+receptor_ligand.ready %>%
+  dplyr::arrange(Recepter_pairs,type) %>%
+  dplyr::select(symbol,Recepter_pairs,size,site_col) -> receptor_ligand.rank
+receptor_ligand.ready <- within(receptor_ligand.ready,symbol<-factor(symbol,levels=unique(receptor_ligand.rank$symbol)))
+with(receptor_ligand.ready,levels(symbol))
+
+receptor_ligand.rank %>%
+  unique() -> receptor_ligand.color
+# dplyr::inner_join(tibble::tibble(Recepter_pairs=unique(receptor_ligand.rank$Recepter_pairs),
+# pair_color = c("#FFB6C1", "#FFBBFF", "#0000FF", "#8B2323", "#CDAA7D", "#8EE5EE", "#76EE00",
+# "#D2691E", "#8B008B", "#6E8B3D", "#FF3030", "#006400", "#FFD700", "#EE00EE")),by="Recepter_pairs") 
+
+receptor_ligand.ready %>%
+  ggplot(aes(x = cancer_types, y = symbol, fill = log2(fc))) +
+  geom_tile(color = "black") +
+  scale_fill_gradient2(
+    low = "blue",
+    mid = "white",
+    high = "red",
+    midpoint = 0,
+    na.value = "white",
+    breaks = seq(-6, 6, length.out = 5),
+    labels = c("-6", "-3", "0", "3", "6"),
+    name = "log2 (FC)"
+  ) +
+  my_theme +
+  theme(
+    panel.background = element_rect(colour = "black", fill = "white"),
+    panel.grid = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_text(color = "black" #c("green","green","green","green","red","blue","blue"),
+                               #face =receptor_ligand.color$size#c("bold.italic","plain","bold.italic","plain","bold.italic","plain","plain")
+    ),
+    legend.text = element_text(size = 10),
+    legend.title = element_text(size = 12),
+    legend.key = element_rect(fill = "white", colour = "black"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  facet_grid(Recepter_pairs~.,scales = "free_y",space = "free") +
+  # scale_y_discrete(limit = c("TNFRSF4","TNFSF4","TNFRSF9","TNFSF9","CTLA4","CD80","CD86")) +
+  scale_x_discrete(limit = cancer_types_rank$cancer_types, expand = c(0, 0)) -> p;p
+ggsave(
+  filename = "fig_05_ligand-receptor_heatmap.pdf",
+  plot = p,
+  device = "pdf",
+  width = 6,
+  height =9,
+  path = out_path
+)
+ggsave(
+  filename = "fig_05_ligand-receptor_heatmap.png",
+  plot = p,
+  device = "png",
+  width = 6,
+  height = 9,
+  path = out_path
+)
+
 save.image(file = file.path(out_path, "rda_00_gene_expr.rda"))
