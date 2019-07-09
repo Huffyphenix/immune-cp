@@ -100,34 +100,34 @@ fn_get_TCGA_sample_class <- function(.x,class){
 # 1.3.calculation ---------------------------------------------------------
 
 # 1.3.1 tumor and normal samples togather ----------
-# exp_data %>%
-#   # head(1) %>%
-#   dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
-#     .x %>%
-#       # dplyr::filter(symbol %in% gene_list$symbol) %>%
-#       dplyr::select(-entrez_id)
-#   })) %>%
-#   dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("1","0"))) %>%
-#   dplyr::select(-expr,-exp_filter) %>%
-#   dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
-#   dplyr::select(-exp_data) -> GSVA.score
-# GSVA.score %>%
-#   readr::write_rds(file.path(res_path,"TCGA_cancer_specific.allsamples(T-N)_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+exp_data %>%
+  # head(1) %>%
+  dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
+    .x %>%
+      # dplyr::filter(symbol %in% gene_list$symbol) %>%
+      dplyr::select(-entrez_id)
+  })) %>%
+  dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("1","0"))) %>%
+  dplyr::select(-expr,-exp_filter) %>%
+  dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
+  dplyr::select(-exp_data) -> GSVA.score
+GSVA.score %>%
+  readr::write_rds(file.path(res_path,"TCGA_cancer_specific.allsamples(T-N)_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
 # 1.3.2 only tumor samples ----------
-# exp_data %>%
-#   # head(1) %>%
-#   dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
-#     .x %>%
-#       # dplyr::filter(symbol %in% gene_list$symbol) %>%
-#       dplyr::select(-entrez_id)
-#   })) %>%
-#   dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("0"))) %>%
-#   dplyr::select(-expr,-exp_filter) %>%
-#   dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
-#   dplyr::select(-exp_data) -> GSVA.score.onlytumor
-# GSVA.score.onlytumor %>%
-#   readr::write_rds(file.path(res_path,"TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+exp_data %>%
+  # head(1) %>%
+  dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
+    .x %>%
+      # dplyr::filter(symbol %in% gene_list$symbol) %>%
+      dplyr::select(-entrez_id)
+  })) %>%
+  dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("0"))) %>%
+  dplyr::select(-expr,-exp_filter) %>%
+  dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
+  dplyr::select(-exp_data) -> GSVA.score.onlytumor
+GSVA.score.onlytumor %>%
+  readr::write_rds(file.path(res_path,"TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
 # 1.3.3 all tumor samples togather ----------
 i <- 0
