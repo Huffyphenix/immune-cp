@@ -11,30 +11,11 @@ expr_path<-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 # Read gene list
 # Gene list was compress as rds
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
-gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
-gene_list$symbol<-as.character(gene_list$symbol)
-ICP_expr_pattern <- readr::read_tsv(file.path(result_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
-fn_site_color <- function(.n,.x){
-  print(.n)
-  if(.x=="Mainly_Tumor"){
-    "red"
-  }else if(.x=="Mainly_Immune"){
-    "Blue"
-  }else if(.x=="Both"){
-    c("#9A32CD")
-  }else{
-    "grey"
-  }
-}
-gene_list %>%
-  dplyr::inner_join(ICP_expr_pattern,by="symbol") %>%
-  dplyr::rename("Exp_site"="Exp site") %>%
-  dplyr::mutate(Exp_site=ifelse(is.na(Exp_site),"N",Exp_site)) %>%
-  dplyr::mutate(site_col = purrr::map2(symbol,Exp_site,fn_site_color)) %>%
-  tidyr::unnest() -> gene_list
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv"))
 
 #output path
 out_path<-c(file.path(result_path,"e_2_DE"))
+load(file = file.path(out_path, "rda_00_gene_expr.rda"))
 
 #######################
 # filter out genes
@@ -200,12 +181,13 @@ ggplot(gene_list_fc_pvalue_simplified_filter,
     high = "red",
     midpoint = 0,
     na.value = "white",
-    breaks = seq(-3, 3, length.out = 5),
-    labels = c("<= -3", "-1.5", "0", "1.5", ">= 3"),
-    name = "log2 FC"
+    breaks = seq(-6, 6, length.out = 5),
+    labels = c("-6", "-3", "0", "3", "6"),
+    name = "log2 (FC)"
   ) +
   scale_y_discrete(limit = gene_rank$symbol) +
   scale_x_discrete(limit = cancer_types_rank$cancer_types, expand = c(0, 0)) +
+  my_theme+
   theme(
     panel.background = element_rect(colour = "black", fill = "white"),
     panel.grid = element_blank(),
@@ -221,7 +203,15 @@ ggsave(
   plot = p,
   device = "pdf",
   width = 10,
-  height = 12,
+  height = 10,
+  path = out_path
+)
+ggsave(
+  filename = "fig_01_expr_pattern-Exp_site.png",
+  plot = p,
+  device = "png",
+  width = 10,
+  height = 10,
   path = out_path
 )
 readr::write_rds(
@@ -234,8 +224,8 @@ readr::write_rds(
 #point heat map
 ###################
 gene_list_fc_pvalue_simplified_filter %>%
-  dplyr::mutate(fc=ifelse(fc>10,10,fc))%>%
-  dplyr::mutate(fc=ifelse(fc<0.1,0.1,fc))%>%
+  # dplyr::mutate(fc=ifelse(fc>10,10,fc))%>%
+  # dplyr::mutate(fc=ifelse(fc<0.1,0.1,fc))%>%
   ggplot(aes(x = cancer_types, y = symbol)) +
   geom_point(aes(size = p.value, col = log2(fc))) +
   scale_color_gradient2(
@@ -244,10 +234,10 @@ gene_list_fc_pvalue_simplified_filter %>%
     high = "red",
     midpoint = 0,
     na.value = "white",
-    breaks = seq(-3, 3, length.out = 5),
+    breaks = seq(-6, 6, length.out = 5),
     #limits=c(-4,4),
-    labels = c("-3", "-1.5", "0", "1.5", "3"),
-    name = "Log2(FC)"
+    labels = c("-6", "-3", "0", "3", "6"),
+    name = "Log2 (FC)"
   ) +
   scale_size_continuous(
     name="P value",
@@ -258,6 +248,7 @@ gene_list_fc_pvalue_simplified_filter %>%
   ) +
   scale_y_discrete(limit = gene_rank$symbol) +
   scale_x_discrete(limit = cancer_types_rank$cancer_types) +
+  my_theme +
   theme(
     panel.background = element_rect(colour = "black", fill = "white"),
     panel.grid = element_line(colour = "grey", linetype = "dashed"),
@@ -278,6 +269,14 @@ ggsave(
   filename = "fig_02_expr_pattern_fc_pval-Exp_site.pdf",
   plot = p1,
   device = "pdf",
+  width = 8,
+  height = 10,
+  path = out_path
+)
+ggsave(
+  filename = "fig_02_expr_pattern_fc_pval-Exp_site.png",
+  plot = p1,
+  device = "png",
   width = 8,
   height = 10,
   path = out_path
@@ -311,6 +310,7 @@ ggplot(
     breaks = seq(0, 12, length.out = 5)
   ) +
   scale_x_discrete(limit = gene_rank$symbol, expand = c(0.01, 0.01)) +
+  my_theme +
   theme(
     panel.background = element_rect(
       colour = "black",
@@ -318,16 +318,16 @@ ggplot(
       size = 1
     ),
     panel.grid.major = element_blank(),
-    axis.title = element_blank(),
+    axis.title.y = element_blank(),
+    axis.title.x = element_text(size = 8),
     axis.text.y = element_text(color = gene_rank$site_col),
     # axis.text.y = element_blank(),
     # axis.ticks.y = element_blank(),
-    legend.text = element_text(size = 12),
-    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 8),
     legend.key = element_rect(fill = "white", colour = "black")
   ) +
-  # coord_flip() +
-  rotate() -> p2;p2
+  labs(y="DE gene counts") +
+  coord_flip() -> p2;p2
 ggsave(
   filename = "fig_03_expr_pattern_gene_counts-Exp_site.pdf",
   plot = p2,
@@ -341,7 +341,6 @@ readr::write_rds(
   path = file.path(out_path, "fig_03_expr_pattern_cancer_counts.pdf.gz"),
   compress = "gz"
 )
-
 
 
 ###cancer counts
@@ -364,6 +363,8 @@ ggplot(
     #   breaks = seq(0, 70, length.out =9)
   ) +
   scale_x_discrete(limit = cancer_types_rank$cancer_types, expand = c(0.01, 0.01)) +
+  labs(y="DE gene counts") +
+  my_theme +
   theme(
     panel.background = element_rect(
       colour = "black",
@@ -371,11 +372,11 @@ ggplot(
       size = 1
     ),
     panel.grid.major = element_blank(),
-    axis.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 8),
     # axis.text.x = element_blank(),
     # axis.ticks.x = element_blank(),
-    legend.text = element_text(size = 12),
-    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 8),
     legend.key = element_rect(fill = "white", colour = "black")
   ) -> p3;p3
 ggsave(
@@ -397,14 +398,24 @@ readr::write_rds(
 ##################
 gene_list_fc_pvalue_simplified_filter %>%
   dplyr::inner_join(gene_rank,by="symbol") %>%
-  dplyr::mutate(fun = "functionWithImmune") %>%
+  dplyr::select(symbol,functionWithImmune,family) %>%
+  dplyr::rename("Immunity"="functionWithImmune","Gene family"="family") %>%
+  tidyr::gather(-symbol,key="fun",value="Gene class") -> gene_class_ready_draw
+  
+gene_class_ready_draw %>%
+  dplyr::arrange(fun,`Gene class`) %>%
+  .$`Gene class` -> gene_class.class.rank
+gene_class_ready_draw <- within(gene_class_ready_draw,`Gene class` <- factor(`Gene class`,levels = unique(gene_class.class.rank)))
+with(gene_class_ready_draw,levels(`Gene class`))
+gene_class_ready_draw %>%
   ggplot(aes(y=symbol,x=fun)) +
-  geom_tile(aes(fill = functionWithImmune),color="grey",size=1) +
+  geom_tile(aes(fill = `Gene class`),color="grey",size=1) +
   scale_y_discrete(limit = gene_rank$symbol) +
   scale_fill_manual(
-    name = "Immune Checkpoint",
-    values = c("#1C86EE", "#EE3B3B", "#EE7600")
+    name = "Gene class",
+    values = c( "#838B8B", "#000000","#0000FF", "#8B2323","#CDAA7D","#8EE5EE","#1C86EE", "#EE3B3B","#EE7600")
   ) +
+  my_theme +
   theme(
     panel.background = element_rect(colour = "black", fill = "white"),
     panel.grid = element_line(colour = "grey", linetype = "dashed"),
@@ -414,36 +425,41 @@ gene_list_fc_pvalue_simplified_filter %>%
       size = 0.2
     ),
     axis.text.y = element_blank(),
+    # axis.text.x = element_text(angle = 45,hjust = 1),
     axis.text.x = element_blank(),
     axis.title = element_blank(),
     axis.ticks = element_blank(),
-    legend.text = element_text(size = 12),
-    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 10),
     # legend.position = "none",
     legend.key = element_rect(fill = "white", colour = "black"),
     plot.margin=unit(c(0,0,0,-0), "cm")
-  ) -> p2.1
+  ) -> p2.1;p2.1
 p1 + theme(axis.ticks.y = element_blank(),
            axis.text = element_text(color = "black"),
            plot.margin=unit(c(-0,-0,0,-0), "cm")) -> p3.1
 p2 + theme(axis.ticks.y = element_blank(),
            axis.text = element_text(color = "black"),
-           plot.margin=unit(c(0,0,0,-0), "cm")) -> p4.1
+           axis.title.x = element_text(size = 10),
+           plot.margin=unit(c(0,0,0,-0), "cm")) +
+  labs(y="DE gene\n counts") -> p4.1
 p3 + theme(axis.text.x = element_blank(),
            axis.ticks.x = element_blank(),
            axis.text = element_text(color = "black"),
-           plot.margin=unit(c(0,0,-0,0), "cm")) -> p1.1
+           axis.title.y = element_text(size = 10),
+           plot.margin=unit(c(0,0,-0,0), "cm")) +
+  labs(y="DE gene\n counts")-> p1.1
 ggarrange(NULL,p1.1,NULL,p2.1,p3.1,p4.1,
           ncol = 3, nrow = 2,  align = "hv", 
-          widths = c(2, 12, 5), heights = c(1, 5),
-          legend = "top",
-          common.legend = TRUE) -> p
+          widths = c(3, 11, 5), heights = c(1, 5),
+          legend = "left",
+          common.legend = TRUE) -> p;p
 
 ggsave(
   filename = "fig_04_combine_expr_pattern-Exp_site.pdf",
   device = "pdf",
   plot = p,
-  width = 8,
+  width = 10,
   height = 10,
   path = out_path
 )
@@ -451,10 +467,9 @@ ggsave(
   filename = "fig_04_combine_expr_pattern-Exp_site.png",
   device = "png",
   plot = p,
-  width = 8,
+  width = 10,
   height = 10,
   path = out_path
 )
 
 save.image(file = file.path(out_path, "rda_00_gene_expr.rda"))
-load(file = file.path(out_path, "rda_00_gene_expr.rda"))
