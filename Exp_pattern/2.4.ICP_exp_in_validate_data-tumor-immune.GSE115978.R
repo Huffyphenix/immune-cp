@@ -276,7 +276,8 @@ correlation.ready %>%
   scale_color_manual(values=c("#CD661D",  "#008B00", "red")) +
   my_theme +
   labs(x="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [GSE115978]",
-       y="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [FANTOM5]") +
+       y="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [FANTOM5]",
+       title = "FANTOM5 vs. GSE115978") +
   theme(
     legend.position = "bottom",
     legend.key.width = unit(0.2,"inches"),
@@ -284,8 +285,8 @@ correlation.ready %>%
     legend.text = element_text(size=8),
     legend.title = element_blank()
   )
-ggsave(file.path(res_path,"pattern_validation","7.1.GSE115978-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 5)
-ggsave(file.path(res_path,"pattern_validation","7.1.GSE115978-Fantom5.correlation.png"),device = "png",height = 5,width = 5)
+ggsave(file.path(res_path,"pattern_validation","7.1.GSE115978-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 6)
+ggsave(file.path(res_path,"pattern_validation","7.1.GSE115978-Fantom5.correlation.png"),device = "png",height = 5,width = 6)
 
 save.image(file.path(
   res_path,"pattern_validation","GSE115978_melanoma.TI.compare.Rdata")

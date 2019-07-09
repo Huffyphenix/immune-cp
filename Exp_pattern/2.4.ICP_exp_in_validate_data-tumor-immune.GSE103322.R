@@ -228,7 +228,7 @@ ready_for_draw %>%
     breaks = c("Only_exp_on_Immune", "Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor")
   ) +
   my_theme +
-  ylab("Expression") +
+  labs(y="Expression",title="GSE103322, HNSCC") +
   theme(
     axis.title.x = element_blank(),
     legend.position = "bottom"
@@ -281,16 +281,21 @@ correlation.ready %>%
   geom_jitter(aes(color=Exp_site)) +
   geom_smooth(se = F, method = "lm") +
   geom_text(aes(x=x,y=y,label = label),data=cor_text %>% dplyr::filter(data_type == "log2FC(I/T)")) +
-  facet_wrap(~data_type,scales = "free") +
-  scale_color_manual(values=c("#CD661D",  "#008B00", "#FF69B4", "#1874CD","#CD3333")) +
+  # facet_wrap(~data_type,scales = "free") +
+  scale_color_manual(values=c("#CD661D",  "#008B00", "red", "#1874CD","#CD3333")) +
   my_theme +
   labs(x="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [GSE103322]",
-       y="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [FANTOM5]") +
+       y="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [FANTOM5]",
+       title = "FANTOM5 vs. GSE103322") +
   theme(
-    legend.position = "bottom"
+    legend.position = "bottom",
+    legend.key.width = unit(0.2,"inches"),
+    legend.key.height=unit(0.2,"inches"),
+    legend.text = element_text(size=8),
+    legend.title = element_blank()
   )
-ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 5)
-ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.png"),device = "png",height = 5,width = 5)
+ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 6)
+ggsave(file.path(res_path,"pattern_validation","6.1.GSE103322-Fantom5.correlation.png"),device = "png",height = 5,width = 6)
 # save image --------------------------------------------------------------
 save.image(file.path(
   res_path,"pattern_validation","GSE103322_HNSCC.TI.compare.Rdata")
