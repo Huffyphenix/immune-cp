@@ -20,7 +20,7 @@ gene_list$symbol <- as.character(gene_list$symbol)
 gene_list_expr <- readr::read_rds(path = file.path(expr_path, ".rds_03_a_gene_list_expr.rds.gz"))
 # ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
 
-ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern-byratio/pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
+ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern-byratio.new/pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
   dplyr::select(entrez_ID,symbol,Exp_site,`log2FC(I/T)`) 
 
 ICP_family <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_family.txt"))
@@ -34,11 +34,11 @@ fn_site_color <- function(.x){
   if(.x=="Mainly_exp_on_Tumor"){
     "red"
   }else if(.x=="Mainly_exp_on_Immune"){
-    "Blue"
+    "darkgreen"
   }else if(.x=="Only_exp_on_Immune"){
     "Blue"
   }else if(.x=="Both_exp_on_Tumor_Immune"){
-    c("#9A32CD")
+    c("darkorange")
   }else{
     "grey"
   }
@@ -358,7 +358,7 @@ ICP_mean_expr_in_cancers.byfunction.OS %>%
   dplyr::mutate(hr.c=log2(hr.c)+1,hr.c.l=log2(hr.c.l)+1,hr.c.h=log2(hr.c.h)+1) %>%
   fn_cox_plot.all(filename="Meanexp.COX_OS.by-functionRole.all.continus",hr="hr.c",hr_l="hr.c.l",hr_h="hr.c.h",title="Overall survival",facet="~ functionWithImmune",dir = "survival",w = 8, h = 6)
 
-# 3 groups by function: exp site Mainly_Tumor, Mainly_Immune, both -----
+# expression in 3 groups by function: exp site Mainly_Tumor, Mainly_Immune, both -----
 # 样本中在各基因的平均表达量
 
 fn_average.by_expsite <- function(.data){
@@ -692,6 +692,60 @@ tiff(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.tiff"),width = 800
 he
 dev.off()
 
+# GSVA score in 3 groups by function: exp site Mainly_Tumor, Mainly_Immune, both -----
+# GSVA score of exp sites
+tcga_gsvascore <- readr::read_rds(file.path(immune_res_path,"TCGA_GSVAScore","TCGA_cancer_specific.allsamples(T-N)_GSVA.score_ICPs_features.rds.gz")) 
+
+tcga_gsvascore %>%
+  tidyr::unnest() %>%
+  dplyr::select(cancer_types,barcode,Both_exp_on_Tumor_Immune,Mainly_exp_on_Immune,Mainly_exp_on_Tumor) %>%
+  tidyr::gather(-cancer_types,-barcode,key="Exp_site",value="GSVA score") -> plot_ready.gsva
+plot_ready.gsva %>%
+  dplyr::group_by(cancer_types, Exp_site) %>%
+  dplyr::mutate(mean = mean(`GSVA score`)) %>%
+  dplyr::select(cancer_types, Exp_site,mean)%>%
+  unique() %>%
+  tidyr::spread(key="Exp_site",value="mean") %>%
+  dplyr::mutate(diff_IT=Mainly_exp_on_Immune-Mainly_exp_on_Tumor) %>%
+  dplyr::select(cancer_types,diff_IT) -> label
+plot_ready.gsva %>%
+  dplyr::inner_join(label,by="cancer_types") -> plot_ready.gsva
+
+plot_ready.gsva %>%
+  dplyr::select(Exp_site) %>%
+  dplyr::inner_join(data.frame(Exp_site = c("Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor"),
+                               rank = c(3,2,1)), by = "Exp_site") %>%
+  dplyr::arrange(rank) %>%
+  .$Exp_site -> Exp_site.rank
+plot_ready.gsva <- within(plot_ready.gsva,Exp_site <- factor(Exp_site,levels = unique(Exp_site.rank)))
+with(plot_ready.gsva, levels(Exp_site))
+
+plot_ready.gsva %>%
+  dplyr::arrange(diff_IT) %>%
+  .$cancer_types -> cancer.rank
+plot_ready.gsva <- within(plot_ready.gsva,cancer_types <- factor(cancer_types,levels = unique(cancer.rank)))
+with(plot_ready.gsva, levels(cancer_types))
+
+plot_ready.gsva %>%
+  ggplot(aes(x=Exp_site,y=`GSVA score`)) +
+  geom_violin(aes(fill=cancer_types),alpha=0.5) +
+  facet_wrap(~cancer_types) +
+  coord_flip() +
+  theme_bw() +
+  xlab("Expression pattern of ICPs") +
+  ylab("GSVA score") +
+  ggpubr::stat_compare_means(method = "anova",label = "p.signif") +
+  theme(
+    strip.background = element_rect(colour = "black", fill = "white"),
+    strip.text = element_text(size = 10,color = "black"),
+    axis.text = element_text(size = 10, colour = "black"),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.border = element_rect(fill='transparent',colour = "black"),
+    panel.grid = element_line(linetype = "dashed")
+  )
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_GSVA-score_in_expsite-by-cancers.pdf"),device = "pdf", width = 12,height = 7)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_GSVA-score_in_expsite-by-cancers.png"),device = "png",width = 12,height = 7)
 # save image --------------------------------------------------------------
 
 save.image(file.path(out_path,"e_6_exp_profile","e_6_exp_profile.rdata"))
