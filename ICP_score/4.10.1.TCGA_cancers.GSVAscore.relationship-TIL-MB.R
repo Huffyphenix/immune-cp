@@ -578,6 +578,7 @@ fn_survival_test <- function(data,feature){
   tibble::tibble(
     group = rownames(.z$conf.int),
     n = .z$n,
+    coef = .z$coefficients[,1],
     hr = .z$conf.int[1],
     hr_l = .z$conf.int[3],
     hr_h = .z$conf.int[4],
@@ -884,7 +885,197 @@ GSVA.score.univarite.surv.PFS.multi %>%
   dplyr::mutate(filename = paste("1.PFS.multi-variable.cox",Group,sep="_")) %>%
   dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox model of GSVA score of features (PFS)",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=25,h=20))
 
-# 5. filter Features for each cancers -------------------------------------
+# 5. score from cox model -------------------------------------------------
+# 5.1.function--------
+fn_cox_score <- function(GSVA,survival){
+  GSVA %>%
+    tidyr::gather(-barcode,key="Features",value="GSVAscore") %>%
+    dplyr::filter(Features %in% survival$Features) %>%
+    dplyr::inner_join(survival,by="Features") %>%
+    dplyr::mutate(GSVA_muliple_coef = GSVAscore*coef) %>%
+    dplyr::group_by(barcode) %>%
+    dplyr::mutate(cox_score = sum(GSVA_muliple_coef)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(barcode,cox_score) %>%
+    unique()
+}
+# 5.2. multi-cox model coef ------
+# 5.2.1.PFS --------
+GSVA.score.univarite.surv.PFS.multi %>%
+  tidyr::nest(-cancer_types,.key="PFS") %>%
+  dplyr::inner_join(GSVA.score.onlytumor,by="cancer_types") %>%
+  dplyr::mutate(cox_score = purrr::map2(GSVA,PFS,fn_cox_score)) %>%
+  dplyr::select(cancer_types,cox_score) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi.coxscore
+
+GSVA.score.univarite.surv.PFS.multi.coxscore %>%
+  readr::write_tsv(file.path(res_path,"3.survival_with_GSVA_score.new","PFS_cox_score(GSVA*coef_of_multi_cox).tsv"))
+
+GSVA.score.univarite.surv.PFS.multi.coxscore %>%
+  dplyr::mutate(barcode = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$TIL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi.coxscore.correlation.TIL
+
+GSVA.score.univarite.surv.PFS.multi.coxscore %>%
+  # dplyr::mutate(barcode = substr(barcode,1,15)) %>%
+  dplyr::inner_join(CTL_data,by=c("barcode","cancer_types")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$CTL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi.coxscore.correlation.CTL
+
+GSVA.score.univarite.surv.PFS.multi.coxscore %>%
+  dplyr::mutate(sample = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TCGA_mutation_burden,
+                    by=c("sample")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$mutation_durden,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi.coxscore.correlation.mutation_durden
+
+# 5.2.2.OS --------
+
+GSVA.score.univarite.surv.OS.multi %>%
+  tidyr::nest(-cancer_types,.key="OS") %>%
+  dplyr::inner_join(GSVA.score.onlytumor,by="cancer_types") %>%
+  dplyr::mutate(cox_score = purrr::map2(GSVA,OS,fn_cox_score)) %>%
+  dplyr::select(cancer_types,cox_score) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.OS.multi.coxscore
+GSVA.score.univarite.surv.OS.multi.coxscore %>%
+  readr::write_tsv(file.path(res_path,"3.survival_with_GSVA_score.new","OS_cox_score(GSVA*coef_of_multi_cox).tsv"))
+
+GSVA.score.univarite.surv.OS.multi.coxscore %>%
+  dplyr::mutate(barcode = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$TIL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.OS.multi.coxscore.correlation.TIL
+
+GSVA.score.univarite.surv.OS.multi.coxscore %>%
+  # dplyr::mutate(barcode = substr(barcode,1,15)) %>%
+  dplyr::inner_join(CTL_data,by=c("barcode","cancer_types")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$CTL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.OS.multi.coxscore.correlation.CTL
+
+GSVA.score.univarite.surv.OS.multi.coxscore %>%
+  dplyr::mutate(sample = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TCGA_mutation_burden,
+                    by=c("sample")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$mutation_durden,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.OS.multi.coxscore.correlation.mutation_durden
+
+# 5.3 uni-cox coef to get cox_score --------
+# 5.2.1.PFS --------
+GSVA.score.univarite.surv.PFS %>%
+  tidyr::nest(-cancer_types,.key="PFS") %>%
+  dplyr::inner_join(GSVA.score.onlytumor,by="cancer_types") %>%
+  dplyr::mutate(cox_score = purrr::map2(GSVA,PFS,fn_cox_score)) %>%
+  dplyr::select(cancer_types,cox_score) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS.coxscore
+
+GSVA.score.univarite.surv.PFS.coxscore %>%
+  readr::write_tsv(file.path(res_path,"3.survival_with_GSVA_score.new","3.PFS_cox_score(GSVA*coef_of_multi_cox)-all_features.tsv"))
+
+GSVA.score.univarite.surv.PFS.coxscore %>%
+  dplyr::mutate(barcode = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$TIL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data)  -> GSVA.score.univarite.surv.PFS.coxscore.correlation.TIL
+
+GSVA.score.univarite.surv.PFS.coxscore %>%
+  dplyr::inner_join(CTL_data,by=c("barcode","cancer_types")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(CTL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$CTL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data)-> GSVA.score.univarite.surv.PFS.coxscore.correlation.CTL
+
+GSVA.score.univarite.surv.PFS.coxscore %>%
+  dplyr::mutate(sample = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TCGA_mutation_burden,
+                    by=c("sample")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(MB_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$mutation_durden,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) -> GSVA.score.univarite.surv.PFS.coxscore.correlation.MB
+
+GSVA.score.univarite.surv.PFS.coxscore.correlation.TIL %>%
+  dplyr::inner_join(GSVA.score.univarite.surv.PFS.coxscore.correlation.CTL,by="cancer_types") %>%
+  dplyr::inner_join(GSVA.score.univarite.surv.PFS.coxscore.correlation.MB,by="cancer_types") -> GSVA.score.univarite.surv.PFS.coxscore.correlation.combine
+
+GSVA.score.univarite.surv.PFS.coxscore.correlation.combine %>%
+  readr::write_rds(file.path(res_path,"3.survival_with_GSVA_score.new","3.PFS_cox_score(GSVA*coef_of_multi_cox)-all_features-correlation.combine(TIL.CTL.MB).rds.gz"),compress = "gz")
+
+# 5.2.2.OS --------
+GSVA.score.univarite.surv.OS %>%
+  tidyr::nest(-cancer_types,.key="PFS") %>%
+  dplyr::inner_join(GSVA.score.onlytumor,by="cancer_types") %>%
+  dplyr::mutate(cox_score = purrr::map2(GSVA,PFS,fn_cox_score)) %>%
+  dplyr::select(cancer_types,cox_score) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.OS.coxscore
+
+GSVA.score.univarite.surv.OS.coxscore %>%
+  readr::write_tsv(file.path(res_path,"3.survival_with_GSVA_score.new","3.OS_cox_score(GSVA*coef_of_multi_cox)-all_features.tsv"))
+
+GSVA.score.univarite.surv.OS.coxscore %>%
+  dplyr::mutate(barcode = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(TIL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$TIL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data)  -> GSVA.score.univarite.surv.OS.coxscore.correlation.TIL
+
+GSVA.score.univarite.surv.OS.coxscore %>%
+  dplyr::inner_join(CTL_data,by=c("barcode","cancer_types")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(CTL_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$CTL,method = "spearman"))
+  })) %>%
+  dplyr::select(-data)-> GSVA.score.univarite.surv.OS.coxscore.correlation.CTL
+
+GSVA.score.univarite.surv.OS.coxscore %>%
+  dplyr::mutate(sample = substr(barcode,1,15)) %>%
+  dplyr::inner_join(TCGA_mutation_burden,
+                    by=c("sample")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(MB_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(cor.test(.x$cox_score,.x$mutation_durden,method = "spearman"))
+  })) %>%
+  dplyr::select(-data) -> GSVA.score.univarite.surv.OS.coxscore.correlation.MB
+
+GSVA.score.univarite.surv.OS.coxscore.correlation.TIL %>%
+  dplyr::inner_join(GSVA.score.univarite.surv.OS.coxscore.correlation.CTL,by="cancer_types") %>%
+  dplyr::inner_join(GSVA.score.univarite.surv.OS.coxscore.correlation.MB,by="cancer_types") -> GSVA.score.univarite.surv.OS.coxscore.correlation.combine
+
+GSVA.score.univarite.surv.OS.coxscore.correlation.combine %>%
+  readr::write_rds(file.path(res_path,"3.survival_with_GSVA_score.new","3.OS_cox_score(GSVA*coef_of_multi_cox)-all_features-correlation.combine(TIL.CTL.MB).rds.gz"),compress = "gz")
+
+# 6. filter Features for each cancers -------------------------------------
 GSVA.TIL.res %>%
   tidyr::unnest() %>%
   dplyr::filter(abs(estimate)>=0.3 & p.value<=0.05) %>%
