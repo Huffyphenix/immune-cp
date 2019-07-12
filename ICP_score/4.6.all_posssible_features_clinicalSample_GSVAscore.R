@@ -16,27 +16,28 @@ library(survival)
 basic_path <- file.path("/home/huff/project")
 
 # E zhou basi path
-basic_path <- file.path("F:/我的坚果云")
+# basic_path <- file.path("F:/我的坚果云")
 
 # Hust basi path
-basic_path <- file.path("S:/坚果云/我的坚果云")
+# basic_path <- file.path("S:/坚果云/我的坚果云")
 
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 TCGA_path <- file.path("/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
-res_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
-
+# res_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature") # old result
+res_path <- file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
 # load data ---------------------------------------------------------------
 exp_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data/mRNA_exp","all_FPKM_expression_2.txt"))
-gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header = T)
-gene_list$symbol <- as.character(gene_list$symbol)
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv")) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune",Exp_site)) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Tumor","Mainly_exp_on_Tumor" ),"Mainly_exp_on_Tumor",Exp_site.1)) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site.1)) 
 
-
-ICP_family <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_family.txt"))%>%
-  dplyr::inner_join(gene_list, by = "symbol")
-ICP_ligand_receptor_pair <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_ligand_receptor_pairs.txt")) %>%
-  dplyr::mutate(pairs = paste("pair",pairs)) %>%
-  dplyr::inner_join(gene_list, by = "symbol")
+# ICP_family <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_family.txt"))%>%
+#   dplyr::inner_join(gene_list, by = "symbol")
+# ICP_ligand_receptor_pair <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_ligand_receptor_pairs.txt")) %>%
+#   dplyr::mutate(pairs = paste("pair",pairs)) %>%
+#   dplyr::inner_join(gene_list, by = "symbol")
 
 # source("/home/huff/project/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
 
@@ -74,10 +75,40 @@ gene_list %>%
   dplyr::inner_join(ensembl_gene, by = "GeneID") %>%
   dplyr::filter(!is.na(ens_id)) -> gene_list
 
-ICPs_exp_in_TI.cancer.site_groups <- 
-  readr::read_tsv(file.path(immune_res_path, "ICP_score/2.1.GSVA-ICPs_exp_site_5_feature","ICPs_exp_in_TI.cancer.site_groups.tsv")) %>%
-  dplyr::inner_join(gene_list,by = "symbol") %>%
-  dplyr::select(symbol, Tissues, `log2FC(I/T)`, TCGA_Cancer, ICP_exp_group, GeneID, ens_id, type, functionWithImmune)
+# 1.get GSVA score of all possible features of ICP ----------------------------------------------
+# 1.1. get gene feature from gene list ----
+genelist <- list()
+#### gene list feature by gene exp site #####
+for(expsite in c("Both_exp_on_Tumor_Immune","Mainly_exp_on_Immune","Mainly_exp_on_Tumor")){
+  genelist[[expsite]] <- gene_list %>%
+    dplyr::filter(Exp_site.1 == expsite) %>%
+    .$ens_id
+}
+
+#### gene list feature by gene function in immune system #####
+for(fun_class in unique(gene_list$functionWithImmune)){
+  genelist[[fun_class]] <- gene_list %>%
+    dplyr::filter(functionWithImmune == fun_class) %>%
+    .$ens_id
+}
+#### gene list feature by ligand-receptor pairs #####
+for(p in unique(gene_list$Recepter_pairs)){
+  if(!is.na(p)){
+    genelist[[p]] <- gene_list %>%
+      dplyr::filter(Recepter_pairs == p) %>%
+      .$ens_id
+  }
+  
+}
+#### gene list feature by gene family #####
+for(f in unique(gene_list$family)){
+  if(f != "Other"){
+    genelist[[f]] <- gene_list %>%
+      dplyr::filter(family == f) %>%
+      .$ens_id
+  }
+}
+genelist[["All_gene"]] <- gene_list$ens_id
 
 # calculation of GSVA score -----------------------------------------------
 fn_get_gene_list_feature_bysite  <- function(tissue){
@@ -98,27 +129,6 @@ fn_get_gene_list_feature_bysite  <- function(tissue){
 
 fn_GSVA <- function(tissue, exp){
   print(paste("GSVA",tissue))
-  
-  #### gene list feature by gene exp site #####
-  genelist <- fn_get_gene_list_feature_bysite(tissue)
-  #### gene list feature by gene function in immune system #####
-  for(fun_class in unique(gene_list$functionWithImmune)){
-    genelist[[fun_class]] <- gene_list %>%
-      dplyr::filter(functionWithImmune == fun_class) %>%
-      .$ens_id
-  }
-  #### gene list feature by ligand-receptor pairs #####
-  for(p in unique(ICP_ligand_receptor_pair$pairs)){
-    genelist[[p]] <- ICP_ligand_receptor_pair %>%
-      dplyr::filter(pairs == p) %>%
-      .$ens_id
-  }
-  #### gene list feature by gene family #####
-  for(f in unique(ICP_family$family)){
-    genelist[[f]] <- ICP_family %>%
-      dplyr::filter(f == f) %>%
-      .$ens_id
-  }
   #### do GSVA ####
   if (length(genelist)>0) {
     exp <- as.matrix(exp)
@@ -149,8 +159,7 @@ fn_GSVA <- function(tissue, exp){
   gsva.score
 }
 
-
-
+# cancer and type specific ----
 exp_data.nest %>%
   dplyr::mutate(tissue = ifelse(Cancer.y=="gastric cancer", "stomach", "skin")) %>%
   # head(1) %>%
@@ -158,4 +167,29 @@ exp_data.nest %>%
   dplyr::select(-data_spread) -> GSVA.score
 
 GSVA.score %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class-cancer_metastic_specific.rds.gz"), compress = "gz")
+
+
+# cancer specific ----
+exp_data %>%
+  tidyr::gather(-gene_id, key="Run", value = exp) %>%
+  dplyr::mutate(exp = ifelse(is.na(exp),0,exp)) %>%
+  dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
+  dplyr::select(-Cancer_type) %>%
+  tidyr::nest(-Cancer.y) %>%
+  dplyr::mutate(data_spread = purrr::map(data,.f = function(.x){
+    .x %>%
+      tidyr::spread(key="Run",value="exp")
+  })) %>%
+  dplyr::select(-data) -> exp_data.nest.cancer_specific
+
+exp_data.nest.cancer_specific %>%
+  dplyr::mutate(tissue = ifelse(Cancer.y=="gastric cancer", "stomach", "skin")) %>%
+  # head(1) %>%
+  dplyr::mutate(GSVA = purrr::map2(tissue, data_spread, fn_GSVA)) %>%
+  dplyr::select(-data_spread) -> GSVA.score.cancer_specific
+
+GSVA.score.cancer_specific %>%
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class-cancer_specific.rds.gz"), compress = "gz")
+
+save.image(file.path(res_path,"get_clinical_gsvascore.rds"))
