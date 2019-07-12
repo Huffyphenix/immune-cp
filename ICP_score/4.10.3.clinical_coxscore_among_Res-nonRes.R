@@ -137,3 +137,4 @@ clinical.OS.uni.coxscore %>%
   ggpubr::stat_compare_means()
 ggsave(file.path(res_path,"clinical.OS.uni.coxscore_diff-Res-nonRes.png"),device = "png",height = 4,width = 5)
 
+save.image(file.path(res_path,"cox_score.difference_between_response_non-response.rda"))
