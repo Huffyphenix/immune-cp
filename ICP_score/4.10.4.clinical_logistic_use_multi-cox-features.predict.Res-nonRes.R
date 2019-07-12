@@ -200,3 +200,5 @@ data_for_logistic %>%
 #   dplyr::mutate(AUC = purrr::pmap(list(Cancer_type=Cancer.y,exp=data_spread,response=response,sample_group=sample_group,Features=Features,filename=filename),fn_logistic)) %>%
 #   dplyr::select(Cancer.y,AUC) %>%
 #   tidyr::unnest()
+
+save.image(file.path(res_path,"logistic.rda"))
