@@ -26,6 +26,8 @@ TCGA_path <- file.path("/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
 # res_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature") # old result
 res_path <- file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
+
+load(file.path(res_path,"get_clinical_gsvascore.rds"))
 # load data ---------------------------------------------------------------
 exp_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data/mRNA_exp","all_FPKM_expression_2.txt"))
 gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv")) %>%
@@ -46,27 +48,17 @@ gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv"
 sample_info <-
   readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","RNAseq-sample_info_complete.tsv"))%>%
   dplyr::filter(Library_strategy == "RNA-Seq") %>%
-  dplyr::filter(Biopsy_Time == "pre-treatment")
+  dplyr::inner_join(readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","anti_ICB_study_info.txt")) %>%
+                      dplyr::select(`data ID`,Author) %>%
+                      unique(), by="data ID")
 
 library(clusterProfiler)
 library(org.Hs.eg.db)
 bitr(gene_list$symbol,"SYMBOL", "ENSEMBL",OrgDb = org.Hs.eg.db)
 
 sample_info %>%
-  dplyr::select(Run, Cancer.y, Cancer_type) %>%
+  dplyr::select(Run, Cancer.y, Cancer_type,  blockade,Biopsy_Time,Author) %>%
   unique() -> Run_pubmed.id
-exp_data %>%
-  tidyr::gather(-gene_id, key="Run", value = exp) %>%
-  dplyr::mutate(exp = ifelse(is.na(exp),0,exp)) %>%
-  dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
-  tidyr::nest(-Cancer.y, -Cancer_type) -> exp_data.gather
-
-exp_data.gather %>%
-  dplyr::mutate(data_spread = purrr::map(data,.f = function(.x){
-    .x %>%
-      tidyr::spread(key="Run",value="exp")
-  })) %>%
-  dplyr::select(-data) -> exp_data.nest
 
 # gene id transfer --------------------------------------------------------
 ensembl_gene <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","Homo_sapiens.gene_info.geneid.symbol.ensembl"))
@@ -136,6 +128,7 @@ fn_GSVA <- function(tissue, exp){
     exp <- exp[,-1]
     exp <- apply(exp, 2, as.numeric)
     rownames(exp) <- rownames.exp
+    exp[is.na(exp)] <- 0
     res.gsva <- gsva(exp,genelist, mx.diff = FALSE, 
                      method = c("gsva"),
                      kcdf = c("Gaussian"), 
@@ -160,6 +153,20 @@ fn_GSVA <- function(tissue, exp){
 }
 
 # cancer and type specific ----
+exp_data %>%
+  tidyr::gather(-gene_id, key="Run", value = exp) %>%
+  dplyr::mutate(exp = ifelse(is.na(exp),0,exp)) %>%
+  dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
+  dplyr::select(-Biopsy_Time,-Author, -blockade) %>%
+  tidyr::nest(-Cancer.y, -Cancer_type) -> exp_data.gather
+
+exp_data.gather %>%
+  dplyr::mutate(data_spread = purrr::map(data,.f = function(.x){
+    .x %>%
+      tidyr::spread(key="Run",value="exp")
+  })) %>%
+  dplyr::select(-data) -> exp_data.nest
+
 exp_data.nest %>%
   dplyr::mutate(tissue = ifelse(Cancer.y=="gastric cancer", "stomach", "skin")) %>%
   # head(1) %>%
@@ -167,7 +174,7 @@ exp_data.nest %>%
   dplyr::select(-data_spread) -> GSVA.score
 
 GSVA.score %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class-cancer_metastic_specific.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-cancer_metastic_specific.rds.gz"), compress = "gz")
 
 
 # cancer specific ----
@@ -175,7 +182,7 @@ exp_data %>%
   tidyr::gather(-gene_id, key="Run", value = exp) %>%
   dplyr::mutate(exp = ifelse(is.na(exp),0,exp)) %>%
   dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
-  dplyr::select(-Cancer_type) %>%
+  dplyr::select(-Cancer_type,-Biopsy_Time,-blockade,-Author) %>%
   tidyr::nest(-Cancer.y) %>%
   dplyr::mutate(data_spread = purrr::map(data,.f = function(.x){
     .x %>%
@@ -190,6 +197,39 @@ exp_data.nest.cancer_specific %>%
   dplyr::select(-data_spread) -> GSVA.score.cancer_specific
 
 GSVA.score.cancer_specific %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class-cancer_specific.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-cancer_specific.rds.gz"), compress = "gz")
+
+# cancer, study, blockage,  pre/on-treatment specific ----
+exp_data %>%
+  tidyr::gather(-gene_id, key="Run", value = exp) %>%
+  dplyr::mutate(exp = ifelse(is.na(exp),0,exp)) %>%
+  dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
+  dplyr::select(-Cancer_type) %>%
+  tidyr::nest(-Cancer.y,-Biopsy_Time,-blockade, -Author) %>%
+  dplyr::mutate(data_spread = purrr::map(data,.f = function(.x){
+    .x %>%
+      tidyr::spread(key="Run",value="exp")
+  })) %>%
+  dplyr::select(-data) -> exp_data.nest.all_specific
+
+exp_data.nest.all_specific[-4,] %>%
+  dplyr::mutate(tissue = ifelse(Cancer.y=="gastric cancer", "stomach", "skin")) %>%
+  # head(1) %>%
+  dplyr::mutate(GSVA = purrr::map2(tissue, data_spread, fn_GSVA)) %>%
+  dplyr::select(-data_spread) -> GSVA.score.all_specific
+
+GSVA.score.all_specific %>%
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-specific.rds.gz"), compress = "gz")
+
+# cancer, study, blockage,  pre/on-treatment specific ----
+exp_data %>%
+  dplyr::mutate(tissue = "All") %>%
+  tidyr::nest(-tissue,.key="data_spread") %>%
+  dplyr::mutate(GSVA = purrr::map2(tissue, data_spread, fn_GSVA)) %>%
+  dplyr::select(-data_spread) -> GSVA.score.all
+
+GSVA.score.all_specific %>%
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-togather.rds.gz"), compress = "gz")
+
 
 save.image(file.path(res_path,"get_clinical_gsvascore.rds"))
