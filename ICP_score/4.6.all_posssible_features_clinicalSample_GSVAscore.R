@@ -60,6 +60,17 @@ sample_info %>%
   dplyr::select(Run, Cancer.y, Cancer_type,  blockade,Biopsy_Time,Author) %>%
   unique() -> Run_pubmed.id
 
+sample_info %>%
+  dplyr::select(Run,Cancer.y,blockade,blockade,Biopsy_Time,Author,Response) %>%
+  dplyr::mutate(Response = ifelse(Response %in% c("CR", "PR", "PRCR", "R"), "Response", "non-Response")) %>%
+  dplyr::group_by(Cancer.y,blockade,blockade,Biopsy_Time,Author,Response) %>%
+  dplyr::mutate(n=n()) %>%
+  dplyr::select(-Run) %>%
+  unique() %>%
+  tidyr::spread(key="Response",value="n") %>%
+  dplyr::mutate(`Response_percentage(%)` = Response*100/(`non-Response`+Response)) %>%
+  readr::write_tsv(file.path(res_path,"Response_statistic_each_dataset.tsv"))
+
 # gene id transfer --------------------------------------------------------
 ensembl_gene <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","Homo_sapiens.gene_info.geneid.symbol.ensembl"))
 
