@@ -1,6 +1,8 @@
 ################################
 # construct logistics model for GSVA score of all possible features
 ################################
+
+### 后来改过，没有跑过，得再测试
 library(magrittr)
 library(tidyverse)
 library(caret)
@@ -27,28 +29,34 @@ basic_path <- file.path("S:/坚果云/我的坚果云")
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 TCGA_path <- file.path("/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
-res_path <- file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical/by_gsva_score")
-score_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
+# res_path <- file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical/by_gsva_score")
+# score_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
+score_path <- file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
+res_path <- file.path(score_path,"logistic_model_predict_Response/all_features")
 
 # load data ---------------------------------------------------------------
-gsva.score <- readr::read_rds(file.path(score_path,"ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class.rds.gz")) %>%
+gsva.score <- readr::read_rds(file.path(score_path,"ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class-cancer_specific.rds.gz")) %>%
   tidyr::unnest() %>%
-  dplyr::select(-Cancer.y, -tissue,-Cancer_type)
+  dplyr::select(-Cancer.y, -tissue)
 
 # exp data classfication --------------------------------------------------
 sample_info <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","RNAseq-sample_info_complete.tsv")) %>%
-  dplyr::filter(Library_strategy == "RNA-Seq") %>%
-  dplyr::filter(Biopsy_Time == "pre-treatment")
+  dplyr::filter(Library_strategy == "RNA-Seq")
+  # dplyr::filter(Biopsy_Time == "pre-treatment")
 
+study_info <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","anti_ICB_study_info.txt")) %>%
+  dplyr::select(`data ID`,Author) %>%
+  unique()
 
 sample_info %>%
-  dplyr::select(Run, Cancer.y, Cancer_type, blockade) %>%
+  dplyr::inner_join(study_info,by="data ID") %>% 
+  dplyr::select(Run, Cancer.y, Cancer_type, blockade, Biopsy_Time,Author) %>%
   unique() -> Run_pubmed.id
 gsva.score %>%
   dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
   # dplyr::filter(symbol %in% gene_list$symbol) %>%
-  dplyr::select(-blockade) %>%
-  tidyr::nest(-Cancer.y,-Cancer_type) -> exp_data.gather.genelist
+  dplyr::select(-blockade,-Cancer_type) %>%
+  tidyr::nest(-Cancer.y) -> exp_data.gather.genelist
 
 exp_data.gather.genelist %>%
   dplyr::rename("data_spread" = "data") -> exp_data.nest.genelist
@@ -57,8 +65,8 @@ sample_info %>%
   dplyr::select(Run, Cancer.y, Cancer_type, Response) %>%
   dplyr::filter(! Response %in% c("NE", "X")) %>%
   dplyr::mutate(Response = ifelse(Response %in% c("CR", "PR", "PRCR", "R"), "yes", "no")) %>%
-  tidyr::nest(-Cancer.y,-Cancer_type, .key = "response") %>%
-  dplyr::inner_join(exp_data.nest.genelist, by = c("Cancer.y", "Cancer_type")) -> data_for_logistic
+  tidyr::nest(-Cancer.y, .key = "response") %>%
+  dplyr::inner_join(exp_data.nest.genelist, by = c("Cancer.y")) -> data_for_logistic
 
 ############## fnctions to do logistic regression iteration ##################
 fn_logistic <- function(Cancer_type,exp, response, sample_group, test_n, train_n, iteration, times = 15 ){
@@ -118,7 +126,7 @@ fn_feature_filter <- function(x, data, times = 15, test_n = 3, train_n = 6){
         }
       }else if(auc1 ==1){
         formula <- formula1
-        auc <- auc
+        auc <- auc1
         auc_test <- fn_auc(test_set = test_set, train_set = train_set, formula = formula)
         break()
       }
@@ -241,7 +249,7 @@ fn_overlap_select <- function(.data, top_n = 10, overlpa_n = 5){
       tidyr::unnest() %>%
       dplyr::select(Cancer.y, Cancer_type, features, score_all) %>% #,blockade
       dplyr::arrange(score_all) %>%
-      dplyr::mutate(rank = nrow(.):1)-> topn_tmp 
+      dplyr::mutate(rank = 1:nrow(.))-> topn_tmp 
     rbind(topn, topn_tmp) -> topn
   }
   
