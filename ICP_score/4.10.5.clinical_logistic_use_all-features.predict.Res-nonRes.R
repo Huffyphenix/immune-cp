@@ -62,7 +62,7 @@ fn_logistic <- function(Cancer_type,exp, response, sample_group, test_n, train_n
   #   rev() %>%
   #   .[1:40] %>%
   #   names() -> top20_mad
-  print(Cancer_type)
+  # print(Cancer_type)
   exp %>%
     dplyr::inner_join(response, by = "Run") %>%
     dplyr::inner_join(sample_group, by = "Run") %>%
@@ -100,7 +100,7 @@ fn_feature_filter <- function(x, data, times = 15, test_n = 3, train_n = 6){
       feature <- feature %>% dplyr::filter(! feature %in% f1)
       formula1 <- as.formula(paste(Reduce(paste, deparse(formula)), f1, sep = "+"))
     }
-    print(Reduce(paste, deparse(formula1)))
+    # print(Reduce(paste, deparse(formula1)))
     auc1 <- fn_auc(test_set = train_set, train_set = train_set, formula = formula1)
     if(i < times){
       if(auc1 < 1){
@@ -150,7 +150,7 @@ fn_auc <- function(test_set, train_set, formula){
   # confusionMatrix(as.factor(predicted.classes), observed.classes,
   #                 positive = "yes")
   # ROC
-  res.roc <- roc(observed.classes, probabilities)
+  res.roc <- roc(observed.classes, probabilities,quiet=TRUE)
   auc <- res.roc$auc[[1]]
   ## best threshold
   
@@ -269,8 +269,7 @@ fn_overlap_select <- function(.data, top_n = 10, overlpa_n = 5){
     tidyr::nest(features,rank_sum) %>%
     dplyr::mutate(topn_count = purrr::map(data,function(.x){
       .x %>%
-        top_n(top_n, rank_sum) %>%
-        dplyr::select(features)
+        top_n(top_n, rank_sum)
     })) %>%
     dplyr::select(-data) 
 }
@@ -380,7 +379,7 @@ fn_auc_on_validation <- function(response,data_spread, model){
   observed.classes <- data.ready$Response
   
   # ROC
-  res.roc <- roc(observed.classes, probabilities)
+  res.roc <- roc(observed.classes, probabilities,quiet=TRUE)
   
   auc <- res.roc$auc[1]
   tibble::tibble(Sensitivity=res.roc$sensitivities,
@@ -420,8 +419,15 @@ data_for_logistic %>%
   dplyr::mutate(type = ifelse(Author=="Riaz" & Biopsy_Time=="on-treatment", "train", "validation")) -> data_for_logistic
 ############## logistic regression
 succss = 0 
+times = 0
+paste("auc.train","auc.test",
+      paste(paste("auc_validation",c(1:6),sep="_"),collapse = " "),
+      "Features",
+      "Times","SuccssTime") %>%
+  readr::write_lines(file.path(res_path,"logistic_record.txt"),sep = "\n",append = TRUE)
 ##################### repeat 100 times get the best features
 while(succss < 10){
+  times=times+1
   n=10
   logistic_feature_res_nrepeat <- list()
   for(i in 1:n){
@@ -458,7 +464,7 @@ while(succss < 10){
   #   tidyr::unnest() %>%
   #   readr::write_tsv(file.path(res_path,"class_metastic_type-and-gsvascore_with_class_metastic_type","repeat_times_feature",paste(j,"final_feature.tsv",sep="_")))
   
-  ############## draw picture, dont using stepAIC
+  ############## draw picture, using stepAIC
   # get model from 70% train and use it on 30% Test and validation data
   data_for_logistic %>%
     dplyr::filter(type == "train") %>%
@@ -484,7 +490,7 @@ while(succss < 10){
   probabilities <- step.model.train %>% predict(type = "response")
   predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
   observed.classes <- data.ready$Response
-  auc.train <- roc(observed.classes, probabilities)$auc[[1]]
+  auc.train <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
   
   # 30% test data 
   data_for_logistic %>%
@@ -506,14 +512,20 @@ while(succss < 10){
   probabilities <- step.model.train %>% predict(data.ready.test,type = "response")
   predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
   observed.classes <- data.ready.test$Response
-  auc.test <- roc(observed.classes, probabilities)$auc[[1]]
+  auc.test <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
   
-  if(auc.train>=0.8 && auc.test>=0.8){
-    data_for_logistic %>%
-      # dplyr::filter(type == "validation") %>%
-      dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=step.model.train)) %>%
-      dplyr::select(-response,-GSVA, -sample_group) %>%
-      tidyr::unnest() -> validation_auc
+  data_for_logistic %>%
+    # dplyr::filter(type == "validation") %>%
+    dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=step.model.train)) %>%
+    dplyr::select(-response,-GSVA, -sample_group) %>%
+    tidyr::unnest() -> validation_auc
+  
+  paste(signif(auc.train,2),signif(auc.test,2),
+        paste(signif(validation_auc$auc,2),collapse = " "),
+        paste(rownames(as.data.frame(summary(step.model.train)$coefficients))[-1],collapse = "/"),
+        times,succss) %>%
+    readr::write_lines(file.path(res_path,"logistic_record.txt"),sep = "\n",append = TRUE)
+  if(min(auc.train,auc.test)>=0.8){
     if(min(validation_auc$auc)>=0.7){
       succss = succss + 1
       step.model.train %>%
