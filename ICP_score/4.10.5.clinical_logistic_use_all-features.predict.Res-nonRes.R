@@ -1,5 +1,8 @@
 ################################
 # construct logistics model for GSVA score of all possible features
+# GSVA was generate in each dataset
+# for only on-treatment samples prediction
+# train data for on-treatment data, is Riaz, on-treatment
 ################################
 library(magrittr)
 library(tidyverse)
@@ -9,6 +12,8 @@ library(broom)
 library(pROC)
 library(MASS)
 library(ggplot2)
+library(multidplyr)
+library(parallel)
 
 
 # data path ---------------------------------------------------------------
@@ -411,150 +416,191 @@ my_theme <-   theme(
   strip.text = element_text(size = 10),
   text = element_text(color = "black")
 )
-########################################## logistic regression iteration result -----------------------------------------------------
+########################################## logistic regression iteration result ------------------------------------------
 data_for_logistic %>%
   dplyr::mutate(sample_group = purrr::map2(response,GSVA,fn_select_train_test,percent = 0.7)) -> data_for_logistic
 
 data_for_logistic %>%
-  dplyr::mutate(type = ifelse(Author=="Riaz" & Biopsy_Time=="on-treatment", "train", "validation")) -> data_for_logistic
+  dplyr::mutate(type = ifelse(Author=="Riaz", "train", "validation")) -> data_for_logistic
 ############## logistic regression
-succss = 0 
-times = 0
-paste("auc.train","auc.test",
-      paste(paste("auc_validation",c(1:6),sep="_"),collapse = " "),
-      "Features",
-      "Times","SuccssTime") %>%
-  readr::write_lines(file.path(res_path,"logistic_record.txt"),sep = "\n",append = TRUE)
-##################### repeat 100 times get the best features
-while(succss < 10){
-  times=times+1
-  n=10
-  logistic_feature_res_nrepeat <- list()
-  for(i in 1:n){
-    data_for_logistic %>%
-      dplyr::filter(type == "train") %>%
-      dplyr::mutate(test_n = 4, train_n = 8) %>%
-      # dplyr::mutate(test_n = 3, train_n = 4) %>%
-      # dplyr::filter(! blockade == "anti–PD-1、CTLA-4") %>% # last two data sets of melanoma dont have enough response observation to train
-      dplyr::mutate(itertion_res = purrr::pmap(list(Cancer.y,GSVA, response, sample_group, test_n, train_n),.f=fn_logistic,iteration = 500, times = 10)) %>%
-      dplyr::select(-response,-GSVA)-> logistic_feature_res_nrepeat[[i]]
-  }
-  ############## score for regression iteration features
-  logistic_feature_res.forFeatureSelect_nrepeat <- list()
-  logistic_feature_Selected_nrepeat <- list()
-  for(i in 1:n){
-    logistic_feature_res_nrepeat[[i]] %>%
-      dplyr::mutate(itertion_res_datafrme = purrr::map(itertion_res,.f=function(.x){
-        unlist(.x) %>%
-          matrix(nrow = length(.x), byrow =T) %>%
-          data.frame() %>%
-          dplyr::as.tbl() %>%
-          dplyr::rename("iteration" = "X1", "train_auc" = "X2", "test_auc" = "X3", "formula" = "X4")
-      })) %>%
-      dplyr::select(-itertion_res) -> logistic_feature_res.forFeatureSelect_nrepeat[[i]]
+fn_Run <- function(stage){
+  succss = 0 
+  times = 0
+  
+  data_for_logistic %>%
+    dplyr::filter(Biopsy_Time == stage) -> .data_for_logistic
+  
+  paste("auc.train","auc.test",
+        paste(paste("auc_validation",.data_for_logistic$Author,sep="_"),collapse = " "),
+        "Features",
+        "Times","SuccssTime") %>%
+    readr::write_lines(file.path(res_path,stage,"logistic_record.txt"),sep = "\n",append = TRUE)
+  ##################### repeat 100 times get the best features
+  while(succss < 10){
+    times=times+1
+    n=10
+    logistic_feature_res_nrepeat <- list()
+    for(i in 1:n){
+      .data_for_logistic %>%
+        dplyr::filter(type == "train") %>%
+        dplyr::mutate(test_n = 4, train_n = 8) %>%
+        # dplyr::mutate(test_n = 3, train_n = 4) %>%
+        # dplyr::filter(! blockade == "anti–PD-1、CTLA-4") %>% # last two data sets of melanoma dont have enough response observation to train
+        dplyr::mutate(itertion_res = purrr::pmap(list(Cancer.y,GSVA, response, sample_group, test_n, train_n),.f=fn_logistic,iteration = 500, times = 10)) %>%
+        dplyr::select(-response,-GSVA)-> logistic_feature_res_nrepeat[[i]]
+    }
+    ############## score for regression iteration features
+    logistic_feature_res.forFeatureSelect_nrepeat <- list()
+    logistic_feature_Selected_nrepeat <- list()
+    for(i in 1:n){
+      logistic_feature_res_nrepeat[[i]] %>%
+        dplyr::mutate(itertion_res_datafrme = purrr::map(itertion_res,.f=function(.x){
+          unlist(.x) %>%
+            matrix(nrow = length(.x), byrow =T) %>%
+            data.frame() %>%
+            dplyr::as.tbl() %>%
+            dplyr::rename("iteration" = "X1", "train_auc" = "X2", "test_auc" = "X3", "formula" = "X4")
+        })) %>%
+        dplyr::select(-itertion_res) -> logistic_feature_res.forFeatureSelect_nrepeat[[i]]
+      
+      logistic_feature_res.forFeatureSelect_nrepeat[[i]] %>%
+        dplyr::mutate(selection = purrr::map(itertion_res_datafrme,fn_feature_score,pos_auc = 0.8, neg_auc = 0.4)) %>%
+        dplyr::select(-itertion_res_datafrme, -sample_group) -> logistic_feature_Selected_nrepeat[[i]]
+    }
+    ############## features selection
+    fn_overlap_select(logistic_feature_Selected_nrepeat,top_n = 10, overlpa_n = 5) -> final_feature
     
-    logistic_feature_res.forFeatureSelect_nrepeat[[i]] %>%
-      dplyr::mutate(selection = purrr::map(itertion_res_datafrme,fn_feature_score,pos_auc = 0.8, neg_auc = 0.4)) %>%
-      dplyr::select(-itertion_res_datafrme, -sample_group) -> logistic_feature_Selected_nrepeat[[i]]
-  }
-  ############## features selection
-  fn_overlap_select(logistic_feature_Selected_nrepeat,top_n = 10, overlpa_n = 5) -> final_feature
-  
-  # final_feature %>%
-  #   tidyr::unnest() %>%
-  #   readr::write_tsv(file.path(res_path,"class_metastic_type-and-gsvascore_with_class_metastic_type","repeat_times_feature",paste(j,"final_feature.tsv",sep="_")))
-  
-  ############## draw picture, using stepAIC
-  # get model from 70% train and use it on 30% Test and validation data
-  data_for_logistic %>%
-    dplyr::filter(type == "train") %>%
-    dplyr::mutate(data.ready = purrr::pmap(list(GSVA,response,sample_group),.f=function(.x,.y,.z){
-      .x %>%
-        dplyr::inner_join(.y, by = "Run") %>%
-        dplyr::inner_join(.z, by = "Run") %>%
-        dplyr::filter(usage == "train") %>%
-        dplyr::select(-Run, -usage) %>%
-        dplyr::mutate(Response = as.factor(Response))
-    })) %>%
-    dplyr::select(data.ready) %>%
-    tidyr::unnest() -> data.ready
-  # data.ready <- na.omit(data.ready)
-  data.ready[is.na(data.ready)] <- 0
-  colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
-  
-  formula.train <- paste("Response~", paste(final_feature$topn_count[[1]]$features,collapse = "+"))
-  model.train <- glm( as.formula(formula.train), data = data.ready, family = binomial)
-  step.model.train <- stepAIC(model.train, direction = "backward",trace = F)
-  
-  # Make predictions
-  probabilities <- step.model.train %>% predict(type = "response")
-  predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
-  observed.classes <- data.ready$Response
-  auc.train <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
-  
-  # 30% test data 
-  data_for_logistic %>%
-    dplyr::filter(type == "train") %>%
-    dplyr::mutate(data.ready = purrr::pmap(list(GSVA,response,sample_group),.f=function(.x,.y,.z){
-      .x %>%
-        dplyr::inner_join(.y, by = "Run") %>%
-        dplyr::inner_join(.z, by = "Run") %>%
-        dplyr::filter(usage == "test") %>%
-        dplyr::select(-Run, -usage) %>%
-        dplyr::mutate(Response = as.factor(Response))
-    })) %>%
-    dplyr::select(data.ready) %>%
-    tidyr::unnest() -> data.ready.test
-  data.ready.test[is.na(data.ready.test)] <- 0
-  colnames(data.ready.test) <- gsub(" ",".",colnames(data.ready.test))
-  
-  # Make predictions
-  probabilities <- step.model.train %>% predict(data.ready.test,type = "response")
-  predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
-  observed.classes <- data.ready.test$Response
-  auc.test <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
-  
-  data_for_logistic %>%
-    # dplyr::filter(type == "validation") %>%
-    dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=step.model.train)) %>%
-    dplyr::select(-response,-GSVA, -sample_group) %>%
-    tidyr::unnest() -> validation_auc
-  
-  paste(signif(auc.train,2),signif(auc.test,2),
-        paste(signif(validation_auc$auc,2),collapse = " "),
-        paste(rownames(as.data.frame(summary(step.model.train)$coefficients))[-1],collapse = "/"),
-        times,succss) %>%
-    readr::write_lines(file.path(res_path,"logistic_record.txt"),sep = "\n",append = TRUE)
-  if(min(auc.train,auc.test)>=0.8){
-    if(min(validation_auc$auc)>=0.7){
-      succss = succss + 1
-      step.model.train %>%
-        readr::write_rds(file.path(res_path,paste("Final_model",succss,".rds.gz",sep="_")),compress = "gz")
-      summary(step.model.train)$coefficients %>%
-        as.data.frame() %>%
-        readr::write_tsv(file.path(res_path,paste("Final_model_coef",succss,".rds.gz",sep="_")))
-      
-      # draw picture
-      validation_auc %>%
-        dplyr::inner_join(Response_statistic,by=c("Biopsy_Time","Author")) %>%
-        dplyr::mutate(group = paste(Author,blockade.y,paste("(",Response,"*/",`non-Response`,"**);",sep=""),"AUC","=",signif(auc,2))) %>%
-        dplyr::select(roc_data,group,type) %>%
-        tidyr::unnest() -> plot_ready
-      plot_ready %>%
-        ggplot(aes(x=Specificity,y=Sensitivity)) +
-        geom_path(aes(color=group,linetype = type)) + 
-        scale_x_reverse()  +
-        my_theme +
-        theme(
-          legend.position = c(0.75,0.25),
-          legend.title = element_blank()
-        )
-      ggsave(file.path(res_path,paste("ROC_plot",succss,"png",sep="_")),device = "png",width = 5, height = 5)
-      ggsave(file.path(res_path,paste("ROC_plot",succss,"pdf",sep="_")),device = "pdf",width = 5, height = 5)
-      
-    } else{
-      succss = succss
+    # final_feature %>%
+    #   tidyr::unnest() %>%
+    #   readr::write_tsv(file.path(res_path,"class_metastic_type-and-gsvascore_with_class_metastic_type","repeat_times_feature",paste(j,"final_feature.tsv",sep="_")))
+    
+    ############## draw picture, using stepAIC
+    # get model from 70% train and use it on 30% Test and validation data
+    .data_for_logistic %>%
+      dplyr::filter(type == "train") %>%
+      dplyr::mutate(data.ready = purrr::pmap(list(GSVA,response,sample_group),.f=function(.x,.y,.z){
+        .x %>%
+          dplyr::inner_join(.y, by = "Run") %>%
+          dplyr::inner_join(.z, by = "Run") %>%
+          dplyr::filter(usage == "train") %>%
+          dplyr::select(-Run, -usage) %>%
+          dplyr::mutate(Response = as.factor(Response))
+      })) %>%
+      dplyr::select(data.ready) %>%
+      tidyr::unnest() -> data.ready
+    # data.ready <- na.omit(data.ready)
+    data.ready[is.na(data.ready)] <- 0
+    colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
+    
+    formula.train <- paste("Response~", paste(final_feature$topn_count[[1]]$features,collapse = "+"))
+    model.train <- glm( as.formula(formula.train), data = data.ready, family = binomial)
+    step.model.train <- stepAIC(model.train, direction = "backward",trace = F)
+    
+    # Make predictions
+    probabilities <- step.model.train %>% predict(type = "response")
+    predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
+    observed.classes <- data.ready$Response
+    auc.train <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
+    
+    # 30% test data 
+    .data_for_logistic %>%
+      dplyr::filter(type == "train") %>%
+      dplyr::mutate(data.ready = purrr::pmap(list(GSVA,response,sample_group),.f=function(.x,.y,.z){
+        .x %>%
+          dplyr::inner_join(.y, by = "Run") %>%
+          dplyr::inner_join(.z, by = "Run") %>%
+          dplyr::filter(usage == "test") %>%
+          dplyr::select(-Run, -usage) %>%
+          dplyr::mutate(Response = as.factor(Response))
+      })) %>%
+      dplyr::select(data.ready) %>%
+      tidyr::unnest() -> data.ready.test
+    data.ready.test[is.na(data.ready.test)] <- 0
+    colnames(data.ready.test) <- gsub(" ",".",colnames(data.ready.test))
+    
+    # Make predictions
+    probabilities <- step.model.train %>% predict(data.ready.test,type = "response")
+    predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
+    observed.classes <- data.ready.test$Response
+    auc.test <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
+    
+    .data_for_logistic %>%
+      # dplyr::filter(type == "validation") %>%
+      dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=step.model.train)) %>%
+      dplyr::select(-response,-GSVA, -sample_group) %>%
+      tidyr::unnest() -> validation_auc
+    
+    paste(signif(auc.train,2),signif(auc.test,2),
+          paste(signif(validation_auc$auc,2),collapse = " "),
+          paste(rownames(as.data.frame(summary(step.model.train)$coefficients))[-1],collapse = "/"),
+          times,succss) %>%
+      readr::write_lines(file.path(res_path,stage,"logistic_record.txt"),sep = "\n",append = TRUE)
+    if(min(auc.train,auc.test)>=0.8){
+      if(min(validation_auc$auc)>=0.7){
+        succss = succss + 1
+        step.model.train %>%
+          readr::write_rds(file.path(res_path,stage,paste("Final_model",succss,".rds.gz",sep="_")),compress = "gz")
+        summary(step.model.train)$coefficients %>%
+          as.data.frame() %>%
+          readr::write_tsv(file.path(res_path,stage,paste("Final_model_coef",succss,".rds.gz",sep="_")))
+        
+        # draw picture
+        validation_auc %>%
+          dplyr::inner_join(Response_statistic,by=c("Biopsy_Time","Author")) %>%
+          dplyr::mutate(group = paste(Author,blockade.y,paste("(",Response,"*/",`non-Response`,"**);",sep=""),"AUC","=",signif(auc,2))) %>%
+          dplyr::select(roc_data,group,type) %>%
+          tidyr::unnest() -> plot_ready
+        plot_ready %>%
+          ggplot(aes(x=Specificity,y=Sensitivity)) +
+          geom_path(aes(color=group,linetype = type)) + 
+          scale_x_reverse()  +
+          my_theme +
+          theme(
+            legend.position = c(0.75,0.25),
+            legend.title = element_blank()
+          )
+        ggsave(file.path(res_path,stage,paste("ROC_plot",succss,"png",sep="_")),device = "png",width = 5, height = 5)
+        ggsave(file.path(res_path,stage,paste("ROC_plot",succss,"pdf",sep="_")),device = "pdf",width = 5, height = 5)
+        
+      } else{
+        succss = succss
+      }
     }
   }
+  succss
 }
-save.image(file.path(res_path,"logistic_prediction.rda"))
+
+# cl <- 2
+# cluster <- create_cluster(cores = cl)
+# tibble::tibble(Biopsy_Time=c("pre-treatment","on-treatment")) %>%
+#   partition(cluster = cluster) %>%
+#   multidplyr::cluster_library("magrittr") %>%
+#   multidplyr::cluster_library("tidyverse") %>%
+#   multidplyr::cluster_library("stringr") %>%
+#   multidplyr::cluster_library("caret") %>%
+#   multidplyr::cluster_library("glmnet") %>%
+#   multidplyr::cluster_library("broom") %>%
+#   multidplyr::cluster_library("pROC") %>%
+#   multidplyr::cluster_library("MASS") %>%
+#   multidplyr::cluster_library("ggplot2") %>%
+#   multidplyr::cluster_assign_value("fn_DE",fn_logistic) %>%
+#   multidplyr::cluster_assign_value("fn_feature_filter",fn_feature_filter) %>%
+#   multidplyr::cluster_assign_value("fn_auc",fn_auc) %>%
+#   multidplyr::cluster_assign_value("fn_feature_score",fn_feature_score) %>%
+#   multidplyr::cluster_assign_value("fn_overlap_select",fn_overlap_select) %>%
+#   multidplyr::cluster_assign_value("fn_select_train_test",fn_select_train_test) %>%
+#   multidplyr::cluster_assign_value("fn_auc_on_validation",fn_auc_on_validation) %>%
+#   multidplyr::cluster_assign_value("my_theme",my_theme) %>%
+#   multidplyr::cluster_assign_value("data_for_logistic",data_for_logistic) %>% 
+#   multidplyr::cluster_assign_value("res_path",res_path) %>%
+#   multidplyr::cluster_assign_value("fn_Run",fn_Run) %>%
+#   dplyr::mutate(DE_res = purrr::map(Biopsy_Time,fn_Run)) %>%
+#   collect() %>%
+#   dplyr::as_tibble() %>%
+#   dplyr::ungroup() %>%
+#   dplyr::select(-PARTITION_ID, -expr) -> gene_DE_between_high_low.all_features.cox_score.OS
+# on.exit(parallel::stopCluster(cluster))
+# fn_Run(Biopsy_Time="pre-treatment")
+fn_Run(stage="on-treatment")
+
+# save.image(file.path(res_path,"logistic_prediction.rda"))
