@@ -239,7 +239,7 @@ exp_data %>%
   dplyr::mutate(GSVA = purrr::map2(tissue, data_spread, fn_GSVA)) %>%
   dplyr::select(-data_spread) -> GSVA.score.all
 
-GSVA.score.all_specific %>%
+GSVA.score.all %>%
   readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-togather.rds.gz"), compress = "gz")
 
 
