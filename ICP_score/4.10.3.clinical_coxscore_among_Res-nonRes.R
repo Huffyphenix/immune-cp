@@ -13,6 +13,8 @@ res_path <- file.path(score_path,"cox_score")
 
 
 # load data ---------------------------------------------------------------
+load(file.path(res_path,"cox_score.difference_between_response_non-response.rda"))
+
 # coef of Coxph model from tcga
 uni_cox.PFS <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/cancer_specific/3.survival_with_GSVA_score.new","GSVA.score.univarite.surv.PFS.tsv"))
 multi_cox_PFS <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/cancer_specific/3.survival_with_GSVA_score.new","GSVA.score.multi-varite.surv.PFS.tsv"))
@@ -23,7 +25,8 @@ multi_cox_OS <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/cancer
 # clinical GSVA score
 gsva_clinical <- readr::read_rds(file.path(score_path,"ICP_GSVA_score-by-matastatic-or-not_all-possible-features_class-cancer_specific.rds.gz")) %>%
   dplyr::mutate(cancer_types = ifelse(tissue == "skin", "SKCM" ,"STAD"))
-
+# gsva_clinical <- readr::read_rds(file.path(score_path,"ICP_GSVA_score_all-possible-features_all-specific.rds.gz")) %>%
+#   dplyr::mutate(cancer_types = ifelse(tissue == "skin", "SKCM" ,"STAD"))
 # clinical response data
 sample_info <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","RNAseq-sample_info_complete.tsv")) %>%
   dplyr::filter(Library_strategy == "RNA-Seq") %>%
