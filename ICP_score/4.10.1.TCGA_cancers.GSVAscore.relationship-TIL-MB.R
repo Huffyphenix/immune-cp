@@ -1,5 +1,6 @@
 ########################## GSVA score of features are: expression site of ICPs, gene family
 ########################## get the correlation between GSVA score and TIL, mutation burden
+########################## cancer type specific
 library(magrittr)
 library(tidyverse)
 library(survival)
