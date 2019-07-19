@@ -13,7 +13,7 @@ res_path <- file.path(score_path,"cox_score")
 
 
 # load data ---------------------------------------------------------------
-load(file.path(res_path,"cox_score.difference_between_response_non-response.rda"))
+load(file.path(res_path,"cox_score.difference_between_response_non-response_allcancer-togather.rda"))
 
 # coef of Coxph model from tcga
 uni_cox.PFS <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/all_togather/3.survival_with_GSVA_score.new","GSVA.score.univarite.surv.PFS.tsv"))
@@ -169,4 +169,4 @@ gsva_clinical %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> GSVA_score_diff_in_R_NR
   
-save.image(file.path(res_path,"cox_score.difference_between_response_non-response.rda"))
+save.image(file.path(res_path,"cox_score.difference_between_response_non-response_allcancer-togather.rda"))
