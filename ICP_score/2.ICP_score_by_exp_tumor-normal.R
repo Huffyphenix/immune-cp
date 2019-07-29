@@ -92,35 +92,43 @@ tumor_class_by_T_N.only_paired.genePercent %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::mutate(n=dplyr::n()) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(cancer_types = paste(cancer_types,"(n=",n,")",sep="")) -> tumor_class_by_T_N.only_paired.genePercent.plot
+  dplyr::mutate(cancer_types_anno = paste(cancer_types,"(n=",n,")",sep="")) -> tumor_class_by_T_N.only_paired.genePercent.plot
 
 tumor_class_by_T_N.only_paired.genePercent.plot %>%
   dplyr::filter(!is.na(hot_per)) %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::mutate(mid = quantile(hot_per,0.5)) %>%
   dplyr::ungroup() %>%
-  dplyr::select(cancer_types,mid) %>%
+  dplyr::select(cancer_types,cancer_types_anno,mid) %>%
   dplyr::arrange(mid) %>%
   unique()-> cancer_rank
 
+cancer21_color %>%
+  dplyr::inner_join(cancer_rank,by="cancer_types") -> cancer21_color.overall
+
 tumor_class_by_T_N.only_paired.genePercent.plot %>%
   dplyr::filter(!is.na(hot_per)) %>%
-  ggplot(aes(x=cancer_types,y=hot_per)) +
+  ggplot(aes(x=cancer_types_anno,y=hot_per)) +
   # geom_jitter(size=0.5,width = 0.1) +
-  scale_x_discrete(limits= cancer_rank$cancer_types) +
-  geom_boxplot(aes(fill = cancer_types),alpha=0.5) +
+  scale_x_discrete(limits= cancer_rank$cancer_types_anno) +
+  geom_boxplot(aes(fill = cancer_types_anno),alpha=0.5) +
   # rotate() +
-  labs(y = "Ratio of ICPs indicate high immunoplasticity") +
+  labs(y = "Percentage of upregulated ICPs") +
+  scale_fill_manual(
+    values = cancer21_color.overall$color,
+    limits = cancer21_color.overall$cancer_types_anno
+  ) +
   my_theme +
   theme(
     panel.background = element_rect(fill = "white", 
                                     colour = "black"),
-    axis.title.x = element_blank(),
-    legend.position = "none",
-    axis.text.x = element_text(colour = "black",vjust = 0.5,hjust = 1, angle = 90)
-  )
-ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 6,height = 4)
-ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 6,height = 4)
+    axis.title.y = element_blank(),
+    legend.position = "none"
+  ) +
+  coord_flip()
+  
+ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,height = 6)
+ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
 
 cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
 cancer_color %>%
@@ -150,14 +158,64 @@ tumor_class_by_T_N.only_paired.genePercent %>%
 ggsave(file.path(res_path,"score_distribution_in_cancers.png"),device = "png",height = 6,width = 8)
 ggsave(file.path(res_path,"score_distribution_in_cancers.pdf"),device = "pdf",height = 6,width = 8)
 
+# correlation between TIL(T-N) and upregulated gene percentage -----
+TCGA.RNAseq.TN.paired.TILdiff.all_celltype <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/result_20171025/e_5_immune_infiltration","TCGA.RNAseq.TN.paired.TILdiff.all_celltype.tsv"))
+
+TCGA.RNAseq.TN.paired.TILdiff.all_celltype %>%
+  dplyr::rename("Participant"="barcode_short") %>%
+  dplyr::inner_join(tumor_class_by_T_N.only_paired.genePercent,by=c("Participant","cancer_types")) -> TCGA.RNAseq.TN.paired.TILdiff.Upratio
+
+TCGA.RNAseq.TN.paired.TILdiff.Upratio %>%
+  tidyr::nest(-cell_type) %>%
+  dplyr::mutate(cor = purrr::map(data,.f=function(.x){
+    broom::tidy(
+      cor.test(.x$hot_per,.x$TIL.diff,method = "spearman",alternative = "two.sided")
+    )
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> TCGA.RNAseq.TN.paired.TILdiff.Upratio.Cor_res
+
+TCGA.RNAseq.TN.paired.TILdiff.Upratio %>%
+  dplyr::filter(!is.na(TIL.diff) & !is.na(hot_per)) %>%
+  dplyr::group_by(cell_type) %>%
+  dplyr::mutate(x=max(hot_per)*0.25,y=max(TIL.diff)) %>%
+  dplyr::select(x,y) %>%
+  dplyr::ungroup() %>%
+  unique() %>%
+  dplyr::inner_join(TCGA.RNAseq.TN.paired.TILdiff.Upratio.Cor_res,by="cell_type") %>%
+  dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2),sep="")) -> TCGA.RNAseq.TN.paired.TILdiff.Upratio.Cor_res.label
+
+TCGA.RNAseq.TN.paired.TILdiff.Upratio %>%
+  ggplot(aes(x=hot_per,y=TIL.diff)) +
+  geom_jitter(size=0.5) +
+  geom_smooth(se= F, method = "lm") +
+  facet_wrap("~cell_type",scales = "free") +
+  geom_text_repel(aes(x=x,y=y,label=label),data=TCGA.RNAseq.TN.paired.TILdiff.Upratio.Cor_res.label,size = 3) +
+  my_theme +
+  labs(x="Percentage of upregulated ICPs",
+       y="TIL(Tumor-Normal)")
+
+ggsave(file.path(res_path,"score_cor_with_TILdiff.png"),device = "png",height = 6,width = 6)
+ggsave(file.path(res_path,"score_cor_with_TILdiff.pdf"),device = "pdf",height = 6,width = 6)
+
 ##### 1.2.all sample together survival -----------------------------------
-# 1.2.1.only paired sample score survival -----
+
 
 tumor_class_by_T_N.only_paired.genePercent %>%
   dplyr::rename("barcode" = "Participant") %>%
   dplyr::inner_join(clinical_tcga,by="barcode") %>%
   dplyr::inner_join(clinical,by="barcode") -> tumor_class_by_T_N.only_paired.immunityScore.clinical
 
+tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
+  dplyr::filter(!is.na(hot_per) & !is.na(PFS)) %>%
+  dplyr::mutate(PFS = as.factor(PFS)) %>%
+  ggplot(aes(x=PFS,y=hot_per)) +
+  geom_violin() +
+  geom_boxplot(width=0.1) +
+  facet_wrap(".~cancer_types",scale="free") +
+  ggpubr::stat_compare_means(method = "wilcox.test",label = "p.format")
+    
+# 1.2.1.only paired sample score survival -----
 color_list <- tibble::tibble(group=c("High","Low"),
                              color=c("red","blue"))
 sur_name <- paste("Score_0.5_Tumor_5year_OS_from_OnlyPaired")
