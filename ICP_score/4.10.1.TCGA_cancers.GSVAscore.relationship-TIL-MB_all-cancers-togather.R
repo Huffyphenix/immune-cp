@@ -710,6 +710,74 @@ GSVA.score.univarite.surv.PFS.multi.coxscore %>%
   })) %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi.coxscore.correlation.mutation_durden
+# survival analysis -------
+# PFS survival all samples ----
+GSVA.score.univarite.surv.PFS.multi.coxscore %>%
+  dplyr::filter(substr(barcode,14,15)=="01") %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  dplyr::inner_join(clinical_all_data,by="barcode") %>%
+  dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::mutate(group = ifelse(cox_score > quantile(cox_score,0.5),"high","low")) -> GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv
+
+GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv %>%
+  dplyr::mutate(x = "all") %>%
+  tidyr::nest(-x) %>%
+  dplyr::mutate(surv_res = purrr::map2(data,x,fn_survival_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest()
+
+sur_res_path <- file.path(res_path,"3.survival_with_GSVA_score.new")
+tibble::tibble(color = c("red","blue"),
+               group = c("high","low"))  -> color_list
+sur_name <- paste("3.PFS_between_PFS-multi_coxscore_high-low")
+
+GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv %>%
+  fn_durvival_plot(title="Pan-cancer\nProgression-free survival",color=color_list,filename=sur_name,out_path=sur_res_path,legend.pos="none",h=3,w=4)
+
+# PFS survival cancer specific ----
+GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv %>%
+  dplyr::group_by(cancer_types.y) %>%
+  dplyr::mutate(group = ifelse(cox_score > quantile(cox_score,0.5),"2high","1low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types.y) %>%
+  dplyr::mutate(surv_res = purrr::map2(data,cancer_types.y,fn_survival_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv.res
+
+GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv.res %>%
+  dplyr::arrange(kmp) %>%
+  .$cancer_types.y -> cancer_types.y
+
+GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv.res %>%
+  dplyr::mutate(value = -log10(kmp)) %>%
+  ggplot(aes(x=cancer_types.y,y=value)) +
+  geom_bar(aes(fill=status),stat="identity",alpha = 0.5,
+           position=position_dodge()) +
+  scale_x_discrete(limits=cancer_types.y) +
+  scale_fill_manual(
+    values = c("red","blue"),
+    name = "HR(High/Low)"
+  ) +
+  geom_hline(yintercept = 1.3) +
+  labs(x="Cancer types",
+       y="-log10(KMP)") +
+  my_theme +
+  coord_flip()
+
+
+sur_res_path <- file.path(res_path,"3.survival_with_GSVA_score.new")
+tibble::tibble(color = c("red","blue"),
+               group = c("high","low"))  -> color_list
+sur_name <- paste("3.PFS_between_OS_coxscore_high-low")
+
+GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv %>%
+  dplyr::group_by(cancer_types.x) %>%
+  dplyr::mutate(group = ifelse(cox_score > quantile(cox_score,0.5),"high","low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types.x) %>%
+  dplyr::mutate(title = paste(cancer_types.x,"\nOverall survival")) %>%
+  dplyr::mutate(filename = paste("3.PFS_between_OS_coxscore_high-low",cancer_types.x,sep=".")) %>%
+  dplyr::mutate(res = purrr::pmap(list(data=data,title=title,filename=filename),fn_durvival_plot,color=color_list,out_path=file.path(sur_res_path,"3.PFS_cancer_specific.PFS_coxscore"),legend.pos="none",h=3,w=4))
 
 # 5.2.2.OS --------
 
@@ -809,7 +877,7 @@ GSVA.score.univarite.surv.OS %>%
 
 GSVA.score.univarite.surv.OS.coxscore %>%
   readr::write_tsv(file.path(res_path,"3.survival_with_GSVA_score.new","3.OS_cox_score(GSVA*coef_of_multi_cox)-all_features.tsv"))
-
+# 5.2.2.1.correlation with TIl,CTL and MB --------
 GSVA.score.univarite.surv.OS.coxscore %>%
   dplyr::mutate(barcode = substr(barcode,1,15)) %>%
   dplyr::inner_join(TIMER_immunity,by="barcode") %>%
@@ -843,6 +911,119 @@ GSVA.score.univarite.surv.OS.coxscore.correlation.TIL %>%
 
 GSVA.score.univarite.surv.OS.coxscore.correlation.combine %>%
   readr::write_rds(file.path(res_path,"3.survival_with_GSVA_score.new","3.OS_cox_score(GSVA*coef_of_multi_cox)-all_features-correlation.combine(TIL.CTL.MB).rds.gz"),compress = "gz")
+
+# 5.2.2.2.survival between high and low cox score --------
+# survival plot fucntion ---
+fn_durvival_plot <- function(data,title="Pan-cancers progress-free survival",color,filename="Pan-can.PFS.survival",out_path,legend.pos,h=3,w=4){
+  
+  fit <- survfit(Surv(time, status) ~ group, data = data, na.action = na.exclude)
+  tmp <- 0
+  for (i in 1:length(fit$strata)) {
+    tmp <- fit$strata[i] + tmp
+    .group <- strsplit(names(fit$strata[i]),split = "=")[[1]][2]
+    tibble::tibble(mid_time=fit$time,final_surv=fit$surv) %>%
+      head(tmp) %>%
+      tail(1) %>%
+      dplyr::mutate(group = .group)-> res.tmp
+    
+    if(i==1){
+      tail_position <- res.tmp
+    } else{
+      tail_position <- rbind(tail_position,res.tmp)
+    }
+  }
+  diff <- survdiff(Surv(time, status) ~ group, data = data, na.action = na.exclude)
+  kmp <- 1 - pchisq(diff$chisq, df = length(levels(as.factor(data$group))) - 1) %>% signif(2)
+  color %>%
+    dplyr::inner_join(data,by="group") %>%
+    dplyr::inner_join(tail_position,by="group") %>%
+    dplyr::group_by(group) %>%
+    dplyr::mutate(n=n()) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(label = paste(group,", n=",n,sep="")) %>%
+    dplyr::select(group,label,color,n,mid_time,final_surv) %>%
+    dplyr::arrange(group) %>%
+    unique() -> text_data
+  survminer::ggsurvplot(fit,pval=F, #pval.method = T,
+                        data = data,
+                        # surv.median.line = "hv",
+                        title = paste(title,", p=",kmp,sep=""), # change it when doing diff data
+                        xlab = "Time (days)",
+                        ylab = 'Probability of survival',
+                        # legend.title = "Methyla group:",
+                        legend= c(legend.pos),
+                        # ggtheme = theme_survminer(),
+                        ggtheme = theme(
+                          panel.border = element_blank(), 
+                          panel.grid.major = element_blank(),
+                          panel.grid.minor = element_blank(), 
+                          axis.line = element_line(colour = "black",size = 0.5),
+                          panel.background = element_rect(fill = "white"),
+                          legend.key = element_blank(),
+                          legend.background = element_blank(),
+                          legend.text = element_text(size = 8),
+                          axis.text = element_text(size = 12,color = "black"),
+                          legend.title = element_blank(),
+                          axis.title = element_text(size = 12,color = "black"),
+                          text = element_text(color = "black")
+                        )
+  )[[1]] +
+    # geom_text(aes(x=time,y=surv,label=label),data=text_data) +
+    geom_text_repel(aes(x=mid_time,y=final_surv,label=label,color=group),data=text_data) +
+    scale_color_manual(
+      values = c(text_data$color,text_data$color),
+      labels = c(text_data$group,text_data$group)
+    ) -> p;p
+  ggsave(filename = paste(filename,kmp,"pdf",sep = "."), plot = p, path = out_path,device = "pdf",height = h,width = w)
+  ggsave(filename = paste(filename,kmp,"png",sep = "."), plot = p, path = out_path,device = "png",height = h,width = w)
+}
+
+# PFS survival all samples ----
+GSVA.score.univarite.surv.OS.coxscore %>%
+  dplyr::filter(substr(barcode,14,15)=="01") %>%
+  dplyr::mutate(barcode = substr(barcode,1,12)) %>%
+  dplyr::inner_join(clinical_all_data,by="barcode") %>%
+  dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::mutate(group = ifelse(cox_score > quantile(cox_score,0.5),"high","low")) -> GSVA.score.univarite.surv.OS.coxscore.for_surv
+
+GSVA.score.univarite.surv.OS.coxscore.for_surv %>%
+  dplyr::mutate(x = "all") %>%
+  tidyr::nest(-x) %>%
+  dplyr::mutate(surv_res = purrr::map2(data,x,fn_survival_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest()
+
+sur_res_path <- file.path(res_path,"3.survival_with_GSVA_score.new")
+tibble::tibble(color = c("red","blue"),
+               group = c("high","low"))  -> color_list
+sur_name <- paste("3.PFS_between_OS_coxscore_high-low")
+
+GSVA.score.univarite.surv.OS.coxscore.for_surv %>%
+  fn_durvival_plot(title="Pan-cancer\nOverall survival",color=color_list,filename=sur_name,out_path=sur_res_path,legend.pos="none",h=3,w=4)
+
+# PFS survival cancer specific ----
+GSVA.score.univarite.surv.OS.coxscore.for_surv %>%
+  dplyr::group_by(cancer_types.x) %>%
+  dplyr::mutate(group = ifelse(cox_score > quantile(cox_score,0.5),"high","low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types.x) %>%
+  dplyr::mutate(surv_res = purrr::map2(data,cancer_types.x,fn_survival_test)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest()
+
+sur_res_path <- file.path(res_path,"3.survival_with_GSVA_score.new")
+tibble::tibble(color = c("red","blue"),
+               group = c("high","low"))  -> color_list
+sur_name <- paste("3.PFS_between_OS_coxscore_high-low")
+
+GSVA.score.univarite.surv.OS.coxscore.for_surv %>%
+  dplyr::group_by(cancer_types.x) %>%
+  dplyr::mutate(group = ifelse(cox_score > quantile(cox_score,0.5),"high","low")) %>%
+  dplyr::ungroup() %>%
+  tidyr::nest(-cancer_types.x) %>%
+  dplyr::mutate(title = paste(cancer_types.x,"\nOverall survival")) %>%
+  dplyr::mutate(filename = paste("3.PFS_between_OS_coxscore_high-low",cancer_types.x,sep=".")) %>%
+  dplyr::mutate(res = purrr::pmap(list(data=data,title=title,filename=filename),fn_durvival_plot,color=color_list,out_path=file.path(sur_res_path,"3.PFS_cancer_specific.OS_coxscore"),legend.pos="none",h=3,w=4))
 
 # 6. filter Features for each cancers -------------------------------------
 GSVA.TIL.res %>%
