@@ -13,7 +13,7 @@ tcga_path <- file.path(basic_path,"/data/TCGA")
 result_path <- file.path(basic_path,"immune_checkpoint/result_20171025/e_5_immune_infiltration")
 
 load(
-  file.path(out_path,"pan-can_survival-TIL(T-N).rds")
+  file.path(result_path,"pan-can_survival-TIL(T-N).rds")
 )
 # load data ---------------------------------------------------------------
 ## survival data
@@ -65,6 +65,16 @@ TCGA.RNAseq.TN.paired %>%
   tidyr::spread(key="class",value="TIL") %>%
   dplyr::mutate(TIL.diff = Tumor-Normal) -> TCGA.RNAseq.TN.paired.TILdiff
 
+TCGA.RNAseq.TN.paired %>%
+  dplyr::inner_join(TIMER_immunity,by="barcode") %>%
+  dplyr::select(-barcode) %>%
+  tidyr::gather(-cancer_types, -barcode_short,-class,key="cell_type",value="TIL") %>%
+  # dplyr::select(cancer_types,barcode_short,TIL,class) %>%
+  tidyr::spread(key="class",value="TIL") %>%
+  dplyr::mutate(TIL.diff = Tumor-Normal) -> TCGA.RNAseq.TN.paired.TILdiff.all_celltype
+
+TCGA.RNAseq.TN.paired.TILdiff.all_celltype %>%
+  readr::write_tsv(file.path(result_path,"TCGA.RNAseq.TN.paired.TILdiff.all_celltype.tsv"))
 
 # plot theme --------------------------------------------------------------
 
