@@ -19,10 +19,20 @@ basic_path <- file.path("F:/我的坚果云")
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 TCGA_path <- file.path("/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
-res_path <- file.path(immune_res_path,"ICP_score/2.1.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
+# res_path <- file.path(immune_res_path,"ICP_score/2.1.Clinical_validation-GSVA-ICPs_exp_site_5_feature") # batch effects not corrected
+res_path <- file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
 
 # load data ---------------------------------------------------------------
-exp_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data/mRNA_exp","all_FPKM_expression_2.txt"))
+
+# exp_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data/mRNA_exp","all_FPKM_expression_2.txt")) # un-batched expression data 
+
+# batch corrected expression data ####
+exp_data <- readr::read_rds(file.path("/home/huff/project/immune_checkpoint/clinical_response_data/mRNA_exp","Batch_corrected_CPM_exp.rds.gz"))   
+exp_data %>%
+  as.data.frame() %>%
+  dplyr::mutate(gene_id = rownames(exp_data)) -> exp_data
+#####
+
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header = T)
 gene_list$symbol <- as.character(gene_list$symbol)
 # survival_data <- readr::read_rds(file.path("/home/huff/project/data/TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
@@ -133,4 +143,4 @@ exp_data.nest %>%
   dplyr::select(-data_spread) -> GSVA.score
 
 GSVA.score %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "ICP_GSVA_score-use_data_batch_corrected.rds.gz"), compress = "gz")
