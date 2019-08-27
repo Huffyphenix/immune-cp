@@ -71,7 +71,7 @@ fn_mean <- function(names,genelist,exp){
     dplyr::group_by(barcode) %>%
     dplyr::mutate(value = mean(exp)) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(Features = paste("Mean_(",names,")"),sep="")%>%
+    dplyr::mutate(Features = paste("Mean.",names,sep=""))%>%
     dplyr::select(barcode,value,Features) %>%
     unique()
 }
@@ -104,7 +104,7 @@ fn_ratio_A <- function(names,genelist,exp){
     dplyr::filter(symbol %in% genes) %>%
     dplyr::inner_join(exp.sum,by="barcode") %>%
     dplyr::mutate(value = (value+1)/(exp+1))  %>%
-    dplyr::mutate(Features = paste("Fold_(",names,"/",symbol,")",sep="")) %>%
+    dplyr::mutate(Features = paste("Fold.",names,".",symbol,sep="")) %>%
     dplyr::select(barcode,value,Features) %>%
     unique()
 }
@@ -130,7 +130,7 @@ fn_ratio_B <- function(names,genelist,exp){
         tidyr::spread(key="symbol",value="exp") %>%
         dplyr::rename("G1"=.x$symbol[1],"G2"=.x$symbol[2]) %>%
         dplyr::mutate(value = (G1+1)/(G2+1)) %>%
-        dplyr::mutate(Features = paste("Ratio_(",.x$symbol[1],"/",.x$symbol[2],")",sep=""))%>%
+        dplyr::mutate(Features = paste("Ratio.",.x$symbol[1],".",.x$symbol[2],sep=""))%>%
         dplyr::select(barcode,value,Features) %>%
         unique()
     })) %>%
