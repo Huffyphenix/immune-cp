@@ -20,14 +20,24 @@ tcga_path <- file.path(basic_path,"/data/TCGA")
 
 # load data ---------------------------------------------------------------
 GSVA.score.alltumor <- 
-  readr::read_rds(file.path(GSVA_path,"TCGA.All-cancer-Tumor_GSVA.score_ICPs_features.rds.gz"))
+  readr::read_rds(file.path(GSVA_path,"TCGA.All-cancer-Tumor_GSVA.score_ICPs_features.rds.gz")) %>%
+  tidyr::unnest() %>%
+  tidyr::gather(-cancer_types,-barcode,key="Features",value="value") %>%
+  dplyr::mutate(Features=gsub(" ","_",Features)) %>%
+  tidyr::spread(key="Features",value="value")
 exp_ratio <- 
-  readr::read_rds(file.path(exp_ratio_path,"TCGA_mean_fold_ratio_features_value.rds.gz"))
+  readr::read_rds(file.path(exp_ratio_path,"TCGA_mean_fold_ratio_features_value.rds.gz"))  %>%
+  tidyr::gather(-barcode,key="Features",value="value") %>%
+  # dplyr::mutate(Features=gsub("\\(","",Features)) %>%
+  # dplyr::mutate(Features=gsub("\\)","",Features)) %>%
+  # dplyr::mutate(Features=gsub("/","_",Features)) %>%
+  dplyr::mutate(Features=gsub(" ","_",Features)) %>%
+  dplyr::mutate(Features=gsub("-",".",Features)) %>%
+  tidyr::spread(key="Features",value="value")
 
 
 # combine data ------------------------------------------------------------
 GSVA.score.alltumor %>%
-  tidyr::unnest() %>%
   dplyr::inner_join(exp_ratio, by="barcode") %>%
   tidyr::nest(-cancer_types, .key="GSVA") -> GSVA_exp_ratio_combine
 
@@ -138,8 +148,9 @@ gene_list %>%
   dplyr::select(symbol,functionWithImmune,family,Recepter_pairs,Exp_site.1,All_gene) %>%
   tidyr::gather(-symbol,key="Groups",value="Features") %>%
   tidyr::nest(-Features) %>%
-  dplyr::filter(! Features %in% "Other") %>%
+  dplyr::filter(!Features %in% "Other") %>%
   dplyr::filter(!is.na(Features)) %>%
+  dplyr::mutate(Features = gsub(" ","_",Features)) %>%
   dplyr::mutate(Feature_symbol = purrr::map(data,.f=function(.x){
     tibble::tibble(
       Feature_symbol=paste(.x$symbol,collapse="/"),
@@ -147,19 +158,19 @@ gene_list %>%
   })) %>%
   dplyr::select(-data) %>%
   tidyr::unnest() %>%
-  dplyr::mutate(label = ifelse(n<5,paste("GSVA(",Feature_symbol,")"),paste("GSVA(",Features,")"))) %>%
+  dplyr::mutate(label = ifelse(n<5,paste("GSVA.",Feature_symbol,sep=""),paste("GSVA.",Features,sep=""))) %>%
   dplyr::right_join(GSVA.TIL.cor.DE.plot,by="Features") %>%
-  dplyr::mutate(label=ifelse(is.na(label),Features,paste("GSVA(",Features,")"))) -> label.data
+  dplyr::mutate(label=ifelse(is.na(label),Features,paste("GSVA.",Features,sep=""))) -> label.data
 
 library(ggrepel)
 
 label.data %>%
-  dplyr::mutate(label = ifelse(cor >=0.3 & FC >=1.5, label, NA)) %>%
+  dplyr::mutate(label = ifelse(cor >=0.4 & FC >=1.5, label, NA)) %>%
   dplyr::mutate(label_or_not = ifelse(cor >=0.3 & FC >=1.5, "yes", "no")) %>%
   ggplot(aes(x=cor,y=FC)) +
   geom_jitter(aes(color=label_or_not)) +
   facet_wrap(".~cell_type",scales = "free") +
-  geom_text_repel(aes(x=cor,y=FC,label=label),color="red",size=3) +
+  # geom_text_repel(aes(x=cor,y=FC,label=label),color="red",size=3) +
   scale_color_manual(
     values = c("black","red")
   ) +
@@ -216,6 +227,7 @@ gene_list %>%
   tidyr::nest(-Features) %>%
   dplyr::filter(! Features %in% "Other") %>%
   dplyr::filter(!is.na(Features)) %>%
+  dplyr::mutate(Features = gsub(" ","_",Features)) %>%
   dplyr::mutate(Feature_symbol = purrr::map(data,.f=function(.x){
     tibble::tibble(
       Feature_symbol=paste(.x$symbol,collapse="/"),
@@ -225,7 +237,7 @@ gene_list %>%
   tidyr::unnest() %>%
   dplyr::mutate(label = ifelse(n<5,Feature_symbol,Features)) %>%
   dplyr::right_join(GSVA.MB.cor.DE.plot,by="Features") %>%
-  dplyr::mutate(label=ifelse(is.na(label),Features,paste("GSVA(",Features,")"))) -> label.data.meanMB
+  dplyr::mutate(label=ifelse(is.na(label),Features,paste("GSVA.",Features,sep=""))) -> label.data.meanMB
 
 library(ggrepel)
 
@@ -288,6 +300,7 @@ gene_list %>%
   tidyr::nest(-Features) %>%
   dplyr::filter(! Features %in% "Other") %>%
   dplyr::filter(!is.na(Features)) %>%
+  dplyr::mutate(Features = gsub(" ","_",Features)) %>%
   dplyr::mutate(Feature_symbol = purrr::map(data,.f=function(.x){
     tibble::tibble(
       Feature_symbol=paste(.x$symbol,collapse="/"),
@@ -295,9 +308,10 @@ gene_list %>%
   })) %>%
   dplyr::select(-data) %>%
   tidyr::unnest() %>%
-  dplyr::mutate(label = ifelse(n<5,Feature_symbol,Features)) %>%
   dplyr::right_join(GSVA.CTL.DE.plot.all,by="Features") %>%
-  dplyr::mutate(label=ifelse(is.na(label),Features,paste("GSVA(",Features,")"))) -> label.data.CTL
+  dplyr::mutate(n = ifelse(is.na(n),10,n)) %>%
+  dplyr::mutate(label = ifelse(n<5,Feature_symbol,Features)) %>%
+  dplyr::mutate(label=ifelse(is.na(Feature_symbol),Features,paste("GSVA.",Features,sep=""))) -> label.data.CTL
 
 label.data.CTL %>%
   dplyr::mutate(label = ifelse(Correlation  >=0.5 & FC >=4, label, NA)) %>%
@@ -367,27 +381,30 @@ fn_survival_test <- function(data,feature){
 
 # 3.2.2.multi-variable cox analysis ---------
 fn_survival_test.multiCox <- function(data,uni_sig_feature){
-  covariates <- uni_sig_feature$Features %>% unique()
-  if(length(covariates)>=1){
-    multi_formulas <- as.formula(paste('Surv(time, status)~', paste(covariates,collapse = " + ")))
-    model <- coxph(multi_formulas, data = data)
-    model.s <- summary(model)
-    
-    # Extract data
-    tibble::tibble(
-      Features = rownames(model.s$coefficients),
-      n = model.s$n,
-      coef = model.s$coefficients[,1],
-      hr = model.s$conf.int[,1],
-      hr_l = model.s$conf.int[,3],
-      hr_h = model.s$conf.int[,4],
-      coxp = model.s$coefficients[,5]) %>%
-      dplyr::mutate(status = ifelse(hr > 1, "High_risk", "Low_risk"))
-  }else{
-    tibble::tibble()
-  }
+  # covariates <- uni_sig_feature$Features %>% unique()
+  uni_sig_feature %>%
+    # head() %>%
+    dplyr::group_by(Features) %>%
+    dplyr::mutate(res = purrr::map(Features,.f=function(.x){
+      multi_formulas <- as.formula(paste('Surv(time, status)~', paste(c(.x,"Age", "Stage", "B_cell","CD4_Tcell","CD8_Tcell","Neutrophil","Macrophage","Dendritic","TIL","CTL"),collapse = "+")))
+      print(multi_formulas)
+      model <- coxph(multi_formulas, data = data)
+      model.s <- summary(model)
+      
+      # Extract data
+      tibble::tibble(
+        Features = rownames(model.s$coefficients),
+        n = model.s$n,
+        coef = model.s$coefficients[,1],
+        hr = model.s$conf.int[,1],
+        hr_l = model.s$conf.int[,3],
+        hr_h = model.s$conf.int[,4],
+        coxp = model.s$coefficients[,5]) %>%
+        dplyr::mutate(status = ifelse(hr > 1, "High_risk", "Low_risk")) %>%
+        head(1)
+    })) %>%
+    tidyr::unnest()
 }
-
 # 3.2.3.drawing cox plot ------
 fn_cox_plot_1 <- function(data,filename,title,facet, dir,w=4,h=4){
   data %>% 
@@ -453,12 +470,18 @@ stage_class <- tibble::tibble(Stage = c("i/ii nos","is","Not_applicable",
                                         "stage iii","stage iiia","stage iiib","stage iiic",
                                         "stage iv","stage iva","stage ivb","stage ivc",
                                         "stage x",NA),
-                              group = c("Not_applicable","Not_applicable","Not_applicable",
+                              stage_group = c("Not_applicable","Not_applicable","Not_applicable",
                                         "stage i","stage i","stage i",
                                         "stage ii","stage ii","stage ii","stage ii",
                                         "stage iii","stage iii","stage iii","stage iii",
                                         "stage iv","stage iv","stage iv","stage iv",
                                         "Not_applicable","Not_applicable"))
+clinical_all_data %>%
+  dplyr::inner_join(stage_class,by="Stage") %>%
+  dplyr::select(-Stage) %>%
+  dplyr::rename("Stage"="stage_group") %>%
+  dplyr::filter(Stage!="Not_applicable")-> clinical_all_data
+
 GSVA_exp_ratio_combine %>%
   dplyr::mutate(clinical_gsva = purrr::map2(GSVA,cancer_types,.f=function(.x,.y){
     print(.y)
@@ -556,7 +579,7 @@ GSVA.score.univarite.surv.PFS %>%
   dplyr::select(cancer_types,Features) %>%
   tidyr::nest(-cancer_types,.key="sig_features") -> GSVA.score.univarite.surv.PFS.sig
 
->>>>>>>>> error
+
 GSVA_exp_ratio_combine %>%
   dplyr::mutate(clinical_gsva = purrr::map2(GSVA,cancer_types,.f=function(.x,.y){
     print(.y)
@@ -587,7 +610,7 @@ GSVA.score.univarite.surv.OS %>%
   dplyr::select(cancer_types,Features) %>%
   tidyr::nest(-cancer_types,.key="sig_features") -> GSVA.score.univarite.surv.OS.sig
 
-GSVA.score.onlytumor %>%
+GSVA_exp_ratio_combine %>%
   dplyr::mutate(clinical_gsva = purrr::map2(GSVA,cancer_types,.f=function(.x,.y){
     print(.y)
     colnames(.x) <- gsub(" ","_",colnames(.x))
@@ -631,17 +654,17 @@ label.data.CTL %>%
   dplyr::mutate(Features=gsub(" ","_",Features)) -> Features_name.detail
 GSVA.score.univarite.surv.OS.multi %>%
   dplyr::inner_join(Features_name.detail,by="Features") %>%
-  dplyr::mutate(Features=name) %>%
-  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(Features=label) %>%
+  dplyr::mutate(cox_sig = ifelse(coxp<0.05,"1yes","2no")) %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  dplyr::filter(abs(hr)<6) %>%
+  dplyr::filter(abs(hr)<6 & coxp<0.05) %>%
   dplyr::mutate(hr_l=ifelse(hr_l<(-6),-6,hr_l),hr_h=ifelse(hr_h>6,6,hr_h)) %>%
   tidyr::nest(-cancer_types) %>%
   dplyr::mutate(Group = "All") %>%
   tidyr::unnest() %>%
   tidyr::nest(-Group) %>%
   dplyr::mutate(filename = paste("2.OS.multi-variable.cox",Group,sep="_")) %>%
-  dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(OS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=6))
+  dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(OS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=20))
 
 ### 3.5.2.PFS cox plot -------
 # 3.5.2.1. cancer groups 
@@ -660,17 +683,17 @@ GSVA.score.univarite.surv.OS.multi %>%
 # 3.5.2.2. all cancer togather
 GSVA.score.univarite.surv.PFS.multi %>%
   dplyr::inner_join(Features_name.detail,by="Features") %>%
-  dplyr::mutate(Features=name) %>%
-  dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::mutate(Features=label) %>%
+  dplyr::mutate(cox_sig = ifelse(coxp<0.05,"1yes","2no")) %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  dplyr::filter(abs(hr)<6) %>%
+  dplyr::filter(abs(hr)<6 & coxp<0.05) %>%
   dplyr::mutate(hr_l=ifelse(hr_l<(-6),-6,hr_l),hr_h=ifelse(hr_h>6,6,hr_h)) %>%
   tidyr::nest(-cancer_types) %>%
   dplyr::mutate(Group = "All") %>%
   tidyr::unnest() %>%
   tidyr::nest(-Group) %>%
   dplyr::mutate(filename = paste("1.PFS.multi-variable.cox",Group,sep="_")) %>%
-  dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(PFS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=6))
+  dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(PFS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=20))
 
 # 5. score from cox model -------------------------------------------------
 # 5.1.function--------
@@ -1091,17 +1114,17 @@ GSVA.TIL.res.sig %>%
   dplyr::rename("Counts_of_significant_analysis_in_all_cancers"="Sig_n") %>%
   dplyr::filter(!Features %in% c(colnames(TIMER_immunity),"CTL","Age")) %>%
   dplyr::inner_join(Features_name.detail,by="Features") %>%
-  dplyr::mutate(color = ifelse(Counts_of_significant_analysis_in_all_cancers>60,"red","black")) -> GSVA_score_res.counts
+  dplyr::mutate(color = ifelse(Counts_of_significant_analysis_in_all_cancers>=3,"red","black")) -> GSVA_score_res.counts
 
 GSVA_score_res.counts %>%
   readr::write_tsv(file.path(res_path,"overall_feature_filter.tsv"))
 
 GSVA_score_res.counts %>%
   # dplyr::filter(cancer_types %in% c("SKCM","STAD","LUSC","LUAD","KIRC","KICH","KIRP")) %>%
-  ggplot(aes(x=name,y=Counts_of_significant_analysis_in_all_cancers)) +
+  ggplot(aes(x=label,y=Counts_of_significant_analysis_in_all_cancers)) +
   geom_bar(aes(color=color),stat="identity", fill="orange",alpha = 0.5,
            position=position_dodge()) +
-  scale_x_discrete(limits=GSVA_score_res.counts$name) +
+  scale_x_discrete(limits=GSVA_score_res.counts$label) +
   scale_color_manual(values=c("black","red")) +
   coord_flip() +
   my_theme +
@@ -1110,8 +1133,8 @@ GSVA_score_res.counts %>%
     legend.position = "none"
   ) +
   labs(y="Counts of significant analysis among cancers",x="Features") 
-ggsave(file.path(res_path,"overall_feature_filter.pdf"),device = "pdf",height = 8,width =6)
-ggsave(file.path(res_path,"overall_feature_filter.png"),device = "png",height = 8,width = 6)
+ggsave(file.path(res_path,"overall_feature_filter.pdf"),device = "pdf",height = 20,width =6)
+ggsave(file.path(res_path,"overall_feature_filter.png"),device = "png",height = 20,width = 6)
 
 # save.image --------------------------------------------------------------
 
