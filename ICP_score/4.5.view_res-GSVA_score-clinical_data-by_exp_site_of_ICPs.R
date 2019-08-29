@@ -22,14 +22,26 @@ basic_path <- file.path("F:/我的坚果云")
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 # TCGA_path <- file.path("/data/TCGA/TCGA_data")
 # gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
-res_path <- file.path(immune_res_path,"ICP_score/2.1.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
+GSVA_path <- file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
 
-GSVA.score <- readr::read_rds(file.path(res_path, "ICP_GSVA_score.rds.gz"))
+GSVA.score <- readr::read_rds(file.path(GSVA_path, "ICP_GSVA_score-use_data_batch_corrected.rds.gz"))
+
+exp_ratio_path <- file.path(immune_res_path,"ICP_score.new")
+exp_ratio <- readr::read_rds(file.path(exp_ratio_path, "clinical_mean_fold_ratio_features_value.rds.gz"))
+
+res_path <- file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio/5.clinical_validate")
+
+# merge data --------------------------------------------------------------
+GSVA.score %>%
+  tidyr::unnest()  %>%
+  dplyr::inner_join(exp_ratio %>%
+                      dplyr::rename("Run"="barcode"),by="Run") -> combine_GSVA.exp_ratio
+
+TCGA_feature_filter <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio","overall_feature_filter.tsv")) %>%
+  dplyr::filter(Counts_of_significant_analysis_in_all_cancers>=3)
 
 # survival data of PFI
 # server 1
-survival_path <- "/home/huff/project/data/TCGA-survival-time/cell.2018.survival"
-# e zhou
 survival_path <- file.path(basic_path,"immune_checkpoint/clinical_response_data")
 
 survival_data <- readr::read_tsv(file.path(survival_path, "RNAseq-sample_info_complete.tsv")) %>%
@@ -55,7 +67,7 @@ survival_data <- readr::read_tsv(file.path(survival_path, "RNAseq-sample_info_co
 #   tidyr::unnest() %>%
 #   dplyr::rename("cancer_types" = "Cancer_Types")
 
-source("F:/github/immune-cp/subtype_analysis/funtions_to_draw_pic.R")
+source("subtype_analysis/funtions_to_draw_pic.R")
 
 # draw pic p---------------------------------------------------------------
 fn_heatmap <- function(pubmed_ID, Cancer.y, tissue, GSVA, clinical){
@@ -69,10 +81,18 @@ fn_heatmap <- function(pubmed_ID, Cancer.y, tissue, GSVA, clinical){
     rownames(res.gsva) <- rownames.res.gsva
     colnames(res.gsva) <- colnames.res.gsva
     
+    apply(res.gsva, 1, mad) %>%
+      t() %>%
+      as.data.frame() %>%
+      dplyr::as.tbl() %>%
+      tidyr::gather(key="feature",value="value") %>%
+      dplyr::filter(value>0) %>%
+      .$feature -> feature_without_0_SD
+    res.gsva[feature_without_0_SD,]-> res.gsva
     ## pheatmap
     pdf(file.path(res_path,paste(pubmed_ID, cancer_types,"GSVAscore", "heatmap.pdf", sep = "_")),
         height = 3, width = 6)
-    pheatmap(res.gsva, #scale = "row",
+    pheatmap(res.gsva, scale = "row",
              clustering_distance_rows = "correlation",
              color = colorRampPalette(c("#00B2EE","white","red"))(50),
              border_color = NA,cutree_rows = 2,
@@ -311,22 +331,24 @@ fn_survival.calculate <- function(group, clinical, pubmed_ID, C,cancer_types, re
 }
 
 
-GSVA.score %>%
+combine_GSVA.exp_ratio %>%
+  tidyr::nest(-`pubmed ID`,-Cancer.y, -tissue,.key="GSVA") %>%
   dplyr::inner_join(survival_data, by="pubmed ID") %>%
   dplyr::rename("pubmed_ID"="pubmed ID") %>%
   # tail(8) %>%
   purrr::pmap(.f=fn_heatmap)
 
-i = 5
-  GSVA.score %>%
-    dplyr::inner_join(survival_data, by="pubmed ID") %>%
-    dplyr::rename("pubmed_ID"="pubmed ID") %>% .$GSVA %>% .[[i]] -> GSVA
-  GSVA.score %>%
-    dplyr::inner_join(survival_data, by="pubmed ID") %>%
-    dplyr::rename("pubmed_ID"="pubmed ID") %>% .$clinical %>% .[[i]] -> clinical
-  GSVA.score %>%
-    dplyr::inner_join(survival_data, by="pubmed ID") %>%
-    dplyr::rename("pubmed_ID"="pubmed ID") %>% .$pubmed_ID %>% .[[i]] -> pubmed_ID
+
+combine_GSVA.exp_ratio %>%
+  tidyr::nest(-`pubmed ID`,-Cancer.y, -tissue,.key="GSVA") %>%
+  dplyr::inner_join(survival_data, by="pubmed ID") %>%
+  dplyr::rename("pubmed_ID"="pubmed ID") -> tmp
+
+# complexheatmap不能在循环中或者函数中生成，只能一个一个手动来
+i=5 # i from 1 to 5
+  tmp %>% .$GSVA %>% .[[i]] -> GSVA
+  tmp %>% .$clinical %>% .[[i]] -> clinical
+  tmp %>% .$pubmed_ID %>% .[[i]] -> pubmed_ID
   
   res.gsva <- as.data.frame(GSVA) %>% t() 
   colnames.res.gsva <- res.gsva[1,]
@@ -335,14 +357,23 @@ i = 5
   res.gsva <- apply(res.gsva, 2, as.numeric)
   rownames(res.gsva) <- rownames.res.gsva
   colnames(res.gsva) <- colnames.res.gsva
+  apply(res.gsva, 1, mad) %>%
+    t() %>%
+    as.data.frame() %>%
+    dplyr::as.tbl() %>%
+    tidyr::gather(key="feature",value="value") %>%
+    dplyr::filter(value>0) %>%
+    .$feature -> feature_without_0_SD
+  res.gsva[feature_without_0_SD,]-> res.gsva
   
   # Compute the dissimilarity matrix
-  gsva.dist <- dist(t(res.gsva), method = "euclidean")
+  gsva.dist <- get_dist(t(res.gsva), method = "pearson")
   gsva.hc <- hclust(d = gsva.dist, method = "complete")
-  
-j=2
+
+  j=2
     C <- j
     group <- cutree(gsva.hc, k = C)
+    dir.create(file.path(res_path, pubmed_ID))
     data.frame(Run = names(group),group = group) %>%
       readr::write_tsv(file.path(res_path, pubmed_ID, paste(C,"clusters_group_info.tsv",sep = "_"))) 
     
@@ -368,28 +399,143 @@ j=2
                                                            "NR" = "black",
                                                            "R" = "#228B22"),
                                                 group=color_list),
-                                     width = unit(0.5, "cm"),
+                                     height = unit(0.5, "cm"),
                                      name = c("Response", "CC group"))
     # draw(sample_anno,1:45)
     
     # heatmap
-    png(file.path(res_path,"complex_heatmap",paste(C, pubmed_ID, "GSVAscore", "heatmap.png", sep = "_")),
+    png(file.path(res_path,"complex_heatmap",paste(C, pubmed_ID, "heatmap.png", sep = "_")),
         height = 300, width = 600)
     Heatmap(res.gsva,
             show_row_names = T,
             show_column_names = FALSE,
             cluster_columns = T,
-            # clustering_distance_columns = "euclidean",
-            # clustering_method_columns = "complete",
+            clustering_distance_columns = "pearson",
+            clustering_method_columns = "complete",
             top_annotation = sample_anno,
             show_row_dend = FALSE, # whether show row clusters.
             heatmap_legend_param = list(title = c("GSVA score")))
     dev.off()
+  
 
 
+# use TAGA filtered features ----------------------------------------------
+res_path <- file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio/5.clinical_validate_use_filtered_features")
+    
+combine_GSVA.exp_ratio %>%
+      tidyr::gather(-`pubmed ID`,-Cancer.y, -tissue,-Run,key="feature",value="value") %>%
+      dplyr::filter(feature %in% TCGA_feature_filter$Features) %>%
+      tidyr::spread(key="feature",value="value") %>%
+      tidyr::nest(-`pubmed ID`,-Cancer.y, -tissue,.key="GSVA") %>%
+      dplyr::inner_join(survival_data, by="pubmed ID") %>%
+      dplyr::rename("pubmed_ID"="pubmed ID") %>%
+      # tail(8) %>%
+      purrr::pmap(.f=fn_heatmap)
+
+combine_GSVA.exp_ratio %>%
+  tidyr::gather(-`pubmed ID`,-Cancer.y, -tissue,-Run,key="feature",value="value") %>%
+  dplyr::filter(feature %in% TCGA_feature_filter$Features) %>%
+  tidyr::spread(key="feature",value="value") %>%
+  tidyr::nest(-`pubmed ID`,-Cancer.y, -tissue,.key="GSVA") %>%
+  dplyr::inner_join(survival_data, by="pubmed ID") %>%
+  dplyr::rename("pubmed_ID"="pubmed ID") -> tmp
+# complexheatmap不能在循环中或者函数中生成，只能一个一个手动来
+i=5 # i from 1 to 5
+tmp %>% .$GSVA %>% .[[i]] -> GSVA
+tmp %>% .$clinical %>% .[[i]] -> clinical
+tmp %>% .$pubmed_ID %>% .[[i]] -> pubmed_ID
+
+res.gsva <- as.data.frame(GSVA) %>% t() 
+colnames.res.gsva <- res.gsva[1,]
+rownames.res.gsva <- rownames(res.gsva)[-1]
+res.gsva <- res.gsva[-1,]
+res.gsva <- apply(res.gsva, 2, as.numeric)
+rownames(res.gsva) <- rownames.res.gsva
+colnames(res.gsva) <- colnames.res.gsva
+apply(res.gsva, 1, mad) %>%
+  t() %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  tidyr::gather(key="feature",value="value") %>%
+  dplyr::filter(value>0) %>%
+  .$feature -> feature_without_0_SD
+res.gsva[feature_without_0_SD,]-> res.gsva
+apply(res.gsva, 1, scale) %>%
+  t() -> res.gsva.scale
+colnames(res.gsva.scale) <- colnames(res.gsva)
+# Compute the dissimilarity matrix
+gsva.dist <- get_dist(t(res.gsva.scale), method = "pearson")
+gsva.hc <- hclust(d = gsva.dist, method = "complete")
+
+j=2
+C <- j
+group <- cutree(gsva.hc, k = C)
+dir.create(file.path(res_path, pubmed_ID))
+data.frame(Run = names(group),group = group) %>%
+  readr::write_tsv(file.path(res_path, pubmed_ID, paste(C,"clusters_group_info.tsv",sep = "_"))) 
+
+data.frame(Run = names(group),group = group) %>%
+  dplyr::as.tbl()  -> group
+
+###### complex heatmap #####
+clinical %>%
+  dplyr::inner_join(group, by = "Run") %>%
+  dplyr::select(Response, group) %>%
+  dplyr::mutate(group = as.character(group)) %>%
+  as.data.frame() -> sample_info
+rownames(sample_info) <- clinical$Run
+
+sample_anno <- HeatmapAnnotation(df = sample_info,
+                                 col = list(Response=c("CR" = "#228B22",
+                                                       "PR" =  "#C1FFC1",
+                                                       "SD" = "#969696",
+                                                       "PD" = "black",
+                                                       "NE" = "white",
+                                                       "X" = "white",
+                                                       "PRCR" = "#C1FFC1",
+                                                       "NR" = "black",
+                                                       "R" = "#228B22"),
+                                            group=color_list),
+                                 height = unit(0.5, "cm"),
+                                 name = c("Response", "CC group"))
+# draw(sample_anno,1:45)
+
+# heatmap
+
+png(file.path(res_path,"complex_heatmap",paste(C, pubmed_ID, "heatmap.png", sep = "_")),
+    height = 300, width = 600)
+Heatmap(res.gsva.scale,
+        show_row_names = T,
+        show_column_names = FALSE,
+        cluster_rows = T,
+        cluster_columns = T,
+        clustering_distance_columns = "pearson",
+        clustering_method_columns = "complete",
+        top_annotation = sample_anno,
+        show_row_dend = FALSE, # whether show row clusters.
+        heatmap_legend_param = list(title = c("GSVA score")))
+dev.off()
+
+# Not run
+fn_Res_diff_between_groups <- function(group){
+  group %>%
+    dplyr::inner_join(clinical, by = "Run") %>%
+    dplyr::select(Run, group, Response) -> group.info
+  group.info %>%
+    dplyr::group_by(group,Response) %>%
+    dplyr::mutate(n=n()) %>%
+    dplyr::select(-Run)%>%
+    unique() %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group=as.character(group)) %>%
+    ggplot(aes(x=group,y=Response)) +
+    geom_tile(aes(fill=n)) +
+    scale_fill_gradient(low="white",
+                          high="red")
+}
 # all data in one ---------------------------------------------------------
 
-    GSVA.score %>%
+    combine_GSVA.exp_ratio %>%
       dplyr::inner_join(survival_data, by="pubmed ID") %>%
       dplyr::rename("pubmed_ID"="pubmed ID") %>%
       # tail(8) %>%
