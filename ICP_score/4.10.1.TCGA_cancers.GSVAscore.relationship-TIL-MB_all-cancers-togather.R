@@ -763,7 +763,8 @@ GSVA.score.univarite.surv.PFS.multi.coxscore.for_surv.res %>%
        y="-log10(KMP)") +
   my_theme +
   coord_flip()
-
+ggsave(file.path(sur_res_path,"3.PFS_cancer_specific.PFS_coxscore.png"),device = "png",height =6,width = 5)
+ggsave(file.path(sur_res_path,"3.PFS_cancer_specific.PFS_coxscore.pdf"),device = "pdf",height =6,width = 5)
 
 sur_res_path <- file.path(res_path,"3.survival_with_GSVA_score.new")
 tibble::tibble(color = c("red","blue"),
