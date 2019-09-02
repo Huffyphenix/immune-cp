@@ -25,13 +25,21 @@ TCGA_path <- file.path("/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
 # res_path <- file.path(immune_res_path,"ICP_score/3.logistic-regression-clinical/by_gsva_score")
 # score_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
-score_path <- file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
-res_path <- file.path(score_path,"logistic_model_predict_Response/all_sample_togather_GSVA")
+exp_score_path <- file.path(immune_res_path,"ICP_score.new")
+gsva_score_path <-  file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
+
+res_path <- file.path(exp_score_path,"logistic_model_predict_Response/all_sample_togather_GSVA")
 
 # load data ---------------------------------------------------------------
-gsva.score <- readr::read_rds(file.path(score_path,"ICP_GSVA_score_all-possible-features_all-togather.rds.gz")) %>%
+gsva.score <- readr::read_rds(file.path(gsva_score_path,"ICP_GSVA_score_all-possible-features_all-togather.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-tissue)
+exp_ratio <- readr::read_rds(file.path(exp_score_path, "clinical_mean_fold_ratio_features_value.rds.gz"))
+
+gsva.score %>%
+  tidyr::unnest()  %>%
+  dplyr::inner_join(exp_ratio %>%
+                      dplyr::rename("Run"="barcode"),by="Run") -> combine_GSVA.exp_ratio
 
 # sample data classfication --------------------------------------------------
 sample_info <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data","RNAseq-sample_info_complete.tsv")) %>%
@@ -44,8 +52,8 @@ sample_info %>%
   dplyr::select(Run,Cancer.y,blockade,blockade,Biopsy_Time,Author,Response) %>%
   unique() -> Run_pubmed.id
 
-gsva.score %>%
-  dplyr::inner_join(Run_pubmed.id, by = "Run") %>%
+combine_GSVA.exp_ratio %>%
+  dplyr::inner_join(Run_pubmed.id, by = c("Run")) %>%
   dplyr::select(-Response) %>%
   tidyr::nest(-Cancer.y,-blockade, -Biopsy_Time, -Author,.key = "GSVA") -> gsva.score
 
@@ -56,18 +64,22 @@ Run_pubmed.id %>%
   tidyr::nest(Run,Response,.key = "response") %>%
   dplyr::inner_join(gsva.score, by = c("Cancer.y","blockade","Biopsy_Time","Author")) -> data_for_logistic
 
-Response_statistic <- readr::read_tsv(file.path(score_path,"Response_statistic_each_dataset.tsv")) %>%
+Response_statistic <- readr::read_tsv(file.path(gsva_score_path,"Response_statistic_each_dataset.tsv")) %>%
   dplyr::select(-Cancer.y)
 
 ############## fnctions to do logistic regression iteration ##################
 fn_logistic <- function(Cancer_type,exp, response, sample_group, test_n, train_n, iteration, times = 15 ){
-  # apply(exp[,-1],2,mad) %>% # mad() Compute the Median Absolute Deviation
-  #   sort() %>%
-  #   rev() %>%
-  #   .[1:40] %>%
-  #   names() -> top20_mad
+  apply(exp[,-1],2,mad) %>% # mad() Compute the Median Absolute Deviation
+    sort() %>%
+    rev() %>%
+    t() %>%
+    as.data.frame() %>%
+    dplyr::as.tbl() %>%
+    tidyr::gather(key="feature",value="value") %>%
+    dplyr::filter(value>0) %>%
+    .$feature -> feature_mad_not_0
   # print(Cancer_type)
-  exp %>%
+  exp[,c("Run",feature_mad_not_0)] %>%
     dplyr::inner_join(response, by = "Run") %>%
     dplyr::inner_join(sample_group, by = "Run") %>%
     dplyr::filter(usage == "train") %>%
@@ -75,6 +87,7 @@ fn_logistic <- function(Cancer_type,exp, response, sample_group, test_n, train_n
     dplyr::mutate(Response = as.factor(Response)) -> data.ready
   data.ready[is.na(data.ready)] <- 0
   colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
+  colnames(data.ready) <- gsub("-",".",colnames(data.ready))
   iteration_n <- iteration
   res <- apply(array(1:iteration_n,dim = iteration_n),1,FUN=fn_feature_filter, data = data.ready, times = times, test_n = test_n, train_n = train_n)
   # print("res get done")
@@ -195,12 +208,15 @@ fn_feature_score <- function(.x, pos_auc = 0.6, neg_auc = 0.4){
   if(!"failures" %in% colnames(for_binomtest)){
     for_binomtest %>%
       dplyr::mutate(failures=0) -> for_binomtest
-  }else{
+  }else if(!"success" %in% colnames(for_binomtest)){
+    for_binomtest %>%
+      dplyr::mutate(success=0) -> for_binomtest
+  }
+  
     for_binomtest %>%
       dplyr::mutate(failures = ifelse(is.na(failures), 0, failures)) %>%
       dplyr::mutate(not_sure = ifelse(is.na(not_sure), 0, not_sure)) %>%
-      dplyr::mutate(success = ifelse(is.na(success), 0, success))-> for_binomtest
-  }
+      dplyr::mutate(success = ifelse(is.na(success), 0, success)) -> for_binomtest
   
   # binom test
   for_binomtest %>%
@@ -376,6 +392,7 @@ fn_auc_on_validation <- function(response,data_spread, model){
   # data.ready <- na.omit(data.ready)
   data.ready[is.na(data.ready)] <- 0
   colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
+  colnames(data.ready) <- gsub("-",".",colnames(data.ready))
   
   # Make predictions
   probabilities <- model %>% predict(data.ready, type = "response")
@@ -425,9 +442,14 @@ data_for_logistic %>%
   tidyr::unnest(n) %>%
   dplyr::filter(n>10) -> data_for_logistic
 ############## logistic regression
-fn_Run <- function(stage,dir,test_n, train_n){
-  succss = 0 
-  times = 0
+stage=c("pre-treatment","on-treatment")
+dir=""
+test_n=4
+train_n=8
+succss = 0
+# fn_Run <- function(stage,dir,test_n, train_n){
+for (times in 0:1000) {
+
   
   data_for_logistic %>%
     dplyr::filter(Biopsy_Time %in% stage) -> .data_for_logistic
@@ -493,6 +515,7 @@ fn_Run <- function(stage,dir,test_n, train_n){
     # data.ready <- na.omit(data.ready)
     data.ready[is.na(data.ready)] <- 0
     colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
+    colnames(data.ready) <- gsub("-",".",colnames(data.ready))
     
     formula.train <- paste("Response~", paste(final_feature$topn_count[[1]]$features,collapse = "+"))
     model.train <- glm( as.formula(formula.train), data = data.ready, family = binomial)
@@ -519,6 +542,7 @@ fn_Run <- function(stage,dir,test_n, train_n){
       tidyr::unnest() -> data.ready.test
     data.ready.test[is.na(data.ready.test)] <- 0
     colnames(data.ready.test) <- gsub(" ",".",colnames(data.ready.test))
+    colnames(data.ready.test) <- gsub("-",".",colnames(data.ready.test))
     
     # Make predictions
     probabilities <- step.model.train %>% predict(data.ready.test,type = "response")
@@ -602,7 +626,7 @@ fn_Run <- function(stage,dir,test_n, train_n){
 #   dplyr::ungroup() %>%
 #   dplyr::select(-PARTITION_ID, -expr) -> gene_DE_between_high_low.all_features.cox_score.OS
 # on.exit(parallel::stopCluster(cluster))
-fn_Run(stage=c("pre-treatment","on-treatment"),dir="",test_n=4, train_n=8)
+# fn_Run(stage=c("pre-treatment","on-treatment"),dir="",test_n=4, train_n=8)
 # fn_Run(Biopsy_Time="on-treatment")
 
 # save.image(file.path(res_path,"logistic_prediction.rda"))
