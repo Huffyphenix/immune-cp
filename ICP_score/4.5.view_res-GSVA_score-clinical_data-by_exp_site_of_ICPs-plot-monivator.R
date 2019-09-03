@@ -10,8 +10,8 @@ time_1 <- gsub(" ",":",gsub("\\/",":",format(Sys.time(), "%d/%m/%y %H:%M:%OS3"))
 
 
   res <- read_csv(file.path(res_path,"logistic_record.txt"),quote = " ") %>%
-    tidyr::separate(col =`auc.train auc.test auc_validation_Kim auc_validation_Hugo auc_validation_Auslander auc_validation_Auslander auc_validation_Riaz auc_validation_Riaz auc_validation_Van_Allen Features Times SuccssTime`, into = c("auc.train", "auc.test", "auc_validation_Kim", "auc_validation_Hugo", "auc_validation_Auslander_pre", "auc_validation_Auslander_on", "auc_validation_Riaz_pre", "auc_validation_Riaz_on", "auc_validation_Van_Allen", "Features", "Times", "SuccssTime"),sep=" ") %>%
-    dplyr::filter(auc.train!="auc.train") %>%
+    tidyr::separate(col =`auc.train auc.test auc_validation_Kim auc_validation_Hugo auc_validation_Auslander auc_validation_Auslander auc_validation_Riaz auc_validation_Riaz auc_validation_Van_Allen Features Times SuccssTime`, into = c("auc.train_on", "auc.test_on", "auc_validation_Kim_pre", "auc_validation_Hugo_pre", "auc_validation_Auslander_pre", "auc_validation_Auslander_on", "auc_validation_Riaz_pre", "auc_validation_Riaz_on", "auc_validation_Van_Allen_pre", "Features", "Times", "SuccssTime"),sep=" ") %>%
+    dplyr::filter(auc.train_on!="auc.train") %>%
     dplyr::select(-Features,-SuccssTime)
   
   res %>%
