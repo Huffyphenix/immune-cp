@@ -150,12 +150,12 @@ my_theme <-   theme(
 # data process ------------------------------------------------------------
 
 data_for_logistic[-3,] %>%
-  dplyr::filter(Biopsy_Time == "on-treatment") %>%
-  dplyr::mutate(sample_group = purrr::map2(response,GSVA,fn_select_train_test,percent = 0.7)) -> data_for_logistic
+  dplyr::filter(Biopsy_Time == "on-treatment") -> data_for_logistic
 
 
 data_for_logistic %>%
   dplyr::filter(Author == "Riaz") %>%
+  dplyr::mutate(sample_group = purrr::map2(response,GSVA,fn_select_train_test,percent = 0.7)) %>%
   dplyr::mutate(data = purrr::pmap(list(response,GSVA,sample_group),.f=function(.x,.y,.z){
     .x %>%
       dplyr::inner_join(.z,by="Run") %>%
@@ -170,8 +170,7 @@ data_for_logistic %>%
   tidyr::unnest() -> Riaz.data
 
 data_for_logistic %>%
-  dplyr::select(-sample_group) %>%
-  dplyr::mutate(usage = c("validation","train")) %>%
+  dplyr::mutate(usage = c("validation","train+test")) %>%
   rbind(Riaz.data) %>%
   dplyr::mutate(n = purrr::map2(Author,response,.f=function(.y,.x){
     print(.y)
@@ -195,7 +194,7 @@ data_for_logistic %>%
 # AUC plot ----------------------------------------------------------------
 
 validation_auc %>%
-  dplyr::mutate(group = paste(Author,blockade,paste("(",yes,"*/",no,"**); ",sep=""),"AUC"," = ",signif(auc,2),"; ",usage,sep="")) %>%
+  dplyr::mutate(group = paste(Author,", ",blockade,paste("(",yes,"*/",no,"**); ",sep=""),"AUC"," = ",signif(auc,2),"; ",usage,sep="")) %>%
   dplyr::select(roc_data,group,usage) %>%
   tidyr::unnest() -> plot_ready.auc
 
@@ -203,22 +202,23 @@ tibble::tibble(group=c("Base_line","Base_line"),usage=c("Base_line","Base_line")
                Sensitivity=c(0,1),Specificity=c(1,0),thresholds=c(0,1), best=c("no","no")) -> base_line
 plot_ready.auc %>%
   rbind(base_line) -> plot_ready
-plot_ready <- within(plot_ready,group<- factor(group,levels = c("Auslanderanti–PD-1/CTLA-4(1*/22**); AUC = 0.91; validation",
-                                                  "Riazanti–PD-1(12*/29**); AUC = 0.83; train",
-                                                  "Riazanti–PD-1(6*/10**); AUC = 0.9; test",
+plot_ready <- within(plot_ready,group<- factor(group,levels = c("Auslander, anti–PD-1/CTLA-4(1*/22**); AUC = 0.91; validation",
+                                                  "Riaz, anti–PD-1(12*/29**); AUC = 0.83; train",
+                                                  "Riaz, anti–PD-1(6*/10**); AUC = 0.9; test",
                                                   "Base_line")))
 plot_ready %>%
   ggplot(aes(x=Specificity,y=Sensitivity)) +
   geom_path(aes(color=group)) + 
   scale_x_reverse()  +
-  scale_color_manual(values = c(c("#CD5555", "#1C86EE", "#EE7621", "#030303"))) +
+  scale_color_manual(values = c(c("red", "#1C86EE", "#EE7621", "#030303"))) +
   my_theme +
   theme(
     legend.position = c(0.64,0.15),
     legend.title = element_blank(),
     legend.text = element_text(size=8),
     legend.key.height = unit(0.15,"inches"),
-    legend.key.width = unit(0.15,"inches")
+    legend.key.width = unit(0.15,"inches"),
+    legend.key = element_rect(colour="white")
   )
 ggsave(file.path(res_path,"Best_model.AUC.png"),device = "png",height = 4, width = 6)
 ggsave(file.path(res_path,"Best_model.AUC.pdf"),device = "pdf",height = 4, width = 6)
