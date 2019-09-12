@@ -2,7 +2,8 @@
 # construct logistics model for GSVA score of all possible features
 # GSVA was generate in each dataset
 # for only pre-treatment samples prediction
-# train data for pre-treatment data, is Riaz, pre-treatment
+# train data for all data, is Riaz
+# dont seperate the pre- and on-treatment data
 
 ################################
 library(magrittr)
