@@ -55,23 +55,30 @@ sample_info <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_
                       unique(), by="data ID")
 
 sample_info %>%
-  dplyr::select(Run,Cancer.y,blockade,blockade,Biopsy_Time,Author,Response) %>%
+  dplyr::select(Run,Cancer.y,blockade,blockade,Author,Response) %>%
   unique() -> Run_pubmed.id
 
 combine_GSVA.exp_ratio %>%
   dplyr::inner_join(Run_pubmed.id, by = c("Run")) %>%
   dplyr::select(-Response) %>%
-  tidyr::nest(-Cancer.y,-blockade, -Biopsy_Time, -Author,.key = "GSVA") -> gsva.score
+  tidyr::nest(-Cancer.y,-blockade, -Author,.key = "GSVA") -> gsva.score
 
 
 Run_pubmed.id %>%
   dplyr::filter(! Response %in% c("NE", "X")) %>%
   dplyr::mutate(Response = ifelse(Response %in% c("CR", "PR", "PRCR", "R"), "yes", "no"))  %>%
   tidyr::nest(Run,Response,.key = "response") %>%
-  dplyr::inner_join(gsva.score, by = c("Cancer.y","blockade","Biopsy_Time","Author")) -> data_for_logistic
+  dplyr::inner_join(gsva.score, by = c("Cancer.y","blockade","Author")) -> data_for_logistic
 
 Response_statistic <- readr::read_tsv(file.path(gsva_score_path,"Response_statistic_each_dataset.tsv")) %>%
-  dplyr::select(-Cancer.y)
+  dplyr::select(-Cancer.y) %>%
+  dplyr::mutate(Response = ifelse(is.na(Response),0,Response)) %>%
+  dplyr::group_by(Author) %>%
+  dplyr::mutate(`non-Response`=sum(`non-Response`),Response=sum(Response)) %>%
+  dplyr::select(-Biopsy_Time,-`Response_percentage(%)`) %>%
+  dplyr::ungroup() %>%
+  unique() %>%
+  dplyr::mutate(`Response_percentage(%)` = 100*Response/(Response+`non-Response`))
 ############## fnctions to do logistic regression iteration ##################
 fn_logistic <- function(Cancer_type,exp, response, sample_group, test_n, train_n, iteration, times = 15 ){
   apply(exp[,-1],2,mad) %>% # mad() Compute the Median Absolute Deviation
@@ -264,7 +271,7 @@ fn_overlap_select <- function(.data, top_n = 10, overlpa_n = 5){
     #   tidyr::unnest() -> topn_tmp
     .data[[i]] %>%
       tidyr::unnest() %>%
-      dplyr::select(Cancer.y, blockade,Biopsy_Time,Author, features, score_all,binom.p) %>% 
+      dplyr::select(Cancer.y, blockade,Author, features, score_all,binom.p) %>% 
       dplyr::arrange(desc(binom.p),score_all) %>%
       dplyr::mutate(rank = 1:nrow(.))-> topn_tmp 
     rbind(topn, topn_tmp) -> topn
@@ -283,9 +290,9 @@ fn_overlap_select <- function(.data, top_n = 10, overlpa_n = 5){
   #   })) %>%
   #   dplyr::select(-data)
   topn %>%
-    dplyr::group_by(Cancer.y, blockade,Biopsy_Time,Author, features) %>%
+    dplyr::group_by(Cancer.y, blockade,Author, features) %>%
     dplyr::mutate(rank_sum = sum( rank)) %>%
-    dplyr::select(Cancer.y, blockade,Biopsy_Time,Author, features,rank_sum) %>%
+    dplyr::select(Cancer.y, blockade,Author, features,rank_sum) %>%
     dplyr::ungroup() %>%
     unique() %>%
     dplyr::arrange(rank_sum) %>%
@@ -432,7 +439,7 @@ my_theme <-   theme(
   text = element_text(color = "black")
 )
 ########################################## logistic regression iteration result -----------------------
-data_for_logistic[-3,] %>%
+data_for_logistic %>%
   dplyr::mutate(sample_group = purrr::map2(response,GSVA,fn_select_train_test,percent = 0.7)) -> data_for_logistic
 
 data_for_logistic %>%
@@ -441,27 +448,27 @@ data_for_logistic %>%
   tidyr::unnest(n) %>%
   dplyr::filter(n>10) -> data_for_logistic
 ############## logistic regression
-stage=c("pre-treatment")
+# stage=c("pre-treatment")
 dir=""
-test_n=3
-train_n=6
+test_n=6
+train_n=12
 succss = 0
 # fn_Run <- function(stage,dir,test_n, train_n){
 for (times in 0:1000) {
   
   
-  data_for_logistic %>%
-    dplyr::filter(Biopsy_Time %in% stage) -> .data_for_logistic
+  data_for_logistic  -> .data_for_logistic
   
-  paste("auc.train","auc.test",
-        paste(paste("auc_validation",.data_for_logistic$Author,sep="_"),collapse = "\t"),
-        "Features",
-        "Times","SuccssTime",sep="\t") %>%
-    readr::write_lines(file.path(res_path,dir,"logistic_record.txt"),sep = "\n",append = TRUE)
+  
   ##################### repeat 100 times get the best features
-  while(succss < 10){
+  while(succss <= 10){
     times=times+1
-    n=10
+    paste("auc.train","auc.test",
+          paste(paste("auc_validation",.data_for_logistic$Author,sep="_"),collapse = "\t"),
+          "Features",
+          "Times","SuccssTime",sep="\t") %>%
+      readr::write_lines(file.path(res_path,dir,"logistic_record.txt"),sep = "\n",append = TRUE)
+    n=5
     logistic_feature_res_nrepeat <- list()
     for(i in 1:n){
       .data_for_logistic %>%
@@ -550,7 +557,7 @@ for (times in 0:1000) {
     auc.test <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
     
     .data_for_logistic %>%
-      # dplyr::filter(type == "validation") %>%
+      dplyr::filter(type == "validation") %>%
       dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=step.model.train)) %>%
       dplyr::select(-response,-GSVA, -sample_group) %>%
       tidyr::unnest() -> validation_auc
@@ -571,7 +578,7 @@ for (times in 0:1000) {
         
         # draw picture
         validation_auc %>%
-          dplyr::inner_join(Response_statistic,by=c("Biopsy_Time","Author")) %>%
+          dplyr::inner_join(Response_statistic,by=c("Author")) %>%
           dplyr::mutate(group = paste(Author,blockade.y,paste("(",Response,"*/",`non-Response`,"**);",sep=""),"AUC","=",signif(auc,2))) %>%
           dplyr::select(roc_data,group,type) %>%
           tidyr::unnest() -> plot_ready
@@ -584,8 +591,8 @@ for (times in 0:1000) {
             legend.position = c(0.75,0.25),
             legend.title = element_blank()
           )
-        ggsave(file.path(res_path,dir,paste("ROC_plot",succss,"png",sep="_")),device = "png",width = 5, height = 5)
-        ggsave(file.path(res_path,dir,paste("ROC_plot",succss,"pdf",sep="_")),device = "pdf",width = 5, height = 5)
+        ggsave(file.path(res_path,dir,paste("ROC_plot",Times,"png",sep="_")),device = "png",width = 5, height = 5)
+        ggsave(file.path(res_path,dir,paste("ROC_plot",Times,"pdf",sep="_")),device = "pdf",width = 5, height = 5)
         
       } else{
         succss = succss
