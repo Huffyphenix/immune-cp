@@ -79,9 +79,13 @@ clinical <- readr::read_rds(file.path(basic_path,"data/TCGA-survival-time/cell.2
 # calculation of average expression of genes of samples --------------------------------
 # 3 groups by function: activate, inhibit and two sides -----
 # 样本中在各基因的平均表达量
+MHC_class_genes <- gene_list %>%
+  dplyr::filter(family %in% c("MHC class I","MHC class II")) %>%
+  .$symbol
 
 fn_average <- function(.data){
   .data %>%
+    dplyr::filter(!symbol %in%MHC_class_genes) %>%
     tidyr::gather(-symbol,-entrez_id,key="barcode",value="expr") %>%
     dplyr::left_join(gene_list,by="symbol") %>%
     dplyr::filter(!is.na(expr)) %>%
@@ -99,7 +103,7 @@ gene_list_expr %>%
   dplyr::select(-filter_expr) %>%
   dplyr::ungroup() -> ICP_mean_expr_in_cancers
 ICP_mean_expr_in_cancers %>%
-  readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_cancers.by_functionalRole.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_cancers.by_functionalRole-noMHC.rds.gz"),compress = "gz")
 
 ICP_mean_expr_in_cancers %>%
   tidyr::unnest() %>%
@@ -155,8 +159,8 @@ ICP_mean_expr_in_cancers %>%
     panel.border = element_rect(fill='transparent',colour = "black"),
     panel.grid = element_line(linetype = "dashed")
   )
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancers.pdf"),device = "pdf", width = 6,height = 5)
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancer.png"),device = "png",width = 6,height =5)
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancers-noMHC.pdf"),device = "pdf", width = 6,height = 5)
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancer-noMHC.png"),device = "png",width = 6,height =5)
 
 # survival analysis
 fun_clinical_test <- function(expr_clinical_ready, cancer_types){
@@ -202,7 +206,7 @@ ICP_mean_expr_in_cancers %>%
   tidyr::unnest() -> ICP_mean_expr_in_cancers.byfunction.PFS
 
 ICP_mean_expr_in_cancers.byfunction.PFS  %>%
-  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival","PFS_survival.ICP_mean_expr_in_cancers.byfunction.tsv"))
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival","PFS_survival.ICP_mean_expr_in_cancers.byfunction-noMHC.tsv"))
 ## OS
 ICP_mean_expr_in_cancers %>%
   tidyr::unnest() %>%
@@ -217,7 +221,7 @@ ICP_mean_expr_in_cancers %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> ICP_mean_expr_in_cancers.byfunction.OS
 ICP_mean_expr_in_cancers.byfunction.OS  %>%
-  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival","OS_survival.ICP_mean_expr_in_cancers.byfunction.tsv"))
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival","OS_survival.ICP_mean_expr_in_cancers.byfunction-noMHC.tsv"))
 
 ## survival plot, cox
 # plot function
@@ -264,10 +268,14 @@ fn_cox_plot <- function(functionWithImmune,data,filename,hr,hr_l,hr_h,title,face
   ggsave(file.path(out_path,"e_6_exp_profile",dir,paste(filename,"pdf",sep=".")),device = "pdf",width = w,height = h)
 }
 
-fn_cox_plot.all <- function(data,filename,hr,hr_l,hr_h,title,facet, dir,w=4,h=4){
+fn_cox_plot.all <- function(data,filename,hr_sum,hr,hr_l,hr_h,title,facet, dir,w=4,h=4){
+  # data %>%
+  #   dplyr::arrange(hr_sum) %>%
+  #   .$cancer_types %>% unique() -> cancer_rank.cox
+  # data <- within(data,cancer_types <- factor(cancer_types,labels = cancer_rank.cox))
   data %>% 
-    # dplyr::mutate(functionWithImmune=functionWithImmune) %>%
-    # dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort)) %>%
+    dplyr::mutate(functionWithImmune=functionWithImmune) %>%
+    dplyr::mutate(cancer_types = reorder(cancer_types,hr_sum,mean)) %>%
     ggplot(aes(y = hr, x = cancer_types, ymin=hr_l,ymax=hr_h)) +
     geom_pointrange(aes(color=cox_sig),size=0.5) +
     scale_color_manual(values=c("red","black")) +
@@ -299,13 +307,21 @@ ICP_mean_expr_in_cancers.byfunction.PFS %>%
     .x %>%
       dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))
   })) %>%
-  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-functionRole",functionWithImmune,sep=".")) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-functionRole-noMHC",functionWithImmune,sep=".")) %>%
   purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival",w = 4, h = 6)
 
 ICP_mean_expr_in_cancers.byfunction.PFS %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(hr_sum = sum(hr)) %>%
+  dplyr::ungroup() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-functionRole.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival",w = 8, h = 6)
+  # tidyr::nest(-functionWithImmune) %>%
+  # dplyr::mutate(data = purrr::map(data,.f=function(.x){
+  #   .x %>%
+  #     dplyr::mutate(cancer_types = reorder(cancer_types,hr_sum,mean))
+  # })) %>%
+  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-functionRole.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival",w = 8, h = 6)
 
 # PFS, cox, continus
 ICP_mean_expr_in_cancers.byfunction.PFS %>% 
@@ -338,6 +354,9 @@ ICP_mean_expr_in_cancers.byfunction.OS %>%
 
 ICP_mean_expr_in_cancers.byfunction.OS %>% 
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(hr_sum = sum(hr)) %>%
+  dplyr::ungroup() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
   fn_cox_plot.all(filename="Meanexp.COX_OS.by-functionRole.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival",w = 8, h = 6)
 
@@ -363,6 +382,7 @@ ICP_mean_expr_in_cancers.byfunction.OS %>%
 
 fn_average.by_expsite <- function(.data){
   .data %>%
+    dplyr::filter(!symbol %in% MHC_class_genes) %>%
     tidyr::gather(-symbol,-entrez_id,key="barcode",value="expr") %>%
     dplyr::left_join(gene_list,by="symbol") %>%
     dplyr::filter(!is.na(expr)) %>%
@@ -385,7 +405,7 @@ gene_list_expr %>%
   dplyr::ungroup() -> ICP_mean_expr_in_cancers.by_expsite
 
 ICP_mean_expr_in_cancers.by_expsite %>%
-  readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_cancers.by_expsite.rds.gz"),compress = "gz") 
+  readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_cancers.by_expsite-noMHC.rds.gz"),compress = "gz") 
 
 ICP_mean_expr_in_cancers.by_expsite %>%
   tidyr::unnest() %>%
@@ -472,8 +492,8 @@ plot_ready %>%
     panel.border = element_rect(fill='transparent',colour = "black"),
     panel.grid = element_line(linetype = "dashed")
   )
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.pdf"),device = "pdf", width = 12,height = 7)  
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers.png"),device = "png",width = 12,height = 7)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers-noMHC.pdf"),device = "pdf", width = 12,height = 7)  
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers-noMHC.png"),device = "png",width = 12,height = 7)  
 
 # survival analysis [univariable survival analysis] ----------------------------
 ## PFS
@@ -490,7 +510,7 @@ ICP_mean_expr_in_cancers.by_expsite %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> ICP_mean_expr_in_cancers.byexpsite.PFS
 ICP_mean_expr_in_cancers.byexpsite.PFS  %>%
-  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival_byExpsite","PFS_survival.ICP_mean_expr_in_cancers.byexpsite.tsv"))
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival_byExpsite","PFS_survival.ICP_mean_expr_in_cancers.byexpsite-noMHC.tsv"))
 
 ## OS
 ICP_mean_expr_in_cancers.by_expsite %>%
@@ -507,7 +527,7 @@ ICP_mean_expr_in_cancers.by_expsite %>%
   tidyr::unnest() -> ICP_mean_expr_in_cancers.byexpsite.OS
 
 ICP_mean_expr_in_cancers.byexpsite.OS  %>%
-  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival_byExpsite","OS_survival.ICP_mean_expr_in_cancers.byexpsite.tsv"))
+  readr::write_tsv(file.path(out_path,"e_6_exp_profile","survival_byExpsite","OS_survival.ICP_mean_expr_in_cancers.byexpsite-noMHC.tsv"))
 
 ## survival plot, cox [univariable]
 # PFS, cox, group
@@ -519,15 +539,26 @@ ICP_mean_expr_in_cancers.byexpsite.PFS %>%
     .x %>%
       dplyr::mutate(cancer_types = reorder(cancer_types,hr,sort))
   })) %>%
-  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-Expsite",Exp_site,sep=".")) %>%
+  dplyr::mutate(filename = paste("Meanexp.COX_PFS.by-Expsite-noMHC",Exp_site,sep=".")) %>%
   dplyr::rename("functionWithImmune"="Exp_site") %>%
   purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
 
 ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
+  dplyr::filter(Exp_site != "Both_exp_on_Tumor_Immune") %>%
   dplyr::rename("functionWithImmune"="Exp_site") %>%
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(hr_sum = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::select(hr,functionWithImmune) %>%
+      tidyr::spread(key="functionWithImmune",value="hr") %>%
+      dplyr::mutate(hr_sum=Mainly_exp_on_Immune-Mainly_exp_on_Tumor) %>%
+      dplyr::select(hr_sum)-> tmp
+    rbind(tmp,tmp)
+  })) %>%
+  tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-Expsite.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
+  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-Expsite.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 6, h = 6)
 
 # PFS, cox, continus
 ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
@@ -562,10 +593,21 @@ ICP_mean_expr_in_cancers.byexpsite.OS %>%
   purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
 
 ICP_mean_expr_in_cancers.byexpsite.OS %>% 
+  dplyr::filter(Exp_site != "Both_exp_on_Tumor_Immune") %>%
   dplyr::rename("functionWithImmune"="Exp_site") %>%
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(hr_sum = purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::select(hr,functionWithImmune) %>%
+      tidyr::spread(key="functionWithImmune",value="hr") %>%
+      dplyr::mutate(hr_sum=Mainly_exp_on_Immune-Mainly_exp_on_Tumor) %>%
+      dplyr::select(hr_sum)-> tmp
+    rbind(tmp,tmp)
+  })) %>%
+  tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_OS.by-Expsite.all",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
+  fn_cox_plot.all(filename="Meanexp.COX_OS.by-Expsite.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
 
 # OS, cox, continus
 ICP_mean_expr_in_cancers.byexpsite.OS %>% 
@@ -619,8 +661,7 @@ mean_exp_of_ICP_in_cancers_samples %>%
   dplyr::select(symbol) %>%
   dplyr::inner_join(gene_list,by="symbol") %>%
   dplyr::arrange(symbol) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N","Not_sure"),"Not_sure",Exp_site)) %>%
   dplyr::mutate(Exp_site = Exp_site.1) %>%
   dplyr::mutate(Exp_site = ifelse(Exp_site=="N","Not_sure",Exp_site)) %>%
   dplyr::select(symbol,type,functionWithImmune,Exp_site,family) %>%
@@ -650,10 +691,10 @@ gene_anno <- HeatmapAnnotation(df=symbol_anno,
                                                      "MHC class I"= "#8B2323",
                                                      "MHC class II"="#CDAA7D",
                                                      "Other"="#8EE5EE")),
-                               width = unit(0.2, "cm"),
+                               height = unit(0.2, "cm"),
                                show_annotation_name =T)
 
-draw(gene_anno,1:20)
+draw(gene_anno,1:69)
 
 rownames(mean_exp_of_ICP_in_cancers_samples.df) <- mean_exp_of_ICP_in_cancers_samples.df[,1]
 mean_exp_of_ICP_in_cancers_samples.df <- mean_exp_of_ICP_in_cancers_samples.df[,-1]
