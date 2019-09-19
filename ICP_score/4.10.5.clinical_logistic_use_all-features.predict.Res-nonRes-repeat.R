@@ -461,14 +461,14 @@ for (times in 0:1000) {
   data_for_logistic  -> .data_for_logistic
   
   
+  paste(paste(paste("auc_validation",.data_for_logistic %>% dplyr::filter(type =="validation") %>% .$Author,sep="_"),collapse = "\t"),
+        "auc.test","auc.train",
+        "Features",
+        "Times","SuccssTime",sep="\t") %>%
+    readr::write_lines(file.path(res_path,dir,"logistic_record.txt"),sep = "\n",append = TRUE)
   ##################### repeat 100 times get the best features
   while(succss <= 10){
     times=times+1
-    paste("auc.train","auc.test",
-          paste(paste("auc_validation",.data_for_logistic$Author,sep="_"),collapse = "\t"),
-          "Features",
-          "Times","SuccssTime",sep="\t") %>%
-      readr::write_lines(file.path(res_path,dir,"logistic_record.txt"),sep = "\n",append = TRUE)
     n=5
     logistic_feature_res_nrepeat <- list()
     for(i in 1:n){
@@ -527,53 +527,63 @@ for (times in 0:1000) {
     formula.train <- paste("Response~", paste(final_feature$topn_count[[1]]$features,collapse = "+"))
     model.train <- glm( as.formula(formula.train), data = data.ready, family = binomial)
     step.model.train <- stepAIC(model.train, direction = "backward",trace = F)
+    final_features <- rownames(as.data.frame(summary(step.model.train)$coefficients))[-1]
     
     # Make predictions
-    probabilities <- step.model.train %>% predict(type = "response")
-    predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
-    observed.classes <- data.ready$Response
-    auc.train <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
-    
-    # 30% test data 
     .data_for_logistic %>%
-      dplyr::filter(type == "train") %>%
-      dplyr::mutate(data.ready = purrr::pmap(list(GSVA,response,sample_group),.f=function(.x,.y,.z){
+      dplyr::filter(Author == "Riaz") %>%
+      dplyr::select(-n) %>%
+      dplyr::mutate(data = purrr::pmap(list(response,GSVA,sample_group),.f=function(.x,.y,.z){
         .x %>%
-          dplyr::inner_join(.y, by = "Run") %>%
-          dplyr::inner_join(.z, by = "Run") %>%
-          dplyr::filter(usage == "test") %>%
-          dplyr::select(-Run, -usage) %>%
-          dplyr::mutate(Response = as.factor(Response))
+          dplyr::inner_join(.z,by="Run") %>%
+          tidyr::nest(-usage,.key="response") -> response
+        .y %>%
+          dplyr::inner_join(.z,by="Run") %>%
+          tidyr::nest(-usage,.key="GSVA") -> GSVA
+        response %>%
+          dplyr::inner_join(GSVA, by="usage") %>%
+          dplyr::mutate(n = purrr::map(response,.f=function(.x){
+            nrow(.x)
+          })) %>%
+          tidyr::unnest(n)
       })) %>%
-      dplyr::select(data.ready) %>%
-      tidyr::unnest() -> data.ready.test
-    data.ready.test[is.na(data.ready.test)] <- 0
-    colnames(data.ready.test) <- gsub(" ",".",colnames(data.ready.test))
-    colnames(data.ready.test) <- gsub("-",".",colnames(data.ready.test))
-    
-    # Make predictions
-    probabilities <- step.model.train %>% predict(data.ready.test,type = "response")
-    predicted.classes <- ifelse(probabilities > 0.5, "yes", "no")
-    observed.classes <- data.ready.test$Response
-    auc.test <- roc(observed.classes, probabilities,quiet=TRUE)$auc[[1]]
+      dplyr::select(-response,-GSVA,-sample_group) %>%
+      tidyr::unnest() %>%
+      dplyr::select(-type) -> Riaz.data
     
     .data_for_logistic %>%
-      dplyr::filter(type == "validation") %>%
+      dplyr::select(-sample_group) %>%
+      dplyr::rename("usage"="type") %>%
+      dplyr::filter( usage == "validation") %>%
+      rbind(Riaz.data) %>%
+      dplyr::mutate(n = purrr::map2(Author,response,.f=function(.y,.x){
+        print(.y)
+        .x$Response %>%
+          table()%>% 
+          as.data.frame() %>%
+          tidyr::spread(key=".",value="Freq") %>% 
+          dplyr::as.tbl()})) %>%
+      tidyr::unnest(n) -> data.ready.test
+    
+    formula.train <- paste("Response~", paste(final_features,collapse = "+"))
+    model.train <- glm( as.formula(formula.train), data = data.ready, family = binomial)
+    # Make predictions
+    
+    data.ready.test %>%
       dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=step.model.train)) %>%
-      dplyr::select(-response,-GSVA, -sample_group) %>%
+      dplyr::select(-response,-GSVA) %>%
       tidyr::unnest() -> validation_auc
     
-    paste(signif(auc.train,2),signif(auc.test,2),
-          paste(signif(validation_auc$auc,2),collapse = "\t"),
-          paste(rownames(as.data.frame(summary(step.model.train)$coefficients))[-1],collapse = "/"),
+    paste(paste(signif(validation_auc$auc,2),collapse = "\t"),
+          paste(final_features,collapse = "/"),
           times,succss,sep="\t") %>%
       readr::write_lines(file.path(res_path,dir,"logistic_record.txt"),sep = "\n",append = TRUE)
     if(min(auc.train,auc.test)>=0.8){
       if(min(validation_auc$auc)>=0.7){
         succss = succss + 1
-        step.model.train %>%
+        model.train %>%
           readr::write_rds(file.path(res_path,stage,paste("Final_model",succss,".rds.gz",sep="_")),compress = "gz")
-        summary(step.model.train)$coefficients %>%
+        summary(model.train)$coefficients %>%
           as.data.frame() %>%
           readr::write_tsv(file.path(res_path,stage,paste("Final_model_coef",succss,".rds.gz",sep="_")))
         
