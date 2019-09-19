@@ -8,7 +8,7 @@ basic_path <- "/home/huff/project"
 
 # data path ---------------------------------------------------------------
 # 1. data from : The Immune Landscape of Cancer. Immunity 48, 812-830.e14.
-immunity_path_1 <- "/project/huff/huff/data/TCGA/immune_infiltration/immune_lanscape.immunity"
+immunity_path_1 <- file.path(basic_path,"data/TCGA/immune_infiltration/immune_lanscape.immunity")
 immune_lanscape_immunity <- readr::read_tsv(file.path(immunity_path_1,"mmc2.txt")) 
 
 # 2. data from TIMER
@@ -24,12 +24,27 @@ result_path <- "/project/huff/huff/immune_checkpoint/result_20171025/e_5_immune_
 TCGA_cancer_info <- readr::read_tsv(file.path("/project/huff/huff/data/TCGA", "TCGA_sample_cancer_info.txt")) %>%
   dplyr::rename("barcode" = "TCGA Participant Barcode","cancer_types" = "TCGA Study")
 
-
 # density compare ------------------------------------------------------------
-cancer_color <- readr::read_tsv(file.path("/data/shiny-data/GSCALite","02_pcc.tsv"))
+cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
 cancer_color %>%
   dplyr::filter(cancer_types %in% unique(immune_lanscape_immunity$`TCGA Study`)) -> cancer21_color
 
+my_theme <-   theme(
+  panel.background = element_rect(fill = "white",colour = "black"),
+  panel.grid.major=element_line(colour=NA),
+  axis.text.y = element_text(size = 10,colour = "black"),
+  axis.text.x = element_text(size = 10,colour = "black"),
+  # legend.position = "none",
+  legend.text = element_text(size = 10),
+  legend.title = element_text(size = 12),
+  legend.background = element_blank(),
+  legend.key = element_rect(fill = "white", colour = "black"),
+  plot.title = element_text(size = 20),
+  axis.text = element_text(colour = "black"),
+  strip.background = element_rect(fill = "white",colour = "black"),
+  strip.text = element_text(size = 10),
+  text = element_text(color = "black")
+)
 ### All cancer samples ------------------------------------------------------
 # 1. for data from : The Immune Landscape of Cancer. Immunity 48, 812-830.e14.
 fn_density_peak <-function(.name,.x){
@@ -61,6 +76,19 @@ immune_lanscape_immunity %>%
 immune_lanscape_immunity %>%
   dplyr::filter(!is.na(`Leukocyte Fraction`)) %>%
   dplyr::rename("Leukocyte_Fraction"="Leukocyte Fraction","cancer_types" = "TCGA Study") %>%
+  dplyr::inner_join(immune_lanscape_immunity.peak,by="cancer_types") -> immune_lanscape_immunity.plot
+immune_lanscape_immunity.plot %>%
+  dplyr::arrange(peak.x) %>%
+  .$cancer_types %>%
+  unique() -> cancer.rank
+
+immune_lanscape_immunity.plot <- within(immune_lanscape_immunity.plot,cancer_types <- factor(cancer_types,levels = cancer.rank))
+with(immune_lanscape_immunity.plot, levels(cancer_types))
+
+immune_lanscape_immunity.peak <- within(immune_lanscape_immunity.peak,cancer_types <- factor(cancer_types,levels = cancer.rank))
+with(immune_lanscape_immunity.peak, levels(cancer_types))
+
+immune_lanscape_immunity.plot %>%
   ggdensity(x="Leukocyte_Fraction",fill="cancer_types",
             palette = "jco") +
   facet_wrap(~cancer_types) +
@@ -123,6 +151,7 @@ fn_draw_density <- function(value){
   
   cancer_color %>%
     dplyr::filter(cancer_types %in% unique(TIMER_data_dealed$cancer_types)) -> cancer_color.timer
+
   
   TIMER_data_dealed %>%
     ggdensity(x=value,fill="Type",
@@ -282,13 +311,29 @@ fn_draw_density_TN_paired <- function(data,peak_data,value){
     .$cancer_types %>% unique() -> cancers
   peak_data %>%
     dplyr::filter(cell_type==value) %>%
-    dplyr::filter(cancer_types %in% cancers)-> anno
+    dplyr::filter(cancer_types %in% cancers) %>%
+    dplyr::filter(cancer_types != "READ") -> anno
+  
+  anno %>%
+    dplyr::select(-peak.y) %>%
+    tidyr::spread(key="Type",value="peak.x") %>%
+    dplyr::mutate(diff = Tumor - Normal) %>%
+    dplyr::arrange(diff) -> cancer_rank
+  
   
   data %>%
-    ggdensity(x=value,fill="Type",
-              palette = "jco") +
+    dplyr::filter(cancer_types != "READ") %>%
+    dplyr::inner_join(cancer_rank,by=c("cancer_types")) %>%
+    dplyr::inner_join(anno, by=c("cancer_types","Type")) %>%
+    dplyr::mutate(cancer_types = reorder(cancer_types,diff,mean)) %>%
+    ggdensity(x=value,
+              fill="Type",
+              palette = "jco",
+              facet.by = "cancer_types") +
+    # ggplot(aes(x=value, fill=Type)) +
+    # geom_density(alpha=0.25) +
     facet_wrap(~cancer_types,scales = "free") +
-    geom_vline(data=anno,aes(xintercept = peak.x,color=Type),linetype="dotted") +
+    geom_vline(aes(xintercept = peak.x,color=Type),linetype="dotted") +
     scale_color_manual(
       values = c("#104E8B", "#8B6914")
     )+
@@ -303,7 +348,8 @@ fn_draw_density_TN_paired <- function(data,peak_data,value){
       axis.text = element_text(colour = "black",size = 12),
       strip.background = element_rect(fill="white",color="black"),
       strip.text = element_text(color="black",size=12)
-    )
+    ) +
+    my_theme
   filename <- paste("TIMER",value,"density.TN-paired_compare",sep=".")
   ggsave(file.path(result_path,paste(filename,"png",sep=".")),device = "png",width = 10,height = 8)
   ggsave(file.path(result_path,paste(filename,"pdf",sep=".")),device = "pdf",width = 10,height = 8)
@@ -317,6 +363,7 @@ TIMER_data_dealed %>%
   dplyr::filter(n>=10) %>%
   dplyr::select(-n) %>%
   dplyr::ungroup() -> TIMER_ready_draw
+
 fn_draw_density_TN_paired(TIMER_ready_draw,TIMER_data_T.N.paired.peak,"TIL")
 fn_draw_density_TN_paired(TIMER_ready_draw,TIMER_data_T.N.paired.peak,"CD4_Tcell")
 fn_draw_density_TN_paired(TIMER_ready_draw,TIMER_data_T.N.paired.peak,"CD8_Tcell")
