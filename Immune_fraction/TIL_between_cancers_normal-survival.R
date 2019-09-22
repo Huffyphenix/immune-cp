@@ -3,6 +3,9 @@
 
 library(magrittr)
 library(ggplot2)
+library(survival)
+library(survminer)
+library(ggrepel)
 
 # data path config ---------------------------------------------------
 basic_path <- "/home/huff/project"
@@ -205,12 +208,13 @@ fn_durvival_plot <- function(data,title="Pan-cancers progress-free survival",col
 }
 ## 2.1.all sample togather, cancer_types as survival groups ----
 
-dir.create(file.path(result_path,"TILdiff-TN_survival"))
-sur_res_path <- file.path(result_path,"TILdiff-TN_survival")
+dir.create(file.path(result_path,"TILdiff-TN_survival-3years"))
+sur_res_path <- file.path(result_path,"TILdiff-TN_survival-3years")
 
 ### 2.1.1.OS -----
 TCGA_combine_TIL_survival %>%
   dplyr::rename("time"="OS","status"="Status") %>%
+  dplyr::filter(time <= 1095) %>%
   dplyr::mutate(group = cancer_types.x) %>%
   dplyr::group_by(group) %>%
   dplyr::mutate(n = dplyr::n()) %>%
@@ -220,13 +224,14 @@ TCGA_combine_TIL_survival %>%
 cancer_colors %>%
   dplyr::rename("group" = "cancer_types") -> color_list
 
-sur_name <- paste("OS_between_cancers")
+sur_name <- paste("OS_between_cancers-3years")
 TCGA_combine_TIL_survival.OS %>%
   fn_durvival_plot(title="Overall survival",color=color_list,filename=sur_name,out_path=sur_res_path,legend.pos="bottom",h=6,w=6)
 
 ### 2.1.1.PFS -----
 TCGA_combine_TIL_survival %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::filter(time <= 1095) %>%
   dplyr::mutate(group = cancer_types.x) %>%
   dplyr::group_by(group) %>%
   dplyr::mutate(n = dplyr::n()) %>%
@@ -236,7 +241,7 @@ TCGA_combine_TIL_survival %>%
 cancer_colors %>%
   dplyr::rename("group" = "cancer_types") -> color_list
 
-sur_name <- paste("PFS_between_cancers")
+sur_name <- paste("PFS_between_cancers-3years")
 TCGA_combine_TIL_survival.PFS %>%
   fn_durvival_plot(title="Progression-free survival",color=color_list,filename=sur_name,out_path=sur_res_path,legend.pos="bottom",h=6,w=6)
 
@@ -244,6 +249,7 @@ TCGA_combine_TIL_survival.PFS %>%
 ## 2.2.1.PFS----
 TCGA_combine_TIL_survival %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::filter(time <= 1095) %>%
   dplyr::mutate(group = ifelse(TIL.diff>=quantile(TIL.diff,0.5),"High","Low")) %>%
   dplyr::group_by(group) %>%
   dplyr::mutate(n = dplyr::n()) %>%
@@ -253,13 +259,14 @@ TCGA_combine_TIL_survival %>%
 color_list <- tibble::tibble(group=c("High","Low"),
                              color=c("red","blue"))
 
-sur_name <- paste("PFS_between_TILhigh-low")
+sur_name <- paste("PFS_between_TILhigh-low-3years")
 TCGA_combine_TIL_survival.PFS.TILgroups %>%
   fn_durvival_plot(title="Progression-free survival",color=color_list,filename=sur_name,out_path=sur_res_path,legend.pos="none",h=3,w=4)
 
 ## 2.2.1.OS----
 TCGA_combine_TIL_survival %>%
   dplyr::rename("time"="OS","status"="Status") %>%
+  dplyr::filter(time <= 1095) %>%
   dplyr::mutate(group = ifelse(TIL.diff>=quantile(TIL.diff,0.5),"High","Low")) %>%
   dplyr::group_by(group) %>%
   dplyr::mutate(n = dplyr::n()) %>%
@@ -269,7 +276,7 @@ TCGA_combine_TIL_survival %>%
 color_list <- tibble::tibble(group=c("High","Low"),
                              color=c("red","blue"))
 
-sur_name <- paste("OS_between_TILhigh-low")
+sur_name <- paste("OS_between_TILhigh-low-3years")
 TCGA_combine_TIL_survival.OS.TILgroups %>%
   fn_durvival_plot(title="Overall survival",color=color_list,filename=sur_name,out_path=sur_res_path,legend.pos="none",h=3,w=4)
 
@@ -277,6 +284,7 @@ TCGA_combine_TIL_survival.OS.TILgroups %>%
 ## 2.3.1.PFS----
 TCGA_combine_TIL_survival %>%
   dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::filter(time <= 1095) %>%
   dplyr::group_by(cancer_types.x) %>%
   dplyr::mutate(n = dplyr::n()) %>%
   dplyr::ungroup() %>%
@@ -293,7 +301,7 @@ TCGA_combine_TIL_survival %>%
 color_list <- tibble::tibble(group=c("High","Low"),
                              color=c("red","blue"))
 
-sur_name <- paste("PFS_between_TILhigh-low")
+sur_name <- paste("PFS_between_TILhigh-low-3years")
 TCGA_combine_TIL_survival.PFS.TILgroups.cancerSpecific %>%
   dplyr::mutate(filename = paste(cancer_types.x,sur_name,sep=".")) %>%
   dplyr::mutate(title = paste(cancer_types.x,"\n","Progression-free survival",sep="")) %>%
@@ -303,6 +311,7 @@ TCGA_combine_TIL_survival.PFS.TILgroups.cancerSpecific %>%
 ## 2.3.2.OS----
 TCGA_combine_TIL_survival %>%
   dplyr::rename("time"="OS","status"="Status") %>%
+  dplyr::filter(time <= 1095) %>%
   dplyr::group_by(cancer_types.x) %>%
   dplyr::mutate(n = dplyr::n()) %>%
   dplyr::ungroup() %>%
@@ -320,7 +329,7 @@ TCGA_combine_TIL_survival %>%
 color_list <- tibble::tibble(group=c("High","Low"),
                              color=c("red","blue"))
 
-sur_name <- paste("OS_between_TILhigh-low")
+sur_name <- paste("OS_between_TILhigh-low-3years")
 TCGA_combine_TIL_survival.OS.TILgroups.cancerSpecific %>%
   dplyr::mutate(filename = paste(cancer_types.x,sur_name,sep=".")) %>%
   dplyr::mutate(title = paste(cancer_types.x,"\n","Overall survival",sep="")) %>%
