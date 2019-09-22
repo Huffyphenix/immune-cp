@@ -80,6 +80,21 @@ ICP_DE_FC_and_ratio_between_cellline_immune %>%
   geom_smooth(method = "lm") +
   geom_text_repel(aes(x=`tumor_ratio_diff(U-D)`,y=`immune_ratio_diff(U-D)`,label=symbol))
 
+# only skin tumor cell included, to calculate the FC between tumor and immune cells -------
+skin_sample <- readr::read_tsv("/home/huff/project/immune_checkpoint/result_20171025/ICP_exp_patthern/cell_type_info/sample_cell_lines.detailed-info.tsv") %>%
+  dplyr::filter(`Characteristics[Tissue]`=="skin") %>%
+  .$sample
+
+ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
+  dplyr::filter( sample %in% skin_sample) %>%
+  tidyr::nest(-entrez_ID,-symbol,.key="cell_line_exp") %>%
+  dplyr::mutate(DE_res = purrr::map2(cell_line_exp,symbol,fn_outlier_ratio)) %>%
+  dplyr::select(-cell_line_exp) %>%
+  tidyr::unnest() -> ICP_DE_FC_and_ratio_between_SKIN_cellline_immune
+
+ICP_DE_FC_and_ratio_between_SKIN_cellline_immune %>%
+  readr::write_tsv(file.path(result_path,"pattern_info","ICP_in_immune_tumor(only-skin-5samples)_cell-by-FC-pvalue.tsv"))
+  
 # initial results vasulization ------
 library("Rtsne")
 # filter repeat samples
