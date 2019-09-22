@@ -162,7 +162,7 @@ gene_expr_pattern %>%
   dplyr::ungroup() %>%
   tidyr::unnest() %>%
   dplyr::left_join(gene_list, by = "symbol") %>%
-  dplyr::arrange(site_col,rank) -> gene_rank
+  dplyr::arrange(site_col,functionWithImmune,family,rank) -> gene_rank
 gene_rank$site_col %>% as.character() ->gene_rank$site_col
 gene_rank$size %>% as.character() ->gene_rank$size
 
@@ -473,7 +473,7 @@ ggsave(
 )
 
 ################
-#receptor and ligand heatmap
+# receptor and ligand heatmap
 ################
 gene_list_fc_pvalue_simplified %>%
   dplyr::inner_join(gene_list,by="symbol") %>%
