@@ -208,6 +208,94 @@ correlation.ready %>%
 ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 6)
 ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.png"),device = "png",height = 5,width = 6)
 
+# correlation between FC got from fantom(only skin type cell)and melanoma -----------------------
+# 结果没有合在一起的好，还是用上面的相关性结果。
+fantom_res_SKIN_cellline_immune <-
+  readr::read_tsv(file.path(res_path,"pattern_info","ICP_in_immune_tumor(only-skin-5samples)_cell-by-FC-pvalue.tsv")) %>%
+  dplyr::select(symbol,mean_cell_line, mean_immune_exp,`log2FC(I/T)`) %>%
+  tidyr::gather(-symbol,key="data_type",value="Fantom5") %>%
+  dplyr::mutate(data_type = ifelse(data_type == "mean_cell_line","mean_tumor_exp",data_type))
+
+colnames(ICP_exp_in_GSE72056)[-1] %>%
+  sample(5) -> rabdom_5_samples
+
+ICP_exp_in_GSE72056 %>%
+  tidyr::gather(-symbol,key="sample",value="Exp") %>%
+  dplyr::inner_join(sample_info.class,by="sample") %>%
+  dplyr::filter(sample %in% rabdom_5_samples) %>%
+  tidyr::nest(-symbol) %>%
+  dplyr::mutate(test = purrr::map(data,fn_compare_TI_FC)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> ICP_exp_in_GSE72056.wilcox.test.FC.TI_random5
+
+ICP_exp_in_GSE72056.wilcox.test.FC.TI_random5 %>%
+  dplyr::select(symbol,mean_tumor_exp, mean_immune_exp,`log2FC(I/T)`) %>%
+  tidyr::gather(-symbol,key="data_type",value="GSE72056") %>%
+  dplyr::inner_join(fantom_res_SKIN_cellline_immune,by=c("symbol","data_type")) -> correlation.ready_SKIN
+
+# spearman correlation
+correlation.ready_SKIN %>%
+  dplyr::filter(symbol != 'BTNL3') %>%
+  tidyr::nest(-data_type) %>%
+  dplyr::mutate(cpm_cor = purrr::map(data,.f=function(.x){
+    broom::tidy(
+      cor.test(.x$GSE72056,.x$Fantom5,method = "spearman")
+    )
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() -> cor.res
+
+# plot
+library(ggplot2)
+library(ggpubr)
+
+my_theme <-   theme(
+  panel.background = element_rect(fill = "white",colour = "black"),
+  panel.grid.major=element_blank(),
+  axis.text.y = element_text(size = 10,colour = "black"),
+  axis.text.x = element_text(size = 10,colour = "black"),
+  # legend.position = "none",
+  legend.text = element_text(size = 10),
+  legend.title = element_text(size = 12),
+  legend.background = element_blank(),
+  legend.key = element_rect(fill = "white", colour = "black"),
+  plot.title = element_text(size = 20),
+  axis.text = element_text(colour = "black"),
+  strip.background = element_rect(fill = "white",colour = "black"),
+  strip.text = element_text(size = 10),
+  text = element_text(color = "black")
+)
+correlation.ready_SKIN %>%
+  dplyr::inner_join(gene_list_exp_site,by="symbol") %>% 
+  dplyr::group_by(data_type) %>%
+  dplyr::mutate(y=(max(Fantom5)-min(Fantom5))*0.85+min(Fantom5),x=min(GSE72056)+(max(GSE72056)-min(GSE72056))*0.4) %>%
+  dplyr::select(data_type,x,y) %>%
+  unique() %>%
+  dplyr::inner_join(cor.res,by="data_type") %>%
+  dplyr::select(data_type,x,y,estimate,p.value) %>%
+  dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2),sep="")) -> cor_text
+
+correlation.ready_SKIN %>%
+  dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
+  dplyr::filter(Exp_site!="Not_sure", data_type == "log2FC(I/T)") %>%
+  ggplot(aes(x=GSE72056,y=Fantom5)) +
+  geom_jitter(aes(color=Exp_site)) +
+  geom_smooth(se = F, method = "lm") +
+  geom_text(aes(x=x,y=y,label = label),data=cor_text %>% dplyr::filter(data_type == "log2FC(I/T)")) +
+  # facet_wrap(~data_type,scales = "free") +
+  scale_color_manual(values=c("#CD661D",  "#008B00", "#FF69B4", "#1874CD","#CD3333")) +
+  my_theme +
+  labs(x="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [GSE72056]",
+       y="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [FANTOM5]",
+       title = "FANTOM5 vs. GSE72056") +
+  theme(
+    legend.position = "bottom",
+    legend.key.width = unit(0.2,"inches"),
+    legend.key.height=unit(0.2,"inches"),
+    legend.text = element_text(size=8),
+    legend.title = element_blank()
+  )
+
 
 # tSNE: use ICP exp to distingrush tumor and immune cells -----------------
 library("Rtsne")
