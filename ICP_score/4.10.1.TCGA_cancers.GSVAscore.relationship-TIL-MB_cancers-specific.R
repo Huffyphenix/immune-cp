@@ -161,9 +161,6 @@ GSVA.MB.res %>%
   readr::write_tsv(file.path(res_path,"2.MB_with_GSVA_score","1.spm-cor.DE.MB-GSVAscore.allcancers.tsv"))
 
 
-
-
-
 # 4. GSVA score with CTL --------------------------------------------------
 # 4.1.load CTL data -----
 CTL_path <- "/home/huff/project/data/TCGA/CTL_level_estimated"
@@ -972,21 +969,247 @@ GSVA.combined_rank %>%
   dplyr::mutate(mean_rank = (B_cell+CD4_Tcell+ CD8_Tcell+ Dendritic+ Macrophage+ Neutrophil+TIL+ mutation_durden+CTL)/9) -> GSVA.combined.mean_rank
   
 GSVA.combined.mean_rank %>%
+  readr::write_tsv(file.path(res_path,"GSVA.combined.TIL_CTL_MB_mean_rank.tsv"))
+
+GSVA.combined.mean_rank %>%
   dplyr::group_by(Features) %>%
   dplyr::mutate(rank=sum(mean_rank)) %>%
-  dplyr::arrange(desc(rank)) %>%
+  dplyr::arrange(rank) %>%
   dplyr::select(Features,rank) %>%
   dplyr::ungroup() %>%
   unique()-> Features_rank
+Features_rank %>%
+  readr::write_tsv(file.path(res_path,"Features_rank_sum_of_meanRank.tsv"))
 
 
 GSVA.combined.mean_rank <- within(GSVA.combined.mean_rank,Features<- factor(Features,levels = Features_rank$Features))
 with(GSVA.combined.mean_rank,levels(Features)) 
 
+Features_rank %>% head(100) %>% .$Features -> top100_features
+GSVA.combined.mean_rank %>%
+  dplyr::filter(Features %in% top100_features) %>%
+  ggplot(aes(x=cancer_types,y=Features)) +
+  geom_tile(aes(fill = mean_rank)) +
+  scale_fill_gradient(name = "Rank",high="white",low="red") +
+  my_theme +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  labs(x="Cancer types")
+ggsave(file.path(res_path,"top100_Feature_filtered_by_correlation_rank.png"),device = "png",height = 15,width = 10)
+ggsave(file.path(res_path,"top100_Feature_filtered_by_correlation_rank.pdf"),device = "pdf",height = 15,width = 10)
+
 GSVA.combined.mean_rank %>%
   ggplot(aes(x=cancer_types,y=Features)) +
   geom_tile(aes(fill = mean_rank)) +
-  scale_fill_gradient(high="red",low="white")
+  scale_fill_gradient(name = "Rank",high="white",low="red") +
+  my_theme +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    axis.text.y = element_blank()
+  ) +
+  labs(x="Cancer types")
+ggsave(file.path(res_path,"ALL_Feature_filtered_by_correlation_rank.png"),device = "png",height = 10,width = 10)
+ggsave(file.path(res_path,"ALL_Feature_filtered_by_correlation_rank.pdf"),device = "pdf",height = 10,width = 10)
+
+
+# get relation of feature with immuneFeatures, rank, combine cancer --------
+
+GSVA.combined_rank %>%
+  tidyr::gather(-cancer_types,-Features,key="cell_type",value="rank") %>%
+  dplyr::group_by(Features,cell_type) %>%
+  dplyr::mutate(mean_rank = mean(rank)) %>%
+  dplyr::select(-cancer_types,-rank) %>%
+  unique() %>%
+  tidyr::spread(key="cell_type",value="mean_rank") %>%
+  dplyr::ungroup() -> GSVA.combined_feature_rank_in_all_cancer
+
+GSVA.TIL.res %>%
+  tidyr::unnest() %>%
+  dplyr::select(cancer_types, Features, cell_type, estimate, `log2FC(High/Low)`) %>%
+  dplyr::mutate(`log2FC(High/Low)`=ifelse(is.na(`log2FC(High/Low)`),0,`log2FC(High/Low)`)) %>%
+  rbind(GSVA.CTL.res %>%
+          tidyr::unnest() %>%
+          dplyr::select(cancer_types, Features, cell_type, estimate, `log2FC(High/Low)`)%>%
+          dplyr::mutate(`log2FC(High/Low)`=ifelse(is.na(`log2FC(High/Low)`),0,`log2FC(High/Low)`))) %>%
+  rbind(GSVA.MB.res %>%
+          tidyr::unnest() %>%
+          dplyr::select(cancer_types, Features, cell_type, estimate, `log2FC(High/Low)`)%>%
+          dplyr::mutate(`log2FC(High/Low)`=ifelse(is.na(`log2FC(High/Low)`),0,`log2FC(High/Low)`))) -> GSVA.combine_cor_DE
+
+GSVA.combine_cor_DE %>%
+  dplyr::group_by(Features,cell_type) %>%
+  dplyr::mutate(mean_cor = mean(estimate), mean_DE = mean(`log2FC(High/Low)`)) %>%
+  dplyr::select(-cancer_types,-estimate,-`log2FC(High/Low)`) %>%
+  unique() %>%
+  dplyr::mutate(sum_cor_DE = mean_cor + mean_DE) %>%
+  dplyr::select(-mean_cor,-mean_DE) %>%
+  tidyr::spread(key="cell_type",value="sum_cor_DE") %>%
+  dplyr::ungroup() -> GSVA.combine_cor_DE.sum
+
+GSVA.combine_cor_DE.sum %>%
+  tidyr::gather(-Features,key="cell_type",value="sum_cor_DE") %>%
+  dplyr::inner_join(GSVA.combined_feature_rank_in_all_cancer %>%
+                      tidyr::gather(-Features,key="cell_type",value="rank"), by=c("Features","cell_type")) %>%
+  dplyr::mutate(combine_rank_cor = rank/sum_cor_DE) -> Features_rank_in_cell_type
+
+Features_rank_in_cell_type %>%
+  dplyr::select(-combine_rank_cor,-rank) %>%
+  dplyr::group_by(Features) %>%
+  dplyr::mutate(mean=mean(sum_cor_DE)) %>%
+  dplyr::select(Features,mean) %>%
+  unique() %>%
+  dplyr::arrange(mean) -> feature_rank_cor
+Features_rank_in_cell_type <- within(Features_rank_in_cell_type,Features<-factor(Features,levels = feature_rank_cor$Features))
+
+Features_rank_in_cell_type %>%
+  ggplot(aes(x=cell_type,y=Features)) +
+  geom_tile(aes(fill=sum_cor_DE)) +
+  scale_fill_gradient2(name = "Cor. + FC",
+                       low="blue",
+                       high="red",
+                       mid = "white",
+                       midpoint = 0) +
+  my_theme +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    axis.text.y = element_blank() ,
+    axis.ticks.y =element_blank()
+  ) +
+  labs(x="Cell types")
+ggsave(file.path(res_path,"ALL_Feature_filtered_by_cor_FC.png"),device = "png",height = 10,width = 10)
+ggsave(file.path(res_path,"ALL_Feature_filtered_by_cor_FC.pdf"),device = "pdf",height = 10,width = 10)
+
+feature_rank_cor %>%
+  # dplyr::filter(Features=="Fold.All_gene.TIGIT") %>%
+  dplyr::filter(strsplit(Features,"\\.")[[1]][1]!="Mean") %>%
+  head(25) %>%
+  rbind(feature_rank_cor %>%
+          dplyr::filter(strsplit(Features,"\\.")[[1]][1]!="Mean") %>%
+          tail(25)) -> top_50
+top_50 %>%
+  readr::write_tsv(file.path(res_path,"top_50_Feature_filtered_by_cor_FC-noMean.tsv"))
+
+Features_rank_in_cell_type %>%
+  dplyr::filter(Features %in% top_50$Features) %>%
+  ggplot(aes(x=cell_type,y=Features)) +
+  geom_tile(aes(fill=sum_cor_DE)) +
+  scale_fill_gradient2(name = "Cor. + FC",
+                       low="blue",
+                       high="red",
+                       mid = "white",
+                       midpoint = 0) +
+  my_theme +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  ) +
+  labs(x="Cell types")
+ggsave(file.path(res_path,"top_50_Feature_filtered_by_cor_FC-noMean.png"),device = "png",height = 10,width = 10)
+ggsave(file.path(res_path,"top_50_Feature_filtered_by_cor_FC-noMean.pdf"),device = "pdf",height = 10,width = 10)
+
+# cancer specific ----------
+library(ggrepel)
+
+for (cancer in unique(GSVA.combine_cor_DE$cancer_types)) {
+  GSVA.combine_cor_DE %>%
+    dplyr::filter(cancer_types %in% cancer) -> for_draw
+  
+  for_draw %>%
+    dplyr::mutate(sum = estimate+ `log2FC(High/Low)`) %>%
+    dplyr::arrange(abs(sum)) %>%
+    tail(20) %>%
+    .$Features -> top20.Features
+  for_draw %>%
+    dplyr::mutate(label = ifelse(abs(estimate) >=0.4, Features, NA)) %>%
+    dplyr::mutate(label_or_not = ifelse(is.na(label), "yes", "no")) %>%
+    ggplot(aes(x=estimate,y=`log2FC(High/Low)`)) +
+    geom_jitter(aes(color=label_or_not)) +
+    # geom_text_repel(aes(x=estimate,y=`log2FC(High/Low)`,label=label,color=label_or_not),size=3) +
+    facet_wrap(~ cell_type, scales = "free") + 
+    scale_color_manual(
+      values = c("red","black")
+    ) +
+    labs(x="Average spearman correlation between \nTIL features and gene feature score in tumors",
+         y="Average log2(TIL fold change between high\nand low gene feature score groups) in tumors",
+         title = cancer) +
+    my_theme +
+    theme(legend.position = "none")
+  ggsave(file.path(res_path,"cacner_specific",paste(cancer,"Cor_DE_points.pdf")),device = "pdf",height = 10, width = 10)
+  ggsave(file.path(res_path,"cacner_specific",paste(cancer,"Cor_DE_points.png")),device = "png",height = 10, width = 10)
+}
+
+# correlation between pair and pair/gene ------------
+
+top_50 %>%
+  dplyr::mutate(main = strsplit(Features, "\\.")[[1]][2]) %>%
+  dplyr::filter(!is.na(main)) %>%
+  dplyr::select(Features, main) -> pairs
+
+GSVA_exp_ratio_combine %>%
+  # head(1) %>%
+  dplyr::mutate(filter_GSVA = purrr::map(GSVA,.f=function(.x){
+    .x %>%
+      tidyr::gather(-barcode,key="Features",value="value") %>%
+      dplyr::filter(Features %in% top_50$Features) 
+  })) %>%
+  dplyr::select(-GSVA) %>%
+  dplyr::mutate(cor = purrr::map(filter_GSVA,.f=function(.x){
+    .res <- tibble::tibble()
+    for (i in 1:nrow(pairs)) {
+      pairs$Features[i] -> x
+      pairs$main[i] -> y
+      .x %>%
+        dplyr::filter(Features %in% x) %>%
+        .$value -> x.value
+      .x %>%
+        dplyr::filter(Features %in% y) %>%
+        .$value -> y.value
+      if (length(y.value)>0) {
+        broom::tidy(
+          cor.test(x.value,y.value,method = "spearman")
+        ) %>%
+          dplyr::mutate(Feature1 = x, Feature2=y) %>%
+          rbind(.res) -> .res
+      } else{
+        .res<-.res
+      }
+    }
+    .res
+  })) %>%
+  dplyr::select(-filter_GSVA) %>%
+  tidyr::unnest() -> top50.pair_cor_res
+
+top50.pair_cor_res %>%
+  dplyr::arrange(Feature2) %>%
+  dplyr::select(Feature1,Feature2) %>%
+  unique() -> Feature_1_2_rank
+top50.pair_cor_res <- within(top50.pair_cor_res,Feature1<-factor(Feature1,levels=unique(Feature_1_2_rank$Feature1)))
+with(top50.pair_cor_res,levels(Feature1))
+top50.pair_cor_res <- within(top50.pair_cor_res,Feature2<-factor(Feature2,levels=unique(Feature_1_2_rank$Feature2)))
+with(top50.pair_cor_res,levels(Feature2))
+top50.pair_cor_res %>%
+  # dplyr::filter(cancer_types=="SKCM") %>%
+  ggplot(aes(x=Feature2,y=Feature1)) +
+  geom_tile(aes(fill=estimate),color="grey",size=0.2) +
+  facet_wrap(.~cancer_types) +
+  scale_fill_gradient2(
+    name = "Spearman cor.",
+    low = "skyblue3",
+    mid = "white",
+    high = "tomato3",
+    limit = c(-1,1),
+    space = "Lab"
+  ) +
+  guides(fill=guide_colorbar(title.position="left")) +
+  my_theme +
+  theme(
+    legend.title = element_text(angle = 90),
+    axis.text.x = element_text(angle = 90,hjust = 1,vjust = 0.5),
+    axis.title = element_blank()
+  )
+ggsave(file.path(res_path,"FoldFeatures-MainGeneset.correlation-heatmap.pdf"),device = "pdf",height = 20,width = 15)
+ggsave(file.path(res_path,"FoldFeatures-MainGeneset.correlation-heatmap.png"),device = "png",height = 20,width = 15)
+
 # save.image --------------------------------------------------------------
 
 # save.image(file.path(res_path,"TCGA.GSVA_score.ICP_features-all_cancer_togather.rda"))
