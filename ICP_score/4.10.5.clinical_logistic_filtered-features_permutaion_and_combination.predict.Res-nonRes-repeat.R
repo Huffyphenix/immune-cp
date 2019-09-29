@@ -6,6 +6,7 @@
 # features are permutation and combination of 44 features filtered from TCGA
 
 ################################
+start <- Sys.time()
 library(magrittr)
 library(tidyverse)
 library(caret)
@@ -29,7 +30,8 @@ gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_ch
 # score_path <- file.path(immune_res_path,"ICP_score/2.2.Clinical_validation-GSVA-ICPs_exp_site_5_feature")
 exp_score_path <- file.path(immune_res_path,"ICP_score.new")
 gsva_score_path <-  file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
-res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination")
+# res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination")
+res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific")
 
 # load data ---------------------------------------------------------------
 gsva.score <- readr::read_rds(file.path(gsva_score_path,"ICP_GSVA_score_all-possible-features_all-togather.rds.gz")) %>%
@@ -48,10 +50,11 @@ gsva.score %>%
                       dplyr::rename("Run"="barcode"),by="Run") %>%
   dplyr::inner_join(exp, by="Run") -> combine_GSVA.exp_ratio
 
-filtered_features <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio/overall_feature_filter.tsv")) %>%
-  dplyr::filter(Counts_of_significant_analysis_in_all_cancers>=3) %>%
+# filtered_features <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio/overall_feature_filter.tsv")) %>%
+#   dplyr::filter(Counts_of_significant_analysis_in_all_cancers>=3) %>%
+#   .$Features
+filtered_features <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/result_20171025/TCGA_GSVAScore/GSVA_add_exp_ratio_cancerSpecific/top_50_Feature_filtered_by_cor_FC-noMean.tsv")) %>%
   .$Features
-
 colnames(combine_GSVA.exp_ratio) <- gsub(colnames(combine_GSVA.exp_ratio),pattern = " ",replacement = "_")
 colnames(combine_GSVA.exp_ratio) <- gsub(colnames(combine_GSVA.exp_ratio),pattern = "-",replacement = ".")
 combine_GSVA.exp_ratio <- combine_GSVA.exp_ratio[,c("Run",filtered_features)]
@@ -82,9 +85,9 @@ Run_pubmed.id %>%
 Response_statistic <- readr::read_tsv(file.path(gsva_score_path,"Response_statistic_each_dataset.tsv")) %>%
   dplyr::select(-Cancer.y) %>%
   dplyr::mutate(Response = ifelse(is.na(Response),0,Response)) %>%
-  dplyr::group_by(Author) %>%
+  dplyr::group_by(Author,Biopsy_Time) %>%
   dplyr::mutate(`non-Response`=sum(`non-Response`),Response=sum(Response)) %>%
-  dplyr::select(-Biopsy_Time,-`Response_percentage(%)`) %>%
+  dplyr::select(-`Response_percentage(%)`) %>%
   dplyr::ungroup() %>%
   unique() %>%
   dplyr::mutate(`Response_percentage(%)` = 100*Response/(Response+`non-Response`))
@@ -143,27 +146,27 @@ fn_prediction <- function(group,final_feature){
     dplyr::select(-response,-GSVA) %>%
     tidyr::unnest() -> validation_auc
   
-  if(min(validation_auc$auc)>=0.6){
+  if(min(validation_auc$auc)>=0.65){
     summary(model.train)$coefficients %>%
       as.data.frame() -> coef
     
     # draw picture
     validation_auc %>%
       dplyr::inner_join(Response_statistic,by=c("Author")) %>%
-      dplyr::mutate(group = paste(Author,blockade.y,paste("(",Response,"*/",`non-Response`,"**);",sep=""),"AUC","=",signif(auc,2))) %>%
+      dplyr::mutate(group = paste(Author,blockade.y,Biopsy_Time,paste("(",Response,"*/",`non-Response`,"**);",sep=""),"AUC","=",signif(auc,2))) %>%
       dplyr::select(roc_data,group,usage) %>%
       tidyr::unnest() -> plot_ready
     plot_ready %>%
       ggplot(aes(x=Specificity,y=Sensitivity)) +
-      geom_path(aes(color=group,linetype = usage)) + 
+      geom_path(aes(color=group)) + 
       scale_x_reverse()  +
       my_theme +
       theme(
         legend.position = c(0.75,0.25),
         legend.title = element_blank()
       )
-    ggsave(file.path(res_path,paste("ROC_plot",group,"png",sep=".")),device = "png",width = 5, height = 5)
-    ggsave(file.path(res_path,paste("ROC_plot",group,"pdf",sep=".")),device = "pdf",width = 5, height = 5)
+    ggsave(file.path(res_path,paste("ROC_plot",group,"png",sep=".")),device = "png",width = 8, height = 5)
+    ggsave(file.path(res_path,paste("ROC_plot",group,"pdf",sep=".")),device = "pdf",width = 8, height = 5)
     sucess="yes"
   } else{
     sucess="no"
@@ -281,14 +284,14 @@ data_for_logistic %>%
 # stage=c("pre-treatment")
 
 fn_choose_feature <- function(n,f){
-  combn(filtered_features,2) %>% 
+  combn(filtered_features,n) %>% 
     as.data.frame() %>%
     dplyr::as.tbl() %>%
     tidyr::gather(key="group",value="features") %>%
     dplyr::mutate(group = paste(group,n,sep="_"))
 }
 
-tibble::tibble(n=c(2:8)) %>%
+tibble::tibble(n=c(2:5)) %>%
   dplyr::mutate(feature_comn = purrr::map(n,.f=fn_choose_feature,f=filtered_features)) %>%
   tidyr::unnest() -> feature_group
 feature_group %>%
@@ -330,4 +333,6 @@ feature_group_AUC %>%
   tidyr::unnest() %>%
   readr::write_tsv(file.path(res_path,"AUC_res_yes.tsv"))
 
+start
+Sys.time()
 parallel::stopCluster(cluster)
