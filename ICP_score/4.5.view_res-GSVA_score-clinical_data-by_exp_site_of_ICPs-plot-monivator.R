@@ -238,24 +238,15 @@ tibble::tibble(group=c("Base_line","Base_line"),usage=c("Base_line","Base_line")
                Sensitivity=c(0,1),Specificity=c(1,0),thresholds=c(0,1), best=c("no","no")) -> base_line
 plot_ready.auc %>%
   rbind(base_line) -> plot_ready
-plot_ready <- within(plot_ready,group<- factor(group,levels = c("Auslander, anti–PD-1/CTLA-4(1*/22**), on-treatment; AUC = 1; validation",
-                                                                "Auslander, anti–PD-1/CTLA-4(2*/12**), pre-treatment; AUC = 0.83; validation",
-                                                                "Hugo, anti–PD-1(15*/12**), pre-treatment; AUC = 0.56; validation",
-                                                                "Kim, anti–PD-1(12*/33**), pre-treatment; AUC = 0.63; validation",
-                                                                "Riaz, anti–PD-1(10*/39**), pre-treatment; AUC = 0.79; validation",
-                                                                "Van Allen, anti-CTLA-4(7*/34**), pre-treatment; AUC = 0.65; validation",
-                                                                "Riaz, anti–PD-1(12*/29**), on-treatment; AUC = 0.86; train",
-                                                                "Riaz, anti–PD-1(6*/10**), on-treatment; AUC = 0.93; test",
+plot_ready <- within(plot_ready,group<- factor(group,levels = c(plot_ready.auc$group %>% unique(),
                                                                 "Base_line")))
 plot_ready %>%
-  dplyr::filter(!group %in% c("Hugo, anti–PD-1(15*/12**), pre-treatment; AUC = 0.56; validation",
-                              "Van Allen, anti-CTLA-4(7*/34**), pre-treatment; AUC = 0.65; validation",
-                              "Kim, anti–PD-1(12*/33**), pre-treatment; AUC = 0.63; validation"
-                              )) %>%
+  # dplyr::filter(!group %in% c("Hugo, anti–PD-1(15*/12**), pre-treatment; AUC = 0.58; validation"
+                              # )) %>%
   ggplot(aes(x=Specificity,y=Sensitivity)) +
   geom_path(aes(color=group)) + 
   scale_x_reverse()  +
-  scale_color_manual(values = c(c("#FF4040", "#0000FF", "#006400", "#CD950C", "#9400D3"), "#030303")) + #, "#EEA2AD", "#00BFFF", "#7CFC00"
+  scale_color_manual(values = c(c("#FF4040", "#0000FF", "#006400", "#CD950C"), "#EEA2AD", "#00BFFF", "#7CFC00", "#9400D3", "#030303")) + #
   my_theme +
   theme(
     legend.position = c(0.64,0.15),
@@ -267,3 +258,6 @@ plot_ready %>%
   )
 ggsave(file.path(res_path,paste(nTimes,"Best_model.AUC.png",sep=".")),device = "png",height = 6, width = 8)
 ggsave(file.path(res_path,paste(nTimes,"Best_model.AUC.pdf",sep=".")),device = "pdf",height = 6, width = 8)
+
+ggsave(file.path(res_path,paste(nTimes,"Best_model.AUC-all_datasets.png",sep=".")),device = "png",height = 6, width = 8)
+ggsave(file.path(res_path,paste(nTimes,"Best_model.AUC-all_datasets.pdf",sep=".")),device = "pdf",height = 6, width = 8)
