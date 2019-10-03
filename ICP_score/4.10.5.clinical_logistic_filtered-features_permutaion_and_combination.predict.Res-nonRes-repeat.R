@@ -57,6 +57,7 @@ filtered_features <- readr::read_tsv(file.path("/home/huff/project/immune_checkp
   .$Features
 colnames(combine_GSVA.exp_ratio) <- gsub(colnames(combine_GSVA.exp_ratio),pattern = " ",replacement = "_")
 colnames(combine_GSVA.exp_ratio) <- gsub(colnames(combine_GSVA.exp_ratio),pattern = "-",replacement = ".")
+filtered_features <- intersect(colnames(combine_GSVA.exp_ratio),filtered_features)
 combine_GSVA.exp_ratio <- combine_GSVA.exp_ratio[,c("Run",filtered_features)]
 
 # sample data classfication --------------------------------------------------
@@ -73,14 +74,14 @@ sample_info %>%
 combine_GSVA.exp_ratio %>%
   dplyr::inner_join(Run_pubmed.id, by = c("Run")) %>%
   dplyr::select(-Response) %>%
-  tidyr::nest(-Cancer.y,-blockade, -Author,.key = "GSVA") -> gsva.score
+  tidyr::nest(-Cancer.y,-blockade, -Author,-Biopsy_Time,.key = "GSVA") -> gsva.score
 
 
 Run_pubmed.id %>%
   dplyr::filter(! Response %in% c("NE", "X")) %>%
   dplyr::mutate(Response = ifelse(Response %in% c("CR", "PR", "PRCR", "R"), "yes", "no"))  %>%
   tidyr::nest(Run,Response,.key = "response") %>%
-  dplyr::inner_join(gsva.score, by = c("Cancer.y","blockade","Author")) -> data_for_logistic
+  dplyr::inner_join(gsva.score, by = c("Cancer.y","blockade","Author","Biopsy_Time")) -> data_for_logistic
 
 Response_statistic <- readr::read_tsv(file.path(gsva_score_path,"Response_statistic_each_dataset.tsv")) %>%
   dplyr::select(-Cancer.y) %>%
@@ -146,14 +147,14 @@ fn_prediction <- function(group,final_feature){
     dplyr::select(-response,-GSVA) %>%
     tidyr::unnest() -> validation_auc
   
-  if(min(validation_auc$auc)>=0.65){
+  if(min(validation_auc$auc)>=0.6){
     summary(model.train)$coefficients %>%
       as.data.frame() -> coef
     
     # draw picture
     validation_auc %>%
-      dplyr::inner_join(Response_statistic,by=c("Author")) %>%
-      dplyr::mutate(group = paste(Author,blockade.y,Biopsy_Time,paste("(",Response,"*/",`non-Response`,"**);",sep=""),"AUC","=",signif(auc,2))) %>%
+      dplyr::inner_join(Response_statistic,by=c("Author","Biopsy_Time")) %>%
+      dplyr::mutate(group = paste(Author,blockade.y,Biopsy_Time,paste("(",Response,"*/",`non-Response`,"**);",sep=""),"AUC","=",signif(auc,2),usage)) %>%
       dplyr::select(roc_data,group,usage) %>%
       tidyr::unnest() -> plot_ready
     plot_ready %>%
@@ -162,8 +163,12 @@ fn_prediction <- function(group,final_feature){
       scale_x_reverse()  +
       my_theme +
       theme(
-        legend.position = c(0.75,0.25),
-        legend.title = element_blank()
+        legend.position = c(0.72,0.17),
+        legend.title = element_blank(),
+        legend.text = element_text(size=8),
+        legend.key.height = unit(0.15,"inches"),
+        legend.key.width = unit(0.15,"inches"),
+        legend.key = element_rect(colour="white")
       )
     ggsave(file.path(res_path,paste("ROC_plot",group,"png",sep=".")),device = "png",width = 8, height = 5)
     ggsave(file.path(res_path,paste("ROC_plot",group,"pdf",sep=".")),device = "pdf",width = 8, height = 5)
@@ -328,7 +333,7 @@ feature_group_AUC %>%
   readr::write_rds(file.path(res_path,"AUC_res_all.rds.gz"),compress = "gz")
 
 feature_group_AUC %>%
-  dplyr::select(group,AUC_mean,sucess) %>%
+  # dplyr::select(group,AUC_mean,sucess) %>%
   dplyr::filter(sucess == "yes") %>%
   tidyr::unnest() %>%
   readr::write_tsv(file.path(res_path,"AUC_res_yes.tsv"))
