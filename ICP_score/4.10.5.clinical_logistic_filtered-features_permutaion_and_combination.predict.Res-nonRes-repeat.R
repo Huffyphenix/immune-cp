@@ -32,6 +32,7 @@ exp_score_path <- file.path(immune_res_path,"ICP_score.new")
 gsva_score_path <-  file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
 # res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination")
 res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific")
+# res_path <- file.path(exp_score_path,"logistic_model_predict_Response/test")
 
 # load data ---------------------------------------------------------------
 gsva.score <- readr::read_rds(file.path(gsva_score_path,"ICP_GSVA_score_all-possible-features_all-togather.rds.gz")) %>%
@@ -333,11 +334,56 @@ feature_group_AUC %>%
   readr::write_rds(file.path(res_path,"AUC_res_all.rds.gz"),compress = "gz")
 
 feature_group_AUC %>%
-  # dplyr::select(group,AUC_mean,sucess) %>%
   dplyr::filter(sucess == "yes") %>%
+  dplyr::select(group,AUC_mean,sucess) %>%
   tidyr::unnest() %>%
   readr::write_tsv(file.path(res_path,"AUC_res_yes.tsv"))
 
+feature_group_AUC %>%
+  dplyr::filter(sucess == "yes") %>%
+  dplyr::select(group,AUC_mean,sucess,AUC) %>%
+  tidyr::unnest() %>%
+  dplyr::group_by(group) %>%
+  dplyr::filter(!usage %in% c("train+test","train")) %>%
+  dplyr::mutate(max_auc = max(auc), min_auc = min(auc), mid_auc = quantile(auc,0.5), mean_auc = mean(auc)) %>%
+  dplyr::select(group,max_auc, min_auc, mid_auc, mean_auc) %>%
+  dplyr::arrange(desc(mean_auc, mid_auc,max_auc, min_auc)) %>%
+  unique() %>% 
+  readr::write_tsv(file.path(res_path,"AUC_res_yes_rank.tsv"))
+
+# # The first ine : V137146_5
+# feature_group_AUC %>%
+#   dplyr::filter(group %in% c("V137146_5")) -> final_res
+# 
+# final_res$final_feature[[1]]$features -> final_features
+# 
+# ############## draw picture, using stepAIC
+# # get model from 70% train and use it on 30% Test and validation data
+# data_for_logistic %>%
+#   dplyr::filter(usage == "train") %>% 
+#   dplyr::mutate(data.ready = purrr::map2(GSVA,response,.f=function(.x,.y){
+#     .x %>%
+#       dplyr::inner_join(.y, by = "Run") %>%
+#       dplyr::select(-Run) %>%
+#       dplyr::mutate(Response = as.factor(Response))
+#   })) %>%
+#   dplyr::select(data.ready) %>%
+#   tidyr::unnest() -> data.ready
+# # data.ready <- na.omit(data.ready)
+# data.ready[is.na(data.ready)] <- 0
+# colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
+# colnames(data.ready) <- gsub("-",".",colnames(data.ready))
+# 
+# formula.train <- paste("Response~", paste(final_features,collapse = "+"))
+# model.train <- glm(as.formula(formula.train), data = data.ready, family = binomial)
+# 
+# # Make predictions
+# 
+# data_for_logistic %>%
+#   dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=model.train)) %>%
+#   dplyr::select(-response,-GSVA) %>%
+#   tidyr::unnest() -> validation_auc
+# data_for_logistic
 start
 Sys.time()
 parallel::stopCluster(cluster)
