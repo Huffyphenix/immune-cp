@@ -29,7 +29,11 @@ res_path <- file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possib
 
 load(file.path(res_path,"get_clinical_gsvascore.rds"))
 # load data ---------------------------------------------------------------
-exp_data <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data/mRNA_exp","all_FPKM_expression_2.txt"))
+# exp_data.fpkm <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_response_data/mRNA_exp","all_FPKM_expression_2.txt"))
+exp_data <- readr::read_rds(file.path("/home/huff/project/immune_checkpoint/clinical_response_data/mRNA_exp","Batch_corrected_CPM_exp.rds.gz"))  
+exp_data %>%
+  as.data.frame() %>%
+  dplyr::mutate(gene_id = rownames(exp_data)) -> exp_data
 gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv")) %>%
   dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune",Exp_site)) %>%
   dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Tumor","Mainly_exp_on_Tumor" ),"Mainly_exp_on_Tumor",Exp_site.1)) %>%
