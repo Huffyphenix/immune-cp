@@ -351,16 +351,24 @@ feature_group_AUC %>%
   unique() %>% 
   readr::write_tsv(file.path(res_path,"AUC_res_yes_rank.tsv"))
 
-# # The first ine : V137146_5
+
+############## validate the results
+# # The first ine : V483182_5
 # feature_group_AUC %>%
-#   dplyr::filter(group %in% c("V137146_5")) -> final_res
+#   dplyr::filter(group %in% c("V483182_5")) -> final_res
 # 
 # final_res$final_feature[[1]]$features -> final_features
 # 
-# ############## draw picture, using stepAIC
+# data_for_logistic %>%
+#   dplyr::mutate(filter_score = purrr::map(GSVA, .f =function(.x){
+#     .x[,c("Run",final_features)]
+#   })) %>%
+#   dplyr::select(-GSVA) %>%
+#   readr::write_rds("/home/huff/project/immune_checkpoint/result_20171025/ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare/clinical_out_score.rds.gz")
+# 
 # # get model from 70% train and use it on 30% Test and validation data
 # data_for_logistic %>%
-#   dplyr::filter(usage == "train") %>% 
+#   dplyr::filter(usage == "train") %>%
 #   dplyr::mutate(data.ready = purrr::map2(GSVA,response,.f=function(.x,.y){
 #     .x %>%
 #       dplyr::inner_join(.y, by = "Run") %>%
@@ -376,14 +384,16 @@ feature_group_AUC %>%
 # 
 # formula.train <- paste("Response~", paste(final_features,collapse = "+"))
 # model.train <- glm(as.formula(formula.train), data = data.ready, family = binomial)
-# 
+# model.train %>%
+#   readr::write_rds(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare","our_ICP_lm_model.rds.gz"))
 # # Make predictions
 # 
 # data_for_logistic %>%
 #   dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=model.train)) %>%
 #   dplyr::select(-response,-GSVA) %>%
 #   tidyr::unnest() -> validation_auc
-# data_for_logistic
+
+
 start
 Sys.time()
 parallel::stopCluster(cluster)
