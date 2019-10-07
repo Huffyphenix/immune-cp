@@ -249,10 +249,11 @@ res2 %>%
   dplyr::mutate(group = paste(Author,Biopsy_Time,blockade,sep=",")) %>%
   ggplot(aes(x=feature_group2,y=mean_auc)) +
   geom_boxplot(aes(fill = group)) +
-  labs(y="Mean AUC of 5 fold cross validation\n(100 repetition)") +
+  labs(y="Mean AUC of 5 fold cross validation\n(100 repetitions)") +
   my_theme +
   theme(
     legend.title = element_blank(),
+    axis.title.x = element_blank(),
     legend.key = element_rect(colour="white")
   )
 
@@ -273,12 +274,13 @@ res_VanAllen %>%
     legend.title = element_blank(),
     axis.title.x = element_blank(),
     legend.position = "top",
-    legend.key = element_rect(colour="white")
+    legend.key = element_rect(colour="white"),
+    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)
   ) +
   ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
 
-ggsave(file.path(res_path,"VanAllen_compare_plot.png"),device = "png",height = 3, width = 4)
-ggsave(file.path(res_path,"VanAllen_compare_plot.pdf"),device = "pdf",height = 3, width = 4)
+ggsave(file.path(res_path,"VanAllen_compare_plot.png"),device = "png",height = 4, width = 4)
+ggsave(file.path(res_path,"VanAllen_compare_plot.pdf"),device = "pdf",height = 4, width = 4)
 
 # res2 %>% dplyr::filter(feature_group=="auc_ICP") %>% dplyr::mutate(res="2") %>%
 #   rbind(res %>% dplyr::filter(feature_group=="auc_ICP") %>% dplyr::mutate(res="1")) %>%
