@@ -90,7 +90,7 @@ broom::tidy(
 
 ICP_DE_FC_and_ratio_between_cellline_immune %>%
   dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` >=1 & `log2FC(I/T).mid` >=2, "Immune cell dominate","Immune and tumor cell almost")) %>%
-  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` <=(-1) & `log2FC(I/T).mid` <=(-2), "Tumor cell dominate",exp_site)) %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` <=(-1) & `log2FC(I/T).mid` <=(-2), "Tumor cell dominate",Exp_site)) %>%
   ggplot(aes(x=`log2FC(I/T).mean`,y=`log2FC(I/T).mid`)) +
   geom_jitter(aes(color = Exp_site)) +
   geom_smooth(method = "lm") +
@@ -108,8 +108,8 @@ ICP_DE_FC_and_ratio_between_cellline_immune %>%
     plot.title = element_text(size=15)
   )
   
-ggsave(file.path(result_path,"classify_ICP_exp_pattern.pdf"),device = "pdf",height = 6, width = 8)
-ggsave(file.path(result_path,"classify_ICP_exp_pattern.png"),device = "png",height = 6, width = 8)
+ggsave(file.path(result_path,"classify_ICP_exp_pattern.pdf"),device = "pdf",height = 4, width = 8)
+ggsave(file.path(result_path,"classify_ICP_exp_pattern.png"),device = "png",height = 4, width = 8)
 
 
 
@@ -159,10 +159,10 @@ ggplot(ready_for_draw,
   # ggpubr::stat_compare_means(method = "wilcox.test",label = "p.format") +
   # geom_text(aes(label = outlier), na.rm = TRUE, nudge_x = -0.25, nudge_y = 0.25,size=3) +
   scale_fill_manual(
-    # values = site_cplor,
-    values = c("yellow",  "green","pink","blue", "red"),
+    name = "ICPs expression pattern",
+    values = c("yellow",  "green","pink"),
     # values = c("#008B00", "#00EE00", "#CD8500", "#FF4500"),
-    breaks = c("Only_exp_on_Immune", "Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor")
+    breaks = c("Immune and tumor cell almost", "Immune cell dominate","Tumor cell dominate")
   ) +
   # theme_bw() +
   ylab(TeX("log_2 (TPM+1)")) +
@@ -172,10 +172,11 @@ ggplot(ready_for_draw,
     axis.text.x = element_text(size = 10),
     axis.title.x = element_blank(),
     # legend.position = "none",
-    legend.text = element_text(size = 10),
-    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 15),
+    legend.title = element_text(size = 18, face = "bold"),
     legend.background = element_blank(),
     legend.key = element_rect(fill = "white", colour = "black"),
+    legend.position = "top",
     plot.title = element_text(size = 20),
     axis.text = element_text(colour = "black"),
     strip.background = element_rect(fill = "white",colour = "black"),
