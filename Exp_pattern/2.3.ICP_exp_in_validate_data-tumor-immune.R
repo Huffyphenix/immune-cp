@@ -7,7 +7,7 @@ library(magrittr)
 basic_path <- "/home/huff/project"
 immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
-res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio.new")
+res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byMeanUQ")
 
 # load image --------------------------------------------------------------
 load(file.path(
@@ -17,7 +17,7 @@ load(file.path(
 #### gene list ------------------------------------------------------------------------
 gene_list <- read.table(file.path(gene_list_path, "all.entrez_id-gene_id"),header=T)
 gene_list_exp_site <- readr::read_tsv(file.path(res_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
-  dplyr::select(entrez_ID,symbol,Exp_site,`log2FC(I/T)`) %>%
+  dplyr::select(entrez_ID,symbol,Exp_site,`log2FC(I/T).mean`,`log2FC(I/T).mid`) %>%
   dplyr::inner_join(gene_list,by="symbol") 
 
 
@@ -67,12 +67,23 @@ fn_compare_TI_FC <- function(.data){
     dplyr::filter(cell_source == "Tumor") %>%
     .$Exp %>%
     mean() -> mean_tumor_exp
+  # UQ exp
+  .data %>%
+    dplyr::filter(cell_source == "Immune") %>%
+    .$Exp %>%
+    quantile(0.75) -> UQ_immune_exp
+  .data %>%
+    dplyr::filter(cell_source == "Tumor") %>%
+    .$Exp %>%
+    quantile(0.75) -> UQ_tumor_exp
   # test
   broom::tidy(
     wilcox.test(Exp ~ cell_source, data = .data, alternative = "two.sided") #Comparing the means of two independent groups:Unpaired Two-Samples Wilcoxon Test (non-parametric) 
   ) %>%
-    dplyr::mutate(mean_immune_exp=mean_immune_exp,mean_tumor_exp=mean_tumor_exp) %>%
-    dplyr::mutate(`log2FC(I/T)` = log2((mean_immune_exp+0.01)/(mean_tumor_exp+0.01)))
+    dplyr::mutate(mean_immune_exp=mean_immune_exp,mean_tumor_exp=mean_tumor_exp,
+                  UQ_immune_exp=UQ_immune_exp, UQ_tumor_exp=UQ_tumor_exp) %>%
+    dplyr::mutate(`log2FC(I/T).mean` = log2((mean_immune_exp+0.01)/(mean_tumor_exp+0.01)),
+                  `log2FC(I/T).UQ` = log2((UQ_immune_exp+0.01)/(UQ_tumor_exp+0.01)))
 }
 
 ICP_exp_in_GSE72056 %>%
@@ -91,13 +102,12 @@ ICP_exp_in_GSE72056 %>%
   dplyr::inner_join(sample_info.class,by="sample") %>%
   dplyr::filter(cell_source %in% c("Tumor","Immune")) %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol")  %>%
-  dplyr::inner_join(ICP_exp_in_GSE72056.wilcox.test.FC.TI,by="symbol") %>%
-  dplyr::mutate(label = paste(symbol,"log2FC=",signif(`log2FC(I/T).y`,2))) -> ready_for_draw
+  dplyr::inner_join(ICP_exp_in_GSE72056.wilcox.test.FC.TI,by="symbol")  -> ready_for_draw
 
 ready_for_draw %>%
   dplyr::select(label,Exp_site,`log2FC(I/T).x`) %>%
   dplyr::inner_join(strip_color,by="Exp_site") %>%
-  dplyr::arrange(rank,`log2FC(I/T).x`) %>%
+  dplyr::arrange(rank,`log2FC(I/T).mean.x`) %>%
   .$label -> symbol_rank
 
 ready_for_draw <- within(ready_for_draw,label <- factor(label,levels = unique(symbol_rank)))  
