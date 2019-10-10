@@ -54,9 +54,9 @@ fn_outlier_ratio <- function(cell_line_exp,.symbol){
     dplyr::mutate(`log2FC(I/T).mid` = log2((mid_immune_exp+1)/(mid_cell_line+1)))%>%
     dplyr::mutate(`log2FC(I/T).down` = log2((down_immune_exp+1)/(down_cell_line+1))) -> FC
   
-  
   FC
 }
+
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine %>%
   dplyr::filter(! `Characteristics[Tissue]` %in% c("PrimaryCell","blood")) %>%
   tidyr::nest(-entrez_ID,-symbol,.key="cell_line_exp") %>%
