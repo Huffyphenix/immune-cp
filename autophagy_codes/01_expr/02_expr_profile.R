@@ -20,8 +20,8 @@ gene_list$symbol <- as.character(gene_list$symbol)
 gene_list_expr <- readr::read_rds(path = file.path(expr_path, ".rds_03_a_gene_list_expr.rds.gz"))
 # ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern","manual_edit_2_ICP_exp_pattern_in_immune_tumor_cell.tsv"))
 
-ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern-byratio.new/pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
-  dplyr::select(entrez_ID,symbol,Exp_site,`log2FC(I/T)`) 
+ICP_expr_pattern <- readr::read_tsv(file.path(out_path,"ICP_exp_patthern-byMeanUQ/pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
+  dplyr::select(entrez_ID,symbol,Exp_site,`log2FC(I/T).mean`,`log2FC(I/T).mid`) 
 
 ICP_family <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_family.txt"))
 
@@ -53,7 +53,7 @@ gene_list %>%
   dplyr::mutate(family = ifelse(is.na(family),"Other",family)) -> gene_list
 
 gene_list %>%
-  readr::write_tsv(file.path(gene_list_path,"ICPs_all_info_class.tsv"))
+  readr::write_tsv(file.path(gene_list_path,"ICPs_all_info_class-new.tsv"))
 
 survival_path <- "/home/huff/project/data/TCGA-survival-time/cell.2018.survival"
 survival_data <- readr::read_rds(file.path(survival_path, "TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
@@ -387,10 +387,10 @@ fn_average.by_expsite <- function(.data){
     dplyr::left_join(gene_list,by="symbol") %>%
     dplyr::filter(!is.na(expr)) %>%
     dplyr::filter(substr(barcode,14,14)==0) %>%
-    dplyr::filter(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor")) %>%
-    dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
-    dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
-    dplyr::mutate(Exp_site = Exp_site.1) %>%
+    dplyr::filter(Exp_site %in% c("Immune and tumor cell almost" ,"Immune cell dominate","Tumor cell dominate" )) %>%
+    # dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
+    # dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
+    # dplyr::mutate(Exp_site = Exp_site.1) %>%
     dplyr::group_by(barcode,Exp_site) %>%
     dplyr::mutate(average_exp = mean(expr)) %>%
     dplyr::select(barcode,Exp_site,average_exp) %>%
@@ -452,7 +452,7 @@ plot_ready %>%
   dplyr::select(cancer_types, Exp_site,mean)%>%
   unique() %>%
   tidyr::spread(key="Exp_site",value="mean") %>%
-  dplyr::mutate(`log2FC(I/T)`=log2(Mainly_exp_on_Immune/Mainly_exp_on_Tumor)) %>%
+  dplyr::mutate(`log2FC(I/T)`=log2(`Immune cell dominate`/`Tumor cell dominate`)) %>%
   dplyr::mutate(title = paste(cancer_types,", log2FC=",signif(`log2FC(I/T)`,2),sep="")) %>%
   dplyr::select(cancer_types,title,`log2FC(I/T)`) -> label
 plot_ready %>%
@@ -460,7 +460,7 @@ plot_ready %>%
 
 plot_ready %>%
   dplyr::select(Exp_site) %>%
-  dplyr::inner_join(data.frame(Exp_site = c("Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor"),
+  dplyr::inner_join(data.frame(Exp_site =c("Immune and tumor cell almost" ,"Immune cell dominate","Tumor cell dominate" ),
                                rank = c(3,2,1)), by = "Exp_site") %>%
   dplyr::arrange(rank) %>%
   .$Exp_site -> Exp_site.rank
@@ -480,8 +480,8 @@ plot_ready %>%
   facet_wrap(~title) +
   coord_flip() +
   theme_bw() +
-  xlab("Expression site of ICPs") +
-  ylab("log2 (Expression)") +
+  xlab("Expression pattern of ICPs") +
+  ylab("log2 (Average expression)") +
   ggpubr::stat_compare_means(comparisons = list(c("Mainly_exp_on_Tumor","Mainly_exp_on_Immune")),label = "p.signif") +
   theme(
     strip.background = element_rect(colour = "black", fill = "white"),
@@ -552,9 +552,9 @@ ICP_mean_expr_in_cancers.byexpsite.PFS %>%
     .x %>%
       dplyr::select(hr,functionWithImmune) %>%
       tidyr::spread(key="functionWithImmune",value="hr") %>%
-      dplyr::mutate(hr_sum=Mainly_exp_on_Immune-Mainly_exp_on_Tumor) %>%
+      dplyr::mutate(hr_sum=`Immune cell dominate`-`Tumor cell dominate`) %>%
       dplyr::select(hr_sum)-> tmp
-    rbind(tmp,tmp)
+    rbind(rbind(tmp,tmp),tmp)
   })) %>%
   tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
@@ -601,9 +601,9 @@ ICP_mean_expr_in_cancers.byexpsite.OS %>%
     .x %>%
       dplyr::select(hr,functionWithImmune) %>%
       tidyr::spread(key="functionWithImmune",value="hr") %>%
-      dplyr::mutate(hr_sum=Mainly_exp_on_Immune-Mainly_exp_on_Tumor) %>%
+      dplyr::mutate(hr_sum=`Immune cell dominate`-`Tumor cell dominate`) %>%
       dplyr::select(hr_sum)-> tmp
-    rbind(tmp,tmp)
+    rbind(tmp,rbind(tmp,tmp))
   })) %>%
   tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
@@ -677,9 +677,9 @@ gene_anno <- HeatmapAnnotation(df=symbol_anno,
                                                                "Activate" = "#1C86EE",
                                                                "TwoSide" = "#EE7600"),
                                           `Exp. pattern`=c("Mainly_exp_on_Tumor" = "pink",
-                                                     "Only_exp_on_Tumor" = "red",
-                                                     "Both_exp_on_Tumor_Immune" = "#9A32CD",
-                                                     "Mainly_exp_on_Immune" = "blue",
+                                                     "Tumor cell dominate" = "red",
+                                                     "Immune and tumor cell almost" = "#9A32CD",
+                                                     "Immune cell dominate" = "blue",
                                                      "Only_exp_on_Immune" = "blue",
                                                      "Not_sure" = "grey"),
                                           `Function type` = c("Receptor" = "black",
