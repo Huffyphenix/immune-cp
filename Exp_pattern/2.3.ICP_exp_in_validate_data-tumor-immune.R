@@ -8,6 +8,7 @@ basic_path <- "/home/huff/project"
 immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
 res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byMeanUQ")
+# res_path <- file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio.new")
 
 # load image --------------------------------------------------------------
 load(file.path(
@@ -94,10 +95,18 @@ ICP_exp_in_GSE72056 %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> ICP_exp_in_GSE72056.wilcox.test.FC.TI
 
+ICP_exp_in_GSE72056.wilcox.test.FC.TI %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` >=1 & `log2FC(I/T).UQ` >=2, "Immune cell dominate","Immune and tumor cell almost")) %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` <=(-1) & `log2FC(I/T).UQ` <=(-2), "Tumor cell dominate",Exp_site)) %>%
+  dplyr::inner_join(gene_list_exp_site, by="symbol") %>%
+  dplyr::select(symbol, Exp_site.x, Exp_site.y) %>% View()
+  
+strip_color <- data.frame(Exp_site = unique(gene_list_exp_site$Exp_site),
+                          site_cplor = c("green", "orange", "pink"),
+                          rank = c(3,2,1))
 # plot
 library(ggbeeswarm)
 ICP_exp_in_GSE72056 %>%
-  dplyr::filter(symbol != "BTNL3") %>%
   tidyr::gather(-symbol,key="sample",value="Exp") %>%
   dplyr::inner_join(sample_info.class,by="sample") %>%
   dplyr::filter(cell_source %in% c("Tumor","Immune")) %>%
@@ -105,16 +114,15 @@ ICP_exp_in_GSE72056 %>%
   dplyr::inner_join(ICP_exp_in_GSE72056.wilcox.test.FC.TI,by="symbol")  -> ready_for_draw
 
 ready_for_draw %>%
-  dplyr::select(label,Exp_site,`log2FC(I/T).x`) %>%
+  dplyr::select(symbol,Exp_site,`log2FC(I/T).mean.x`) %>%
   dplyr::inner_join(strip_color,by="Exp_site") %>%
-  dplyr::arrange(rank,`log2FC(I/T).mean.x`) %>%
-  .$label -> symbol_rank
+  dplyr::arrange(rank,`log2FC(I/T).mean.x`)-> symbol_rank
 
-ready_for_draw <- within(ready_for_draw,label <- factor(label,levels = unique(symbol_rank)))  
-with(ready_for_draw, levels(label))
+ready_for_draw <- within(ready_for_draw,symbol <- factor(symbol,levels = unique(symbol_rank$symbol)))  
+with(ready_for_draw, levels(symbol))
 
 ready_for_draw %>%
-  dplyr::select(label,Exp_site) %>%
+  dplyr::select(symbol,Exp_site) %>%
   unique() -> color_bac
 color_bac$cell_source <- color_bac$Exp <- 1
 
@@ -123,36 +131,40 @@ ggplot(ready_for_draw,aes(x=cell_source, y=Exp)) +
   geom_quasirandom(size=0.1) +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf,alpha=0.1) +
   # geom_violin() +
-  facet_wrap(~label,scales = "free_y") +
+  facet_wrap(~symbol,scales = "free_y") +
   scale_fill_manual(
-    # values = site_cplor,
-    values = c("yellow",  "green","pink","blue", "red"),
+    name = "Expression pattern",
+    values = c("yellow",  "green","pink"),
     # values = c("#008B00", "#00EE00", "#CD8500", "#FF4500"),
-    breaks = c("Only_exp_on_Immune", "Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor")
+    breaks = c("Immune and tumor cell almost", "Immune cell dominate","Tumor cell dominate")
   ) +
   my_theme +
   labs(y="Expression",title="GSE72056, melanoma") +
   theme(
     axis.title.x = element_blank(),
-    legend.position = "bottom"
+    legend.position = "top",
+    legend.text = element_text(size = 15),
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.background = element_blank(),
+    legend.key = element_rect(fill = "white", colour = "black")
   )
 ggsave(file.path(res_path,"pattern_validation","5.2.GSE72056.ICP_exp-T-I_compare.pdf"),device = "pdf",height = 10,width = 16)
 ggsave(file.path(res_path,"pattern_validation","5.2.GSE72056.ICP_exp-T-I_compare.png"),device = "png",height = 10,width = 16)
 
 # correlation between FC got from fantom and melanoma ---------------------------------
 fantom_res <- readr::read_tsv(file.path(res_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
-  dplyr::select(symbol,mean_cell_line, mean_immune_exp,`log2FC(I/T)`) %>%
-  tidyr::gather(-symbol,key="data_type",value="Fantom5") %>%
-  dplyr::mutate(data_type = ifelse(data_type == "mean_cell_line","mean_tumor_exp",data_type))
+  dplyr::select(symbol,mean_cell_line, mean_immune_exp,mid_cell_line,mid_immune_exp,`log2FC(I/T).mean`,`log2FC(I/T).mid`) %>%
+  dplyr::rename("log2FC(I/T).UQ"="log2FC(I/T).mid","UQ_tumor_exp"="mid_cell_line","UQ_immune_exp"="mid_immune_exp","mean_tumor_exp"="mean_cell_line") %>%
+  tidyr::gather(-symbol,key="data_type",value="Fantom5") 
 
 ICP_exp_in_GSE72056.wilcox.test.FC.TI %>%
-  dplyr::select(symbol,mean_tumor_exp, mean_immune_exp,`log2FC(I/T)`) %>%
+  dplyr::select(symbol,mean_tumor_exp, mean_immune_exp,UQ_immune_exp, UQ_tumor_exp,`log2FC(I/T).mean`,`log2FC(I/T).UQ`) %>%
   tidyr::gather(-symbol,key="data_type",value="GSE72056") %>%
   dplyr::inner_join(fantom_res,by=c("symbol","data_type")) -> correlation.ready
 
 # spearman correlation
 correlation.ready %>%
-  dplyr::filter(symbol != 'BTNL3') %>%
+  # dplyr::filter(symbol != "BTNL3") %>%
   tidyr::nest(-data_type) %>%
   dplyr::mutate(cpm_cor = purrr::map(data,.f=function(.x){
     broom::tidy(
@@ -182,9 +194,7 @@ my_theme <-   theme(
   strip.text = element_text(size = 10),
   text = element_text(color = "black")
 )
-strip_color <- data.frame(Exp_site = c("Only_exp_on_Immune","Mainly_exp_on_Immune","Both_exp_on_Tumor_Immune","Mainly_exp_on_Tumor","Only_exp_on_Tumor" ),
-                          site_cplor = c("blue", "green", "orange", "pink","red"),
-                          rank = c(5,4,3,2,1))
+
 correlation.ready %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol") %>% 
   dplyr::group_by(data_type) %>%
@@ -195,18 +205,19 @@ correlation.ready %>%
   dplyr::select(data_type,x,y,estimate,p.value) %>%
   dplyr::mutate(label = paste("r = ",signif(estimate,2),", p = ",signif(p.value,2),sep="")) -> cor_text
 
+library(latex2exp)
 correlation.ready %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
-  dplyr::filter(Exp_site!="Not_sure", data_type == "log2FC(I/T)") %>%
+  dplyr::filter(Exp_site!="Not_sure", data_type %in% c("log2FC(I/T).mean","log2FC(I/T).UQ")) %>%
   ggplot(aes(x=GSE72056,y=Fantom5)) +
   geom_jitter(aes(color=Exp_site)) +
   geom_smooth(se = F, method = "lm") +
-  geom_text(aes(x=x,y=y,label = label),data=cor_text %>% dplyr::filter(data_type == "log2FC(I/T)")) +
-  # facet_wrap(~data_type,scales = "free") +
+  geom_text(aes(x=x,y=y,label = label),data=cor_text %>% dplyr::filter(data_type%in% c("log2FC(I/T).mean","log2FC(I/T).UQ"))) +
+  facet_wrap(~data_type,scales = "free") +
   scale_color_manual(values=c("#CD661D",  "#008B00", "#FF69B4", "#1874CD","#CD3333")) +
   my_theme +
-  labs(x="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [GSE72056]",
-       y="Log2 expression fold change of immune regulators\nbetween immune cells and tumor cells [FANTOM5]",
+  labs(x="GSE72056",
+       y="FANTOM5",
        title = "FANTOM5 vs. GSE72056") +
   theme(
     legend.position = "bottom",
@@ -214,9 +225,9 @@ correlation.ready %>%
     legend.key.height=unit(0.2,"inches"),
     legend.text = element_text(size=8),
     legend.title = element_blank()
-  )
-ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.pdf"),device = "pdf",height = 5,width = 6)
-ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.png"),device = "png",height = 5,width = 6)
+  ) 
+ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.pdf"),device = "pdf",height = 4,width = 6)
+ggsave(file.path(res_path,"pattern_validation","5.1.GSE72056-Fantom5.correlation.png"),device = "png",height = 4,width = 6)
 
 # correlation between FC got from fantom(only skin type cell)and melanoma -----------------------
 # 结果没有合在一起的好，还是用上面的相关性结果。
