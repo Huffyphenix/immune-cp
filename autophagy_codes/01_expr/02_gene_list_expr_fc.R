@@ -11,7 +11,11 @@ expr_path<-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 # Read gene list
 # Gene list was compress as rds
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
-gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv"))
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv")) %>%
+  dplyr::mutate(site_col = ifelse(Exp_site== "Immune and tumor cell almost","darkorange", site_col)) %>%
+  dplyr::mutate(site_col = ifelse(Exp_site== "Immune cell dominate","darkgreen", site_col)) %>%
+  dplyr::mutate(site_col = ifelse(Exp_site== "Tumor cell dominate","red", site_col)) 
+  
 
 #output path
 out_path<-c(file.path(result_path,"e_2_DE"))
@@ -237,7 +241,7 @@ gene_list_fc_pvalue_simplified_filter %>%
     breaks = seq(-6, 6, length.out = 5),
     #limits=c(-4,4),
     labels = c("-6", "-3", "0", "3", "6"),
-    name = "Log2 (FC)"
+    name = latex2exp::TeX("Log_2 (FC)")
   ) +
   scale_size_continuous(
     name="P value",
