@@ -10,7 +10,7 @@ library(survival)
 # data path ---------------------------------------------------------------
 basic_path <- file.path("/home/huff/project")
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
-TCGA_path <- file.path("/data/TCGA/TCGA_data")
+TCGA_path <- file.path("/home/huff/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
 res_path <- file.path(immune_res_path,"ICP_score/2.GSVA-ICPs_exp_site_5_feature")
 
