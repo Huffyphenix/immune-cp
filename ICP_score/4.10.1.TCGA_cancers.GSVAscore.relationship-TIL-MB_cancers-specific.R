@@ -9,7 +9,7 @@ immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 TCGA_path <- file.path(basic_path,"immune_checkpoint/data/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
 
-res_path <- file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio_cancerSpecific")
+res_path <- file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio_cancerSpecific-new")
 
 exp_ratio_path <- file.path(immune_res_path,"ICP_score.new")
 GSVA_path <- file.path(immune_res_path,"TCGA_GSVAScore")
@@ -20,7 +20,7 @@ tcga_path <- file.path(basic_path,"/data/TCGA")
 
 # load data ---------------------------------------------------------------
 GSVA.score.onlytumor <- 
-  readr::read_rds(file.path(immune_res_path,"TCGA_GSVAScore/TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz")) %>%
+  readr::read_rds(file.path(immune_res_path,"TCGA_GSVAScore/new-TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz")) %>%
   tidyr::unnest() %>%
   tidyr::gather(-cancer_types,-barcode,key="Features",value="value") %>%
   dplyr::mutate(Features=gsub(" ","_",Features)) %>%
@@ -43,10 +43,8 @@ GSVA.score.onlytumor %>%
 
 # laod ICP feature info ---------------------------------------------------
 
-gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv")) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune",Exp_site)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Tumor","Mainly_exp_on_Tumor" ),"Mainly_exp_on_Tumor",Exp_site.1)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site.1))
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv")) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site))
 
 # plot theme --------------------------------------------------------------
 
