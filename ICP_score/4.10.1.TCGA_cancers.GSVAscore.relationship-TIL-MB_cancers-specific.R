@@ -26,7 +26,7 @@ GSVA.score.onlytumor <-
   dplyr::mutate(Features=gsub(" ","_",Features)) %>%
   tidyr::spread(key="Features",value="value")
 exp_ratio <- 
-  readr::read_rds(file.path(exp_ratio_path,"TCGA_mean_fold_ratio_features_value.rds.gz"))  %>%
+  readr::read_rds(file.path(exp_ratio_path,"new-TCGA_mean_fold_ratio_features_value.rds.gz"))  %>%
   tidyr::gather(-barcode,key="Features",value="value") %>%
   # dplyr::mutate(Features=gsub("\\(","",Features)) %>%
   # dplyr::mutate(Features=gsub("\\)","",Features)) %>%
@@ -500,23 +500,23 @@ GSVA.score.univarite.surv.OS.multi %>%
 #   dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_2,facet = "cancer_types~.",title="Multi-variable cox model of GSVA score of features (OS)",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=10,h=12))
 
 # 3.5.1.2. all cancer togather
-label.data.CTL %>%
-  dplyr::select(Features,label,n) %>%
-  dplyr::mutate(name = ifelse(n<5,paste(Features,"(",label,")",sep=""),Features)) %>%
-  dplyr::mutate(Features=gsub(" ","_",Features)) -> Features_name.detail
-GSVA.score.univarite.surv.OS.multi %>%
-  dplyr::inner_join(Features_name.detail,by="Features") %>%
-  dplyr::mutate(Features=label) %>%
-  dplyr::mutate(cox_sig = ifelse(coxp<0.05,"1yes","2no")) %>%
-  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  dplyr::filter(abs(hr)<6 & coxp<0.05) %>%
-  dplyr::mutate(hr_l=ifelse(hr_l<(-6),-6,hr_l),hr_h=ifelse(hr_h>6,6,hr_h)) %>%
-  tidyr::nest(-cancer_types) %>%
-  dplyr::mutate(Group = "All") %>%
-  tidyr::unnest() %>%
-  tidyr::nest(-Group) %>%
-  dplyr::mutate(filename = paste("2.OS.multi-variable.cox",Group,sep="_")) %>%
-  dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(OS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=20))
+# label.data.CTL %>%
+#   dplyr::select(Features,label,n) %>%
+#   dplyr::mutate(name = ifelse(n<5,paste(Features,"(",label,")",sep=""),Features)) %>%
+#   dplyr::mutate(Features=gsub(" ","_",Features)) -> Features_name.detail
+# GSVA.score.univarite.surv.OS.multi %>%
+#   dplyr::inner_join(Features_name.detail,by="Features") %>%
+#   dplyr::mutate(Features=label) %>%
+#   dplyr::mutate(cox_sig = ifelse(coxp<0.05,"1yes","2no")) %>%
+#   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
+#   dplyr::filter(abs(hr)<6 & coxp<0.05) %>%
+#   dplyr::mutate(hr_l=ifelse(hr_l<(-6),-6,hr_l),hr_h=ifelse(hr_h>6,6,hr_h)) %>%
+#   tidyr::nest(-cancer_types) %>%
+#   dplyr::mutate(Group = "All") %>%
+#   tidyr::unnest() %>%
+#   tidyr::nest(-Group) %>%
+#   dplyr::mutate(filename = paste("2.OS.multi-variable.cox",Group,sep="_")) %>%
+#   dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(OS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=20))
 
 ### 3.5.2.PFS cox plot -------
 # 3.5.2.1. cancer groups 
@@ -533,19 +533,19 @@ GSVA.score.univarite.surv.OS.multi %>%
 #   dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_2,facet = "cancer_types~.",title="Multi-variable cox model of GSVA score of features (PFS)",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=10,h=12))
 
 # 3.5.2.2. all cancer togather
-GSVA.score.univarite.surv.PFS.multi %>%
-  dplyr::inner_join(Features_name.detail,by="Features") %>%
-  dplyr::mutate(Features=label) %>%
-  dplyr::mutate(cox_sig = ifelse(coxp<0.05,"1yes","2no")) %>%
-  dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  dplyr::filter(abs(hr)<6 & coxp<0.05) %>%
-  dplyr::mutate(hr_l=ifelse(hr_l<(-6),-6,hr_l),hr_h=ifelse(hr_h>6,6,hr_h)) %>%
-  tidyr::nest(-cancer_types) %>%
-  dplyr::mutate(Group = "All") %>%
-  tidyr::unnest() %>%
-  tidyr::nest(-Group) %>%
-  dplyr::mutate(filename = paste("1.PFS.multi-variable.cox",Group,sep="_")) %>%
-  dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(PFS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=20))
+# GSVA.score.univarite.surv.PFS.multi %>%
+#   dplyr::inner_join(Features_name.detail,by="Features") %>%
+#   dplyr::mutate(Features=label) %>%
+#   dplyr::mutate(cox_sig = ifelse(coxp<0.05,"1yes","2no")) %>%
+#   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
+#   dplyr::filter(abs(hr)<6 & coxp<0.05) %>%
+#   dplyr::mutate(hr_l=ifelse(hr_l<(-6),-6,hr_l),hr_h=ifelse(hr_h>6,6,hr_h)) %>%
+#   tidyr::nest(-cancer_types) %>%
+#   dplyr::mutate(Group = "All") %>%
+#   tidyr::unnest() %>%
+#   tidyr::nest(-Group) %>%
+#   dplyr::mutate(filename = paste("1.PFS.multi-variable.cox",Group,sep="_")) %>%
+#   dplyr::mutate(res = purrr::map2(data,filename,fn_cox_plot_1,facet = "cancer_types~.",title="Multi-variable cox(PFS)\nGSVA score of ICP features",dir=file.path(res_path,"3.survival_with_GSVA_score.new"),w=6,h=20))
 
 # # 5. score from cox model -------------------------------------------------
 # # 5.1.function--------
