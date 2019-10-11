@@ -1,17 +1,18 @@
-file.name <- list.files(path = "/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction2", pattern = "_predicted_result_tumor.Rdata$")
+file.name <- list.files(path = "/home/huff/project/data/TCGA/immune_infiltration/miao_TCAP_prediction", pattern = "_immune_infiltration_ref.Rdata$")
 cancer_types <- file.name %>% stringr::str_split(pattern = "\\_", simplify = T) %>% .[,1]
 
 process_raw_data <- function(.x){
   print(.x)
-  path <- "/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction2"
+  path <- "/home/huff/project/data/TCGA/immune_infiltration/miao_TCAP_prediction"
   load(file.path(path,.x))
-  rownames <- gsub("\\.","-",substr(rownames(predict_result),1,12))
+  rownames <- gsub("\\.","-",substr(rownames(fra),1,12))
   cancer_type <- strsplit(x = .x,split = "_")[[1]][1]
-  predict_result %>%
-    as.data.frame() %>%
+  fra %>%
     dplyr::as.tbl() %>%
     dplyr::mutate(barcode = rownames) %>%
-    dplyr::select(barcode, InfiltrationScore) -> .tmp
+    tidyr::gather(-barcode,key="TIL",value="value") %>%
+    dplyr::mutate(value = as.numeric(value)) %>%
+    tidyr::spread(key="TIL",value="value")-> .tmp
   return(.tmp)
 }
 
@@ -22,4 +23,6 @@ cancers_names %>%
   dplyr::mutate(Infiltration=purrr::map(names,process_raw_data)) -> pancan_immune_infiltration_by_TCAP
 
 pancan_immune_infiltration_by_TCAP %>%
-  readr::write_rds(file.path("/project/huff/huff/data/TCGA/immune_infiltration/miao_TCAP_prediction","pancan33_immune_infiltration_by_TCAP.rds.gz"),compress = "gz")
+  dplyr::select(-names) %>%
+  dplyr::ungroup() %>%
+  readr::write_rds(file.path("/home/huff/project/data/TCGA/immune_infiltration/miao_TCAP_prediction","pancan33_immune_infiltration_by_TCAP.rds.gz"),compress = "gz")
