@@ -33,7 +33,8 @@ exp_data %>%
   dplyr::mutate(gene_id = rownames(exp_data)) -> exp_data
 #####
 
-gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header = T)
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv"))
+
 gene_list$symbol <- as.character(gene_list$symbol)
 # survival_data <- readr::read_rds(file.path("/home/huff/project/data/TCGA-survival-time/cell.2018.survival","TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
 #   dplyr::rename("cancer_types" = "type")
