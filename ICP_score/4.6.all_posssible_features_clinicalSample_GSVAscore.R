@@ -34,10 +34,8 @@ exp_data <- readr::read_rds(file.path("/home/huff/project/immune_checkpoint/clin
 exp_data %>%
   as.data.frame() %>%
   dplyr::mutate(gene_id = rownames(exp_data)) -> exp_data
-gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv")) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune",Exp_site)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Tumor","Mainly_exp_on_Tumor" ),"Mainly_exp_on_Tumor",Exp_site.1)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site.1)) 
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv")) %>%
+    dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site))
 
 # ICP_family <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/checkpoint/ICP_gene_family.txt"))%>%
 #   dplyr::inner_join(gene_list, by = "symbol")
@@ -86,7 +84,7 @@ gene_list %>%
 # 1.1. get gene feature from gene list ----
 genelist <- list()
 #### gene list feature by gene exp site #####
-for(expsite in c("Both_exp_on_Tumor_Immune","Mainly_exp_on_Immune","Mainly_exp_on_Tumor")){
+for(expsite in c("Tumor cell dominate","Immune and tumor cell almost","Immune cell dominate")){
   genelist[[expsite]] <- gene_list %>%
     dplyr::filter(Exp_site.1 == expsite) %>%
     .$ens_id
@@ -189,7 +187,7 @@ exp_data.nest %>%
   dplyr::select(-data_spread) -> GSVA.score
 
 GSVA.score %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-cancer_metastic_specific.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "new-ICP_GSVA_score_all-possible-features_all-cancer_metastic_specific.rds.gz"), compress = "gz")
 
 
 # cancer specific ----
@@ -212,7 +210,7 @@ exp_data.nest.cancer_specific %>%
   dplyr::select(-data_spread) -> GSVA.score.cancer_specific
 
 GSVA.score.cancer_specific %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-cancer_specific.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "new-ICP_GSVA_score_all-possible-features_all-cancer_specific.rds.gz"), compress = "gz")
 
 # cancer, study, blockage,  pre/on-treatment specific ----
 exp_data %>%
@@ -234,7 +232,7 @@ exp_data.nest.all_specific[-4,] %>%
   dplyr::select(-data_spread) -> GSVA.score.all_specific
 
 GSVA.score.all_specific %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-specific.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "new-ICP_GSVA_score_all-possible-features_all-specific.rds.gz"), compress = "gz")
 
 # cancer, study, blockage,  pre/on-treatment specific ----
 exp_data %>%
@@ -244,7 +242,7 @@ exp_data %>%
   dplyr::select(-data_spread) -> GSVA.score.all
 
 GSVA.score.all %>%
-  readr::write_rds(file.path(res_path, "ICP_GSVA_score_all-possible-features_all-togather.rds.gz"), compress = "gz")
+  readr::write_rds(file.path(res_path, "new-ICP_GSVA_score_all-possible-features_all-togather.rds.gz"), compress = "gz")
 
 
 save.image(file.path(res_path,"get_clinical_gsvascore.rds"))
