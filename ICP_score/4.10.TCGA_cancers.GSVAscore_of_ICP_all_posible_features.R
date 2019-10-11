@@ -10,17 +10,17 @@ library(GSVA)
 # server 1
 basic_path <- file.path("/home/huff/project")
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
-TCGA_path <- file.path(basic_path,"immune_checkpoint/data/TCGA_data")
+TCGA_path <- file.path("/home/huff/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
 res_path <- file.path(immune_res_path,"TCGA_GSVAScore")
 
 # load data ---------------------------------------------------------------
 ## all TCGA expression data 
 exp_data <- readr::read_rds(file.path(TCGA_path,"pancan33_expr.rds.gz"))
-gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv")) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune",Exp_site)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Tumor","Mainly_exp_on_Tumor" ),"Mainly_exp_on_Tumor",Exp_site.1)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site.1)) 
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv"))  %>%
+  dplyr::mutate(site_col = ifelse(Exp_site== "Immune and tumor cell almost","darkorange", site_col)) %>%
+  dplyr::mutate(site_col = ifelse(Exp_site== "Immune cell dominate","darkgreen", site_col)) %>%
+  dplyr::mutate(site_col = ifelse(Exp_site== "Tumor cell dominate","red", site_col)) 
 
 # 1.get GSVA score of all possible features of ICP ----------------------------------------------
 # 1.1. get gene feature from gene list ----
@@ -28,7 +28,7 @@ genelist <- list()
 #### gene list feature by gene exp site #####
 for(expsite in c("Both_exp_on_Tumor_Immune","Mainly_exp_on_Immune","Mainly_exp_on_Tumor")){
   genelist[[expsite]] <- gene_list %>%
-    dplyr::filter(Exp_site.1 == expsite) %>%
+    dplyr::filter(Exp_site == expsite) %>%
     .$symbol
 }
 
@@ -112,7 +112,7 @@ exp_data %>%
   dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
   dplyr::select(-exp_data) -> GSVA.score
 GSVA.score %>%
-  readr::write_rds(file.path(res_path,"TCGA_cancer_specific.allsamples(T-N)_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(res_path,"new-TCGA_cancer_specific.allsamples(T-N)_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
 # 1.3.2 only tumor samples ----------
 exp_data %>%
@@ -127,7 +127,7 @@ exp_data %>%
   dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
   dplyr::select(-exp_data) -> GSVA.score.onlytumor
 GSVA.score.onlytumor %>%
-  readr::write_rds(file.path(res_path,"TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(res_path,"new-TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
 # 1.3.3 all tumor samples togather ----------
 i <- 0
@@ -163,5 +163,5 @@ exp_data.merge %>%
   dplyr::select(-exp_data) -> GSVA.score.alltumor
 
 GSVA.score.alltumor %>%
-  readr::write_rds(file.path(res_path,"TCGA.All-cancer-Tumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(res_path,"new-TCGA.All-cancer-Tumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
