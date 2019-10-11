@@ -6,7 +6,7 @@ library(tidyverse)
 # server 1
 basic_path <- file.path("/home/huff/project")
 immune_res_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
-TCGA_path <- file.path(basic_path,"immune_checkpoint/data/TCGA_data")
+TCGA_path <- file.path("/home/huff/data/TCGA/TCGA_data")
 gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_checkpoint")
 
 res_path <- file.path(immune_res_path,"ICP_score.new")
@@ -16,16 +16,14 @@ res_path <- file.path(immune_res_path,"ICP_score.new")
 # expression data
 expr <- readr::read_rds(file.path(TCGA_path, "pancan33_expr.rds.gz"))
 
-gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv")) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune",Exp_site)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Tumor","Mainly_exp_on_Tumor" ),"Mainly_exp_on_Tumor",Exp_site.1)) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site.1)) 
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv")) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("N"),"Not_sure",Exp_site)) 
 
 # 1.get mean expression of all possible features of ICP ----------------------------------------------
 # 1.1. get gene feature from gene list ----
 genelist <- list()
 #### gene list feature by gene exp site #####
-for(expsite in c("Both_exp_on_Tumor_Immune","Mainly_exp_on_Immune","Mainly_exp_on_Tumor")){
+for(expsite in c("Tumor cell dominate","Immune and tumor cell almost","Immune cell dominate")){
   genelist[[expsite]] <- gene_list %>%
     dplyr::filter(Exp_site.1 == expsite) %>%
     .$symbol
@@ -57,18 +55,18 @@ for(f in unique(gene_list$family)){
 genelist[["All_gene"]] <- gene_list$symbol
 
 # 1.2 funciton to get mean expression ----
-fn_mean <- function(names,genelist,exp){
-  genes <- genelist[[names]]
-  exp %>%
-    dplyr::filter(symbol %in% genes) %>%
-    dplyr::group_by(barcode) %>%
-    dplyr::mutate(value = mean(exp)) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(Features = paste("Mean.",names,sep=""))%>%
-    dplyr::select(barcode,value,Features) %>%
-    unique()
-}
-
+# fn_mean <- function(names,genelist,exp){
+#   genes <- genelist[[names]]
+#   exp %>%
+#     dplyr::filter(symbol %in% genes) %>%
+#     dplyr::group_by(barcode) %>%
+#     dplyr::mutate(value = mean(exp)) %>%
+#     dplyr::ungroup() %>%
+#     dplyr::mutate(Features = paste("Mean.",names,sep=""))%>%
+#     dplyr::select(barcode,value,Features) %>%
+#     unique()
+# }
+# 
 expr %>%
   dplyr::mutate(exp_deal = purrr::map(expr,.f=function(.x){
     .x %>%
@@ -80,8 +78,8 @@ expr %>%
   tidyr::unnest() -> expr_ready
 
 # 1.3 calculation of mean exp-----
-tibble::tibble(names = names(genelist)) %>%
-  dplyr::mutate(mean = purrr::map(names,fn_mean,genelist=genelist,exp=expr_ready)) -> TCGA_mean_exp
+# tibble::tibble(names = names(genelist)) %>%
+#   dplyr::mutate(mean = purrr::map(names,fn_mean,genelist=genelist,exp=expr_ready)) -> TCGA_mean_exp
 
 # 2.get fold expression of all possible features of ICP ----------------------------------------------
 # 2.1 function to get ratio of (geneA+geneB+..)/geneA ------
@@ -151,10 +149,10 @@ tibble::tibble(names = names) %>%
 TCGA_ratio_exp %>%
   tidyr::unnest() %>%
   rbind(TCGA_fold_exp %>% tidyr::unnest()) %>%
-  rbind(TCGA_mean_exp %>% tidyr::unnest()) %>%
+  # rbind(TCGA_mean_exp %>% tidyr::unnest()) %>%
   dplyr::select(-names) %>%
   tidyr::spread(key="Features",value="value") -> TCGA_mean_fold_ratio_features_value
 
 TCGA_mean_fold_ratio_features_value %>%
-  readr::write_rds(file.path(res_path,"TCGA_mean_fold_ratio_features_value.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(res_path,"new-TCGA_mean_fold_ratio_features_value.rds.gz"),compress = "gz")
 
