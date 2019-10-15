@@ -26,7 +26,7 @@ gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.
 # 1.1. get gene feature from gene list ----
 genelist <- list()
 #### gene list feature by gene exp site #####
-for(expsite in c("Both_exp_on_Tumor_Immune","Mainly_exp_on_Immune","Mainly_exp_on_Tumor")){
+for(expsite in c("Immune and tumor cell almost", "Immune cell dominate","Tumor cell dominate")){
   genelist[[expsite]] <- gene_list %>%
     dplyr::filter(Exp_site == expsite) %>%
     .$symbol
@@ -98,6 +98,20 @@ fn_get_TCGA_sample_class <- function(.x,class){
   data
 }
 # 1.3.calculation ---------------------------------------------------------
+# 1.3.2 only tumor samples ----------
+exp_data %>%
+  # head(1) %>%
+  dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
+    .x %>%
+      # dplyr::filter(symbol %in% gene_list$symbol) %>%
+      dplyr::select(-entrez_id)
+  })) %>%
+  dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("0"))) %>%
+  dplyr::select(-expr,-exp_filter) %>%
+  dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
+  dplyr::select(-exp_data) -> GSVA.score.onlytumor
+GSVA.score.onlytumor %>%
+  readr::write_rds(file.path(res_path,"new-TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
 # 1.3.1 tumor and normal samples togather ----------
 exp_data %>%
@@ -114,20 +128,6 @@ exp_data %>%
 GSVA.score %>%
   readr::write_rds(file.path(res_path,"new-TCGA_cancer_specific.allsamples(T-N)_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
-# 1.3.2 only tumor samples ----------
-exp_data %>%
-  # head(1) %>%
-  dplyr::mutate(exp_filter = purrr::map(expr,.f=function(.x){
-    .x %>%
-      # dplyr::filter(symbol %in% gene_list$symbol) %>%
-      dplyr::select(-entrez_id)
-  })) %>%
-  dplyr::mutate(exp_data = purrr::map(exp_filter,fn_get_TCGA_sample_class,class=c("0"))) %>%
-  dplyr::select(-expr,-exp_filter) %>%
-  dplyr::mutate(GSVA = purrr::map2(cancer_types, exp_data, fn_GSVA)) %>%
-  dplyr::select(-exp_data) -> GSVA.score.onlytumor
-GSVA.score.onlytumor %>%
-  readr::write_rds(file.path(res_path,"new-TCGA_cancer_specific.onlyTumor_GSVA.score_ICPs_features.rds.gz"),compress = "gz")
 
 # 1.3.3 all tumor samples togather ----------
 i <- 0
