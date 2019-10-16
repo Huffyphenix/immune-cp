@@ -69,7 +69,7 @@ sample_info <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_
                       unique(), by="data ID")
 
 sample_info %>%
-  dplyr::select(Run,Cancer.y,blockade,Biopsy_Time,Author,Response) %>%
+  dplyr::select(Run,Cancer.y,blockade,Biopsy_Time,Author,Response, Response_standard,Second_Response_standard) %>%
   unique() -> Run_pubmed.id
 
 combine_GSVA.exp_ratio %>%
@@ -79,20 +79,25 @@ combine_GSVA.exp_ratio %>%
 
 
 Run_pubmed.id %>%
-  dplyr::filter(! Response %in% c("NE", "X")) %>%
+  dplyr::filter(! Response %in% c("NE")) %>%
   dplyr::mutate(Response = ifelse(Response %in% c("CR", "PR", "PRCR", "R"), "yes", "no"))  %>%
+  dplyr::mutate(Response = ifelse(blockade == "anti-CTLA-4" & Second_Response_standard %in% c("R"), "yes", Response)) %>%
+  dplyr::mutate(Response = ifelse(blockade == "anti-CTLA-4" & Second_Response_standard %in% c("long-survival","NR"), "no", Response)) %>%
+  dplyr::mutate(x = ifelse(is.na(Second_Response_standard) & blockade == "anti-CTLA-4", "1","2")) %>%
+  dplyr::filter(x=="2") %>%
+  dplyr::select(-Response_standard,-Second_Response_standard,-x) %>%
   tidyr::nest(Run,Response,.key = "response") %>%
   dplyr::inner_join(gsva.score, by = c("Cancer.y","blockade","Author","Biopsy_Time")) -> data_for_logistic
 
-Response_statistic <- readr::read_tsv(file.path(gsva_score_path,"Response_statistic_each_dataset.tsv")) %>%
-  dplyr::select(-Cancer.y) %>%
-  dplyr::mutate(Response = ifelse(is.na(Response),0,Response)) %>%
-  dplyr::group_by(Author,Biopsy_Time) %>%
-  dplyr::mutate(`non-Response`=sum(`non-Response`),Response=sum(Response)) %>%
-  dplyr::select(-`Response_percentage(%)`) %>%
-  dplyr::ungroup() %>%
-  unique() %>%
-  dplyr::mutate(`Response_percentage(%)` = 100*Response/(Response+`non-Response`))
+# Response_statistic <- readr::read_tsv(file.path(gsva_score_path,"Response_statistic_each_dataset.tsv")) %>%
+#   dplyr::select(-Cancer.y) %>%
+#   dplyr::mutate(Response = ifelse(is.na(Response),0,Response)) %>%
+#   dplyr::group_by(Author,Biopsy_Time) %>%
+#   dplyr::mutate(`non-Response`=sum(`non-Response`),Response=sum(Response)) %>%
+#   dplyr::select(-`Response_percentage(%)`) %>%
+#   dplyr::ungroup() %>%
+#   unique() %>%
+#   dplyr::mutate(`Response_percentage(%)` = 100*Response/(Response+`non-Response`))
 ############## fnctions to do logistic regression iteration ##################
 print("######################### fnctions to do logistic regression")
 fn_auc <- function(test_set, train_set, formula){
@@ -237,6 +242,7 @@ fn_auc_on_validation <- function(response,data_spread, model){
     dplyr::select(Sensitivity, Specificity,  thresholds, best) %>%
     dplyr::mutate(auc=auc) %>%
     tidyr::nest(-auc,.key="roc_data")
+  # tibble::tibble(roc = res.roc)
 }
 
 my_theme <-   theme(
@@ -409,41 +415,64 @@ print("###################### all analysis finished")
 #   dplyr::filter(group %in% c("V483182_5")) -> final_res
 # 
 # final_res$final_feature[[1]]$features -> final_features
-# 
-# data_for_logistic %>%
-#   dplyr::mutate(filter_score = purrr::map(GSVA, .f =function(.x){
-#     .x[,c("Run",final_features)]
-#   })) %>%
-#   dplyr::select(-GSVA) %>%
-#   readr::write_rds("/home/huff/project/immune_checkpoint/result_20171025/ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare/clinical_out_score.rds.gz")
+final_features <- c("Immune_and_tumor_cell_almost","Fold.All_gene.PDCD1","Fold.Pair_14.BTN2A1","Fold.Pair_3.ICOSLG","Fold.TwoSide.PVR")
+
+data_for_logistic %>%
+  dplyr::mutate(filter_score = purrr::map(GSVA, .f =function(.x){
+    .x[,c("Run",final_features)]
+  })) %>%
+  dplyr::select(-GSVA) %>%
+  readr::write_rds(file.path(res_path,"select_best_and_compare/clinical_out_score.rds.gz"))
 # 
 # # get model from 70% train and use it on 30% Test and validation data
-# data_for_logistic %>%
-#   dplyr::filter(usage == "train") %>%
-#   dplyr::mutate(data.ready = purrr::map2(GSVA,response,.f=function(.x,.y){
-#     .x %>%
-#       dplyr::inner_join(.y, by = "Run") %>%
-#       dplyr::select(-Run) %>%
-#       dplyr::mutate(Response = as.factor(Response))
-#   })) %>%
-#   dplyr::select(data.ready) %>%
-#   tidyr::unnest() -> data.ready
-# # data.ready <- na.omit(data.ready)
-# data.ready[is.na(data.ready)] <- 0
-# colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
-# colnames(data.ready) <- gsub("-",".",colnames(data.ready))
+data_for_logistic %>%
+  dplyr::filter(usage == "train") %>%
+  dplyr::mutate(data.ready = purrr::map2(GSVA,response,.f=function(.x,.y){
+    .x %>%
+      dplyr::inner_join(.y, by = "Run") %>%
+      dplyr::select(-Run) %>%
+      dplyr::mutate(Response = as.factor(Response))
+  })) %>%
+  dplyr::select(data.ready) %>%
+  tidyr::unnest() -> data.ready
+# data.ready <- na.omit(data.ready)
+data.ready[is.na(data.ready)] <- 0
+colnames(data.ready) <- gsub(" ",".",colnames(data.ready))
+colnames(data.ready) <- gsub("-",".",colnames(data.ready))
 # 
-# formula.train <- paste("Response~", paste(final_features,collapse = "+"))
-# model.train <- glm(as.formula(formula.train), data = data.ready, family = binomial)
-# model.train %>%
-#   readr::write_rds(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare","our_ICP_lm_model.rds.gz"))
+formula.train <- paste("Response~", paste(final_features,collapse = "+"))
+model.train <- glm(as.formula(formula.train), data = data.ready, family = binomial)
+model.train %>%
+  readr::write_rds(file.path(file.path(res_path,"select_best_and_compare/our_ICP_lm_model.rds.gz")))
 # # Make predictions
 # 
-# data_for_logistic %>%
-#   dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=model.train)) %>%
-#   dplyr::select(-response,-GSVA) %>%
-#   tidyr::unnest() -> validation_auc
+data_for_logistic %>%
+  dplyr::mutate(auc = purrr::map2(response,GSVA,fn_auc_on_validation,model=model.train)) %>%
+  dplyr::select(-response,-GSVA) %>%
+  tidyr::unnest() -> validation_auc
 
+# draw picture
+
+validation_auc %>%
+  dplyr::inner_join(Response_statistic,by=c("Author","Biopsy_Time")) %>%
+  dplyr::mutate(group = paste(Author,blockade.y,Biopsy_Time,paste("(",yes,"*/",`no`,"**);",sep=""),"AUC","=",signif(auc,2),usage)) %>%
+  dplyr::select(roc_data,group,usage) %>%
+  tidyr::unnest() -> plot_ready
+plot_ready %>%
+  ggplot(aes(x=Specificity,y=Sensitivity)) +
+  geom_path(aes(color=group)) + 
+  scale_x_reverse()  +
+  my_theme +
+  theme(
+    legend.position = c(0.72,0.17),
+    legend.title = element_blank(),
+    legend.text = element_text(size=8),
+    legend.key.height = unit(0.15,"inches"),
+    legend.key.width = unit(0.15,"inches"),
+    legend.key = element_rect(colour="white")
+  )
+ggsave(file.path(res_path,paste("ROC_plot","BEST","png",sep=".")),device = "png",width = 8, height = 5)
+ggsave(file.path(res_path,paste("ROC_plot","BEST","pdf",sep=".")),device = "pdf",width = 8, height = 5)
 
 start
 Sys.time()
