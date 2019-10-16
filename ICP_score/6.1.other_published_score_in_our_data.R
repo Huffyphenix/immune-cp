@@ -168,7 +168,7 @@ fn_IMPRESS_score <- function(data){
 }
 
 exp_data %>%
-  dplyr::mutate(IMPRESS = purrr::map(exp, fn_IFN)) %>%
+  dplyr::mutate(IMPRESS = purrr::map(exp, fn_IMPRESS)) %>%
   dplyr::select(-exp) -> clinical_IMPRESS_score.QN
 
 # combine all data -------------------------------------------------------
