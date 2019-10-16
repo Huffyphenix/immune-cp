@@ -7,12 +7,12 @@ library(pROC)
 # path config -------------------------------------------------------------
 basic_path <- file.path("/home/huff/project")
 immune_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
-res_path <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare")
+res_path <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific-evenTop20/select_best_and_compare")
 
 
 # load data ---------------------------------------------------------------
 
-publish_score <- readr::read_rds(file.path(res_path,"CYT_IFN_score.rds.gz"))
+publish_score <- readr::read_rds(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare","CYT_IFN_IMPRESS_score.rds.gz"))
 our_score <- readr::read_rds(file.path(res_path,"clinical_out_score.rds.gz"))
 our_model <- readr::read_rds(file.path(res_path,"our_ICP_lm_model.rds.gz"))
 
@@ -149,7 +149,51 @@ fn_auc_model <- function(data, usage,response, model){
   auc <- res.roc$auc[[1]]
   auc
 }
-fn_cross_validation <- function(n,Author, response, filter_score, IFN_score, expanded_immune_score, CYT_score){
+fn_auc_IMPRESS <- function(data, usage,response){
+  data %>%
+    dplyr::ungroup() %>%
+    dplyr::inner_join(usage, by="Run") %>%
+    dplyr::inner_join(response, by="Run") %>%
+    dplyr::mutate(Response = as.factor(Response)) %>%
+    dplyr::filter(usage == "train" ) %>%
+    dplyr::select(-usage) -> train_set
+  train_set %>%
+    tidyr::gather(-Run,-Response,key="f",value="score") %>%
+    dplyr::filter(is.na(score)) %>%
+    dplyr::select(Run) %>%
+    unique() -> NA.train
+  train_set<-train_set %>% dplyr::filter(! Run %in% NA.train$Run) %>% dplyr::select(-Run)
+  colnames(train_set) <- gsub(" ",".",colnames(train_set))
+  colnames(train_set) <- gsub("-",".",colnames(train_set))
+  data %>%
+    dplyr::ungroup() %>%
+    dplyr::inner_join(usage, by="Run") %>%
+    dplyr::inner_join(response, by="Run") %>%
+    dplyr::mutate(Response = as.factor(Response)) %>%
+    dplyr::filter(usage == "test" ) %>%
+    dplyr::select(-usage) -> test_set
+  test_set %>%
+    tidyr::gather(-Run,-Response,key="f",value="score") %>%
+    dplyr::filter(is.na(score)) %>%
+    dplyr::select(Run) %>%
+    unique() -> NA.test
+  test_set<-test_set %>% dplyr::filter(! Run %in% NA.test$Run) %>% dplyr::select(-Run)
+  colnames(test_set) <- gsub(" ",".",colnames(test_set))
+  colnames(test_set) <- gsub("-",".",colnames(test_set))
+  
+  # Make predictions
+  # probabilities <- model %>% predict(test_set, type = "response")
+  predicted.classes <- ifelse(test_set$IMPRESS >= 8, "yes", "no")
+  observed.classes <- test_set$Response
+  # Model accuracy
+  accuracy <- mean(predicted.classes == test_set$Response)
+  error <- mean(predicted.classes != test_set$Response)
+  
+  res.roc <- roc(observed.classes, probabilities,quiet=TRUE)
+  auc <- res.roc$auc[[1]]
+  auc
+}
+fn_cross_validation <- function(n,Author, response, filter_score, IFN_score, expanded_immune_score, CYT_score, IMPRESS){
   print(Author)
   tmp <- tibble::tibble()
   
@@ -165,7 +209,9 @@ fn_cross_validation <- function(n,Author, response, filter_score, IFN_score, exp
     
     auc_CYT <- fn_auc(CYT_score,  usage, response)
     
-    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT))
+    auc_IMPRESS <- fn_auc(IMPRESS,  usage, response)
+    
+    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS))
   }
   tmp %>%
     tidyr::gather(key="feature_group",value="auc") %>%
@@ -189,7 +235,9 @@ fn_cross_validation_VA <- function(n,Author, response, filter_score, IFN_score, 
     
     auc_CYT <- fn_auc(CYT_score,  usage, response)
     
-    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT))
+    auc_IMPRESS <- fn_auc(IMPRESS,  usage, response)
+    
+    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS))
   }
   tmp %>%
     tidyr::gather(key="feature_group",value="auc") %>%
@@ -215,7 +263,7 @@ res_VanAllen %>%
 res2 <- tibble::tibble()
 for (j in 1:100) {
   combine_data %>%
-    dplyr::mutate(AUC = purrr::pmap(list(Author,response, filter_score, IFN_score, expanded_immune_score, CYT_score),fn_cross_validation,n=5)) %>%
+    dplyr::mutate(AUC = purrr::pmap(list(Author,response, filter_score, IFN_score, expanded_immune_score, CYT_score,IMPRESS),fn_cross_validation,n=5)) %>%
     dplyr::select(-response, -filter_score, -IFN_score, -expanded_immune_score, -CYT_score) %>%
     tidyr::unnest() %>%
     dplyr::select(-auc) %>%
