@@ -42,12 +42,12 @@ fn_expanded_immune <- function(exp){
     dplyr::select(-ENSEMBL) %>%
     tidyr::spread(key="Run",value="exp")-> exp.filter
   
-  normalize.quantiles(as.matrix(as.matrix(exp.filter[,-1]))) %>%
-    as.data.frame() %>%
-    dplyr::as.tbl() %>%
-    dplyr::mutate(SYMBOL=exp.filter$SYMBOL) -> exp.filter.QN
-  colnames(exp.filter.QN) <- c(colnames(exp.filter[,-1]),"SYMBOL")
-  exp.filter.QN %>%
+  # normalize.quantiles(as.matrix(as.matrix(exp.filter[,-1]))) %>%
+  #   as.data.frame() %>%
+  #   dplyr::as.tbl() %>%
+  #   dplyr::mutate(SYMBOL=exp.filter$SYMBOL) -> exp.filter.QN
+  # colnames(exp.filter.QN) <- c(colnames(exp.filter[,-1]),"SYMBOL")
+  exp.filter %>%
     tidyr::gather(-SYMBOL,key="Run",value="exp") %>%
     dplyr::mutate(exp=log10(as.numeric(exp))) %>%
     dplyr::group_by(Run) %>%
@@ -74,12 +74,12 @@ fn_IFN <- function(exp){
     dplyr::select(-ENSEMBL) %>%
     tidyr::spread(key="Run",value="exp")-> exp.filter
   
-  normalize.quantiles(as.matrix(as.matrix(exp.filter[,-1]))) %>%
-    as.data.frame() %>%
-    dplyr::as.tbl() %>%
-    dplyr::mutate(SYMBOL=exp.filter$SYMBOL) -> exp.filter.QN
-  colnames(exp.filter.QN) <- c(colnames(exp.filter[,-1]),"SYMBOL")
-  exp.filter.QN %>%
+  # normalize.quantiles(as.matrix(as.matrix(exp.filter[,-1]))) %>%
+  #   as.data.frame() %>%
+  #   dplyr::as.tbl() %>%
+  #   dplyr::mutate(SYMBOL=exp.filter$SYMBOL) -> exp.filter.QN
+  # colnames(exp.filter.QN) <- c(colnames(exp.filter[,-1]),"SYMBOL")
+  exp.filter %>%
     tidyr::gather(-SYMBOL,key="Run",value="exp") %>%
     dplyr::mutate(exp=log10(as.numeric(exp))) %>%
     dplyr::group_by(Run) %>%
@@ -110,8 +110,6 @@ library(preprocessCore)
 
 fn_IMPRESS <- function(exp){
   exp %>%
-    dplyr::mutate(exp = ifelse(is.na(exp),0.001,exp)) %>%
-    dplyr::mutate(exp = ifelse(exp==0,0.001,exp)) %>%
     dplyr::filter(SYMBOL %in% c("BTLA","VSIR","CD200","CD200R1",
                                 "CD27","CD274","CD276","CD28","CD40",
                                 "CD80","CD86","CEACAM1","CTLA4",
@@ -120,14 +118,29 @@ fn_IMPRESS <- function(exp){
                                 "TIGIT","TNFRSF14","TNFSF4","TNFRSF4","TNFRSF9",
                                 "OX40L","TNFSF9")) %>%
     dplyr::select(-ENSEMBL) %>%
+    tidyr::nest(-SYMBOL) %>%
+    dplyr::mutate(exp_normalize = purrr::map(data,.f=function(.x){
+      .x %>%
+        dplyr::mutate(na_x = ifelse(is.na(exp),1,0)) %>%
+        .$na_x %>%
+        sum() -> na_one
+      if(na_one >=1){
+        .x %>%
+          dplyr::mutate(exp = 0)
+      }else{
+        .x
+      }
+    })) %>%
+    dplyr::select(-data) %>%
+    tidyr::unnest() %>%
     tidyr::spread(key="Run",value="exp")-> exp.filter
   
-  normalize.quantiles(as.matrix(as.matrix(exp.filter[,-1]))) %>%
-    as.data.frame() %>%
-    dplyr::as.tbl() %>%
-    dplyr::mutate(SYMBOL=exp.filter$SYMBOL) -> exp.filter.QN
-  colnames(exp.filter.QN) <- c(colnames(exp.filter[,-1]),"SYMBOL")
-  exp.filter.QN %>%
+  # normalize.quantiles(as.matrix(as.matrix(exp.filter[,-1]))) %>%
+  #   as.data.frame() %>%
+  #   dplyr::as.tbl() %>%
+  #   dplyr::mutate(SYMBOL=exp.filter$SYMBOL) -> exp.filter.QN
+  # colnames(exp.filter.QN) <- c(colnames(exp.filter[,-1]),"SYMBOL")
+  exp.filter %>%
     tidyr::gather(-SYMBOL,key="Run",value="exp") %>%
     tidyr::nest(-Run) %>%
     dplyr::mutate(IMPRESS = purrr::map(data,fn_IMPRESS_score)) %>%
