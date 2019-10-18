@@ -118,21 +118,21 @@ fn_IMPRESS <- function(exp){
                                 "TIGIT","TNFRSF14","TNFSF4","TNFRSF4","TNFRSF9",
                                 "OX40L","TNFSF9")) %>%
     dplyr::select(-ENSEMBL) %>%
-    tidyr::nest(-SYMBOL) %>%
-    dplyr::mutate(exp_normalize = purrr::map(data,.f=function(.x){
-      .x %>%
-        dplyr::mutate(na_x = ifelse(is.na(exp),1,0)) %>%
-        .$na_x %>%
-        sum() -> na_one
-      if(na_one >=1){
-        .x %>%
-          dplyr::mutate(exp = 0)
-      }else{
-        .x
-      }
-    })) %>%
-    dplyr::select(-data) %>%
-    tidyr::unnest() %>%
+    # tidyr::nest(-SYMBOL) %>%
+    # dplyr::mutate(exp_normalize = purrr::map(data,.f=function(.x){
+    #   .x %>%
+    #     dplyr::mutate(na_x = ifelse(is.na(exp),1,0)) %>%
+    #     .$na_x %>%
+    #     sum() -> na_one
+    #   if(na_one >=1){
+    #     .x %>%
+    #       dplyr::mutate(exp = 0)
+    #   }else{
+    #     .x
+    #   }
+    # })) %>%
+    # dplyr::select(-data) %>%
+    # tidyr::unnest() %>%
     tidyr::spread(key="Run",value="exp")-> exp.filter
   
   # normalize.quantiles(as.matrix(as.matrix(exp.filter[,-1]))) %>%
@@ -168,15 +168,17 @@ fn_IMPRESS_score <- function(data){
     tmp <- c(gene_pairs[[i]])
     data %>%
       dplyr::filter(SYMBOL %in% tmp) %>%
+      dplyr::mutate(na_num = ifelse(is.na(sum(exp)),0,1)) %>%
       tidyr::spread(key = "SYMBOL", value ="exp") %>%
       dplyr::rename("g1"=tmp[1],"g2"=tmp[2]) %>%
       dplyr::mutate(score = ifelse(g1<g2,1,0)) %>%
-      dplyr::select(score) -> res1
+      dplyr::select(score,na_num) -> res1
     rbind(res,res1) -> res
   }
   res %>%
-    dplyr::mutate(IMPRESS = sum(score)) %>%
-    dplyr::select(-score) %>%
+    dplyr::mutate(score = ifelse(is.na(score),0,score)) %>%
+    dplyr::mutate(IMPRESS = sum(score)*15/sum(na_num)) %>%
+    dplyr::select(-score, -na_num) %>%
     unique()
 }
 
