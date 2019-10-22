@@ -183,8 +183,27 @@ fn_auc_IMPRESS <- function(data, usage,response){
   
   # Make predictions
   # probabilities <- model %>% predict(test_set, type = "response")
-  predicted.classes <- ifelse(test_set$IMPRESS >= 8, "yes", "no")
+  auc <- 0
+  cutoff.best <- 0
+  for (cutoff in 1:15) {
+    predicted.classes <- ifelse(test_set$IMPRESS >= cutoff, "yes", "no")
+    observed.classes <- test_set$Response
+    probabilities <- test_set$IMPRESS/15
+    res.roc <- roc(observed.classes, probabilities,quiet=TRUE)
+    auc.tmp <- res.roc$auc[[1]]
+    if(auc.tmp > auc){
+      auc <- auc.tmp
+      cutoff.best <- cutoff
+    }else{
+      auc <- auc
+      cutoff.best <- cutoff.best
+    }
+  }
+  
+  predicted.classes <- ifelse(test_set$IMPRESS >= cutoff.best, "yes", "no")
   observed.classes <- test_set$Response
+  probabilities <- test_set$IMPRESS/15
+  res.roc <- roc(observed.classes, probabilities,quiet=TRUE)
   # Model accuracy
   accuracy <- mean(predicted.classes == test_set$Response)
   error <- mean(predicted.classes != test_set$Response)
@@ -209,7 +228,7 @@ fn_cross_validation <- function(n,Author, response, filter_score, IFN_score, exp
     
     auc_CYT <- fn_auc(CYT_score,  usage, response)
     
-    auc_IMPRESS <- fn_auc(IMPRESS,  usage, response)
+    auc_IMPRESS <- fn_auc_IMPRESS(IMPRESS,  usage, response)
     
     tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS))
   }
@@ -235,7 +254,7 @@ fn_cross_validation_VA <- function(n,Author, response, filter_score, IFN_score, 
     
     auc_CYT <- fn_auc(CYT_score,  usage, response)
     
-    auc_IMPRESS <- fn_auc(IMPRESS,  usage, response)
+    auc_IMPRESS <- fn_auc_IMPRESS(IMPRESS,  usage, response)
     
     tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS))
   }
@@ -264,7 +283,7 @@ res2 <- tibble::tibble()
 for (j in 1:100) {
   combine_data %>%
     dplyr::mutate(AUC = purrr::pmap(list(Author,response, filter_score, IFN_score, expanded_immune_score, CYT_score,IMPRESS),fn_cross_validation,n=5)) %>%
-    dplyr::select(-response, -filter_score, -IFN_score, -expanded_immune_score, -CYT_score) %>%
+    dplyr::select(-response, -filter_score, -IFN_score, -expanded_immune_score, -CYT_score, -IMPRESS) %>%
     tidyr::unnest() %>%
     dplyr::select(-auc) %>%
     unique() %>%
@@ -291,18 +310,20 @@ my_theme <-   theme(
   text = element_text(color = "black")
 )
 tibble::tibble(feature_group = unique(res2$feature_group),
-               feature_group2 = c("Immune regulators","IFNy","Expanded immune","CYT")) -> feature_correspond
+               feature_group2 = c("ICP","IFNy","Expanded immune","CYT","IMPRESS")) -> feature_correspond
 res2 %>%
   dplyr::inner_join(feature_correspond,by="feature_group") %>%
   dplyr::mutate(group = paste(Author,Biopsy_Time,blockade,sep=",")) %>%
   ggplot(aes(x=feature_group2,y=mean_auc)) +
   geom_boxplot(aes(fill = group)) +
+  facet_wrap(~feature_group2, scales = "free_x", nrow = 1) +
   labs(y="Mean AUC of 5 fold cross validation\n(100 repetitions)") +
   my_theme +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
-    legend.key = element_rect(colour="white")
+    legend.key = element_rect(colour="white"),
+    axis.text.x = element_blank()
   )
 
 ggsave(file.path(res_path,"All_compare_plot.png"),device = "png",height = 4, width = 8)
