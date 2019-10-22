@@ -544,7 +544,7 @@ ICP_mean_expr_in_cancers.byexpsite.PFS %>%
   purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
 
 ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
-  dplyr::filter(Exp_site != "Both_exp_on_Tumor_Immune") %>%
+  dplyr::filter(Exp_site != "Immune and tumor cell almost") %>%
   dplyr::rename("functionWithImmune"="Exp_site") %>%
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   tidyr::nest(-cancer_types) %>%
@@ -554,7 +554,7 @@ ICP_mean_expr_in_cancers.byexpsite.PFS %>%
       tidyr::spread(key="functionWithImmune",value="hr") %>%
       dplyr::mutate(hr_sum=`Immune cell dominate`-`Tumor cell dominate`) %>%
       dplyr::select(hr_sum)-> tmp
-    rbind(rbind(tmp,tmp),tmp)
+    rbind(tmp,tmp)
   })) %>%
   tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
@@ -593,7 +593,7 @@ ICP_mean_expr_in_cancers.byexpsite.OS %>%
   purrr::pwalk(.f=fn_cox_plot,hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 4, h = 6)
 
 ICP_mean_expr_in_cancers.byexpsite.OS %>% 
-  dplyr::filter(Exp_site != "Both_exp_on_Tumor_Immune") %>%
+  dplyr::filter(Exp_site != "Immune and tumor cell almost") %>%
   dplyr::rename("functionWithImmune"="Exp_site") %>%
   dplyr::mutate(cox_sig = ifelse(coxp<0.1,"1yes","2no")) %>%
   tidyr::nest(-cancer_types) %>%
@@ -603,7 +603,7 @@ ICP_mean_expr_in_cancers.byexpsite.OS %>%
       tidyr::spread(key="functionWithImmune",value="hr") %>%
       dplyr::mutate(hr_sum=`Immune cell dominate`-`Tumor cell dominate`) %>%
       dplyr::select(hr_sum)-> tmp
-    rbind(tmp,rbind(tmp,tmp))
+    rbind(tmp,tmp)
   })) %>%
   tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
