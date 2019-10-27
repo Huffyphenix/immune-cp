@@ -102,7 +102,9 @@ tumor_class_by_T_N.only_paired.genePercent.plot %>%
   dplyr::select(cancer_types,cancer_types_anno,mid) %>%
   dplyr::arrange(mid) %>%
   unique()-> cancer_rank
-
+cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
+cancer_color %>%
+  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.genePercent$cancer_types)) -> cancer21_color
 cancer21_color %>%
   dplyr::inner_join(cancer_rank,by="cancer_types") -> cancer21_color.overall
 
@@ -130,9 +132,7 @@ tumor_class_by_T_N.only_paired.genePercent.plot %>%
 ggsave(file.path(res_path,"score_distribution.png"),device = "png",width = 4,height = 6)
 ggsave(file.path(res_path,"score_distribution.pdf"),device = "pdf",width = 4,height = 6)
 
-cancer_color <- readr::read_tsv(file.path(basic_path,"data/TCGA","02_pcc.tsv"))
-cancer_color %>%
-  dplyr::filter(cancer_types %in% unique(tumor_class_by_T_N.only_paired.genePercent$cancer_types)) -> cancer21_color
+
 
 tumor_class_by_T_N.only_paired.genePercent %>%
   dplyr::filter(!is.na(hot_per)) %>%
@@ -216,8 +216,8 @@ tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   ggpubr::stat_compare_means(method = "wilcox.test",label = "p.format")
     
 # 1.2.1.only paired sample score survival -----
-color_list <- tibble::tibble(group=c("High","Low"),
-                             color=c("red","blue"))
+color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE",c("#CDAD00")),
+                             group=c("High","Low","Mid"))
 sur_name <- paste("Score_0.5_Tumor_5year_OS_from_OnlyPaired")
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::filter(!is.na(hot_per)) %>%
@@ -234,8 +234,7 @@ tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("OS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
-color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE",c("#CDAD00")),
-                            group=c("High","Low","Mid"))
+
 
 sur_name <- paste("Score_0.75-0.25_Tumor_allyear_OS_from_OnlyPaired")
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
