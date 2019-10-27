@@ -323,7 +323,8 @@ res2 %>%
     legend.title = element_blank(),
     axis.title.x = element_blank(),
     legend.key = element_rect(colour="white"),
-    axis.text.x = element_blank()
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
   )
 
 ggsave(file.path(res_path,"All_compare_plot.png"),device = "png",height = 4, width = 8)
