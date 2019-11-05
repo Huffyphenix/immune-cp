@@ -128,10 +128,11 @@ color_bac$cell_source <- color_bac$Exp <- 1
 
 
 ggplot(ready_for_draw,aes(x=cell_source, y=Exp)) +
-  geom_quasirandom(size=0.1) +
+  # geom_quasirandom(size=0.1) +
+  geom_violin(size = 0.25) +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf,alpha=0.1) +
   # geom_violin() +
-  facet_wrap(~symbol,scales = "free_y") +
+  facet_wrap(~symbol,scales = "free_y", ncol = 7) +
   scale_fill_manual(
     name = "Expression pattern",
     values = c("yellow",  "green","pink"),
@@ -142,14 +143,21 @@ ggplot(ready_for_draw,aes(x=cell_source, y=Exp)) +
   labs(y="Expression",title="GSE72056, melanoma") +
   theme(
     axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1,size = 6),
+    axis.text.y = element_text(size = 6),
     legend.position = "top",
-    legend.text = element_text(size = 15),
-    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 10, face = "bold"),
     legend.background = element_blank(),
-    legend.key = element_rect(fill = "white", colour = "black")
+    legend.key = element_rect(fill = "white", colour = "black"),
+    legend.key.width = unit(0.1,"inches"),
+    legend.key.height=unit(0.1,"inches"),
+    strip.text = element_text(size = 6),
+    plot.title = element_text(size = 12, face = "bold"),
+    panel.grid=element_blank()
   )
-ggsave(file.path(res_path,"pattern_validation","5.2.GSE72056.ICP_exp-T-I_compare.pdf"),device = "pdf",height = 10,width = 16)
-ggsave(file.path(res_path,"pattern_validation","5.2.GSE72056.ICP_exp-T-I_compare.png"),device = "png",height = 10,width = 16)
+ggsave(file.path(res_path,"pattern_validation","5.2.GSE72056.ICP_exp-T-I_compare-violin.pdf"),device = "pdf",height = 20,width = 16, units = c("cm"))
+ggsave(file.path(res_path,"pattern_validation","5.2.GSE72056.ICP_exp-T-I_compare-violin.png"),device = "png",height = 20,width = 16, units = c("cm"))
 
 # correlation between FC got from fantom and melanoma ---------------------------------
 fantom_res <- readr::read_tsv(file.path(res_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
