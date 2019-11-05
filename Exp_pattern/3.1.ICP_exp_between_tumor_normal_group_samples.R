@@ -7,30 +7,36 @@ library(dplyr)
 
 # processed path
 basic_path <- "/home/huff/project"
-tcga_path = file.path(basic_path,"immune_checkpoint/data/TCGA_data")
+# tcga_path = file.path(basic_path,"immune_checkpoint/data/TCGA_data")
 immune_path <- file.path(basic_path,"immune_checkpoint")
 gene_list_path <-file.path(immune_path,"checkpoint/20171021_checkpoint")
+expr_path <- file.path(basic_path,"immune_checkpoint/result_20171025/expr_rds")
 
 
 # load data ---------------------------------------------------------------
 gene_list <- read.table(file.path(gene_list_path, "all.entrez_id-gene_id"),header=T)
-expr <- readr::read_rds(file.path(tcga_path, "pancan33_expr.rds.gz"))
+expr <- readr::read_rds(file.path(expr_path, ".rds_03_a_gene_list_expr.rds.gz"))
 
 
 # filter data -------------------------------------------------------------
-filter_gene_list <- function(.x, gene_list) {
-  gene_list %>%
-    dplyr::select(symbol) %>%
-    dplyr::left_join(.x, by = "symbol") %>%
-    dplyr::select(-entrez_id) %>%
-    tidyr::gather(-symbol,key="barcode",value="exp")
-}
+# filter_gene_list <- function(.x, gene_list) {
+#   gene_list %>%
+#     dplyr::select(symbol) %>%
+#     dplyr::left_join(.x, by = "symbol") %>%
+#     dplyr::select(-entrez_id) %>%
+#     tidyr::gather(-symbol,key="barcode",value="exp")
+# }
+# 
+# expr %>%
+#   dplyr::mutate(filter_expr = purrr::map(expr, filter_gene_list, gene_list = gene_list)) %>%
+#   dplyr::select(-expr) -> gene_list_expr.nest
 
 expr %>%
-  dplyr::mutate(filter_expr = purrr::map(expr, filter_gene_list, gene_list = gene_list)) %>%
-  dplyr::select(-expr) -> gene_list_expr.nest
-
-gene_list_expr.nest %>%
+  dplyr::mutate(gat_exp = purrr::map(filter_expr, .f=function(.x){
+    .x %>%
+      tidyr::gather(-symbol,-entrez_id,key="barcode",value="exp") 
+  })) %>%
+  dplyr::select(-filter_expr) %>%
   tidyr::unnest() %>%
   dplyr::mutate(group = ifelse(substr(barcode,14,14)==1,"Normal","Tumor")) %>%
   dplyr::mutate(Participant = substr(barcode,1,12)) -> gene_list_expr.nest.TNgrouped
@@ -126,8 +132,10 @@ gene_list_expr.nest.TNgrouped %>%
 
 
 # group tumor samples by gene counts -----------------------------------------------------
-
-ICP_expr_pattern <- readr::read_tsv(file.path(immune_path,"result_20171025","ICP_exp_patthern-byratio","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
+ICP_expr_pattern <-
+  readr::read_tsv(file.path(immune_path,"result_20171025","ICP_exp_patthern-byMeanUQ","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
+  dplyr::select(symbol,Exp_site)
+# ICP_expr_pattern<- readr::read_tsv(file.path(immune_path,"result_20171025","ICP_exp_patthern-byratio","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
 
 fn_group_sample_by_ICP_exp_in_TN_1 <- function(.name,.data){
   print(.name)
@@ -168,8 +176,7 @@ fn_group_sample_by_ICP_exp_in_TN_2 <- function(.x,.y){
 # paired tumor-normal samples grouping ----
 gene_list_expr.T_N.only_paired %>%
   dplyr::inner_join(ICP_expr_pattern,by="symbol") %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_Immune","Both")) %>%
-  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune","Only_exp_on_Tumor"),"Mainly_Tumor",Exp_site.1)) %>%
+  dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Immune cell dominate","Immune and tumor cell almost"),"Useful","Useless")) %>%
   dplyr::mutate(Exp_site=Exp_site.1) %>%
   dplyr::select(-Exp_site.1) %>%
   tidyr::nest(-cancer_types,-Participant) %>%
