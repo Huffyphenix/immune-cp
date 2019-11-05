@@ -122,7 +122,7 @@ ICP_Exp_site_by_DE_Fc_and_ratio_between_cellline_immune %>%
   readr::write_tsv(file.path(result_path,"pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv"))
 
 # draw picture ------------------------------------------------------------
-strip_color <- data.frame(Exp_site = unique(ICP_Exp_site_by_DE_Fc_and_ratio_between_cellline_immune$exp_site),
+strip_color <- data.frame(Exp_site = unique(ICP_Exp_site_by_DE_Fc_and_ratio_between_cellline_immune$Exp_site),
                           site_cplor = c("green", "yellow", "pink"),
                           rank = c(3,2,1))
 ICP_fantom.gene_exp.cell_line.Immune_cell.combine  %>%
@@ -152,10 +152,10 @@ color_bac$Group <- color_bac$gene_tpm <- 1
 library(ggbeeswarm)
 ggplot(ready_for_draw,
        aes(x = Group,y = gene_tpm)) +
-  # geom_violin() +
-  geom_quasirandom(size=0.2) +
+  geom_violin(size = 0.25) +
+  # geom_quasirandom(size=0.2) +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin = -Inf,xmax = Inf,ymin = -Inf,ymax = Inf,alpha = 0.1) +
-  facet_wrap(~symbol,scale = "free_y") +
+  facet_wrap(~symbol,scale = "free_y", ncol = 7) +
   # ggpubr::stat_compare_means(method = "wilcox.test",label = "p.format") +
   # geom_text(aes(label = outlier), na.rm = TRUE, nudge_x = -0.25, nudge_y = 0.25,size=3) +
   scale_fill_manual(
@@ -166,26 +166,45 @@ ggplot(ready_for_draw,
   ) +
   # theme_bw() +
   ylab(TeX("log_2 (TPM+1)")) +
+  my_theme +
   theme(
-    panel.background = element_rect(fill = "white",colour = "black"),
-    axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(size = 10),
     axis.title.x = element_blank(),
-    # legend.position = "none",
-    legend.text = element_text(size = 15),
-    legend.title = element_text(size = 18, face = "bold"),
+    axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1,size = 6),
+    axis.text.y = element_text(size = 6),
+    legend.position = "top",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 10, face = "bold"),
     legend.background = element_blank(),
     legend.key = element_rect(fill = "white", colour = "black"),
-    legend.position = "top",
-    plot.title = element_text(size = 20),
-    axis.text = element_text(colour = "black"),
-    strip.background = element_rect(fill = "white",colour = "black"),
-    strip.text = element_text(size = 10),
-    text = element_text(color = "black")
-  ) 
+    legend.key.width = unit(0.1,"inches"),
+    legend.key.height=unit(0.1,"inches"),
+    strip.text = element_text(size = 6),
+    plot.title = element_text(size = 12, face = "bold"),
+    panel.grid=element_blank()
+  )
+  # theme(
+  #   panel.background = element_rect(fill = "white",colour = "black"),
+  #   axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1,size = 6),
+  #   axis.text.y = element_text(size = 6),
+  #   axis.title.x = element_blank(),
+  #   # legend.position = "none",
+  #   legend.text = element_text(size = 8),
+  #   legend.title = element_text(size = 10, face = "bold"),
+  #   legend.background = element_blank(),
+  #   legend.key = element_rect(fill = "white", colour = "black"),
+  #   legend.key.width = unit(0.1,"inches"),
+  #   legend.key.height=unit(0.1,"inches"),
+  #   legend.position = "top",
+  #   axis.text = element_text(colour = "black"),
+  #   strip.background = element_rect(fill = "white",colour = "black"),
+  #   strip.text = element_text(size = 6),
+  #   plot.title = element_text(size = 12, face = "bold"),
+  #   text = element_text(color = "black"),
+  #   panel.grid=element_blank()
+  # ) 
 
-ggsave(file.path(result_path,"pattern_info","FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.png"),device = "png",height = 10,width = 20)  
-ggsave(file.path(result_path,"pattern_info","FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue.pdf"),device = "pdf",height = 10,width = 20)  
+ggsave(file.path(result_path,"pattern_info","FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue-violin.png"),device = "png",height = 20,width = 16, units = c("cm"))  
+ggsave(file.path(result_path,"pattern_info","FANTOM5.ICP_exp_in_tumor(no-blood-tissue)_immune-TCGA.tissue-violin.pdf"),device = "pdf",height = 20,width = 16, units = c("cm"))  
 
 
 # detailed tissue exp pattern ------------------------------------------------------
