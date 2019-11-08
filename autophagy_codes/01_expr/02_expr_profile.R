@@ -12,7 +12,7 @@ gene_list_path <- file.path(immune_path,"checkpoint/20171021_checkpoint")
 expr_path <- file.path(basic_path,"immune_checkpoint/result_20171025/expr_rds")
 out_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 
-load(file.path(out_path,"e_6_exp_profile","e_6_exp_profile.rdata"))
+# load(file.path(out_path,"e_6_exp_profile","e_6_exp_profile.rdata"))
 
 # load data
 gene_list <- read.table(file.path(gene_list_path, "gene_list_type"),header=T)
@@ -142,7 +142,7 @@ ICP_mean_expr_in_cancers %>%
   tidyr::unnest() %>%
   dplyr::mutate(average_exp = log2(average_exp)) %>%
   ggplot(aes(x=functionWithImmune,y=average_exp)) +
-  geom_violin(aes(fill=cancer_types),alpha=0.5) +
+  geom_violin(aes(fill=cancer_types),alpha=0.5, size = 0.25) +
   facet_wrap(~cancer_types) +
   coord_flip() +
   # scale_x_discrete(limits= cancer_rank$cancer_types) +
@@ -157,10 +157,10 @@ ICP_mean_expr_in_cancers %>%
     legend.position = "none",
     panel.background = element_blank(),
     panel.border = element_rect(fill='transparent',colour = "black"),
-    panel.grid = element_line(linetype = "dashed")
+    panel.grid = element_blank()
   )
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancers-noMHC.pdf"),device = "pdf", width = 6,height = 5)
-ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancer-noMHC.png"),device = "png",width = 6,height =5)
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancers-noMHC.pdf"),device = "pdf", width = 8,height = 6)
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_functionRoles-bycancer-noMHC.png"),device = "png",width = 8,height =6)
 
 # survival analysis
 fun_clinical_test <- function(expr_clinical_ready, cancer_types){
@@ -321,7 +321,7 @@ ICP_mean_expr_in_cancers.byfunction.PFS %>%
   #   .x %>%
   #     dplyr::mutate(cancer_types = reorder(cancer_types,hr_sum,mean))
   # })) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-functionRole.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival",w = 8, h = 6)
+  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-functionRole.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival",w = 4, h = 3)
 
 # PFS, cox, continus
 ICP_mean_expr_in_cancers.byfunction.PFS %>% 
@@ -476,13 +476,13 @@ with(plot_ready, levels(title))
 plot_ready %>%
   dplyr::mutate(average_exp = log2(average_exp)) %>%
   ggplot(aes(x=Exp_site,y=average_exp)) +
-  geom_violin(aes(fill=cancer_types),alpha=0.5) +
+  geom_violin(aes(fill=cancer_types),alpha=0.5, size = 0.5, color = "grey") +
   facet_wrap(~title) +
   coord_flip() +
   theme_bw() +
   xlab("Expression pattern of ICPs") +
   ylab("log2 (Average expression)") +
-  ggpubr::stat_compare_means(comparisons = list(c("Mainly_exp_on_Tumor","Mainly_exp_on_Immune")),label = "p.signif") +
+  ggpubr::stat_compare_means(comparisons = list(c("Tumor cell dominate","Immune cell dominate")),label = "p.signif") +
   theme(
     strip.background = element_rect(colour = "black", fill = "white"),
     strip.text = element_text(size = 10,color = "black"),
@@ -490,7 +490,7 @@ plot_ready %>%
     legend.position = "none",
     panel.background = element_blank(),
     panel.border = element_rect(fill='transparent',colour = "black"),
-    panel.grid = element_line(linetype = "dashed")
+    panel.grid = element_blank()
   )
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers-noMHC.pdf"),device = "pdf", width = 12,height = 7)  
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers-noMHC.png"),device = "png",width = 12,height = 7)  
@@ -607,7 +607,7 @@ ICP_mean_expr_in_cancers.byexpsite.OS %>%
   })) %>%
   tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_OS.by-Expsite.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 8, h = 6)
+  fn_cox_plot.all(filename="Meanexp.COX_OS.by-Expsite.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Overall survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 6, h = 6)
 
 # OS, cox, continus
 ICP_mean_expr_in_cancers.byexpsite.OS %>% 
