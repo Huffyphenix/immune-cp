@@ -413,7 +413,7 @@ gene_class_ready_draw <- within(gene_class_ready_draw,`Gene class` <- factor(`Ge
 with(gene_class_ready_draw,levels(`Gene class`))
 gene_class_ready_draw %>%
   ggplot(aes(y=symbol,x=fun)) +
-  geom_tile(aes(fill = `Gene class`),color="grey",size=1) +
+  geom_tile(aes(fill = `Gene class`),color="grey",size=0.25) +
   scale_y_discrete(limit = gene_rank$symbol) +
   scale_fill_manual(
     name = "Gene class",
@@ -439,6 +439,13 @@ gene_class_ready_draw %>%
     legend.key = element_rect(fill = "white", colour = "black"),
     plot.margin=unit(c(0,0,0,-0), "cm")
   ) -> p2.1;p2.1
+ggsave(filename = "fig_gene_class.pdf",
+       device = "pdf",
+       plot = p2.1,
+       width = 4,
+       height = 11,
+       units = "cm",
+       path = out_path)
 p1 + theme(axis.ticks.y = element_blank(),
            axis.text = element_text(color = "black"),
            plot.margin=unit(c(-0,-0,0,-0), "cm")) -> p3.1
