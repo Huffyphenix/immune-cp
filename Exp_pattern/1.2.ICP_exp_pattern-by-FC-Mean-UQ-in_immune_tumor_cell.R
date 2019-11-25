@@ -111,8 +111,34 @@ ICP_DE_FC_and_ratio_between_cellline_immune %>%
 ggsave(file.path(result_path,"classify_ICP_exp_pattern.pdf"),device = "pdf",height = 4, width = 8)
 ggsave(file.path(result_path,"classify_ICP_exp_pattern.png"),device = "png",height = 4, width = 8)
 
-
-
+ICP_DE_FC_and_ratio_between_cellline_immune %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` >=1 & `log2FC(I/T).mid` >=2, "Immune cell dominate","Immune and tumor cell almost")) %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` <=(-1) & `log2FC(I/T).mid` <=(-2), "Tumor cell dominate",Exp_site)) %>%
+  dplyr::mutate(log2Immune.UQ=log2(mid_immune_exp+1),log2Tumor.UQ=log2(mid_cell_line+1)) %>%
+  ggplot(aes(x=`log2Immune.UQ`,y=`log2Tumor.UQ`)) +
+  geom_point(aes(color = Exp_site)) +
+  geom_abline(intercept = 2, slope = 1) +
+  geom_abline(intercept = -2, slope = 1) +
+  geom_text(aes(x=x,y=y,label=label),
+                data=tibble::tibble(x=c(3.5,10),
+                                    y=c(7,6),
+                                    label=c("log2(I/T)<-2","log2(I/T)>2"))) +
+  # geom_smooth(method = "lm") +
+  # geom_text_repel(aes(x=`log2FC(I/T).mean`,y=`log2FC(I/T).mid`,label=symbol)) +
+  # geom_label(x=4,y=10,aes(label=label),data = cor_label) +
+  # geom_hline(yintercept = c(-2,2),linetype = 2) +
+  # geom_vline(xintercept = c(-1,1),linetype = 2) +
+  labs(x=TeX("log_2 (UQ(Immune)+1)"),
+       y=TeX("log_2 (UQ(Tumor)+1)"),
+       title = "Classification of ICPs' expression pattern") +
+  scale_color_manual(values = c("#CD950C", "#66CD00", "#EE2C2C"),
+                     name = "ICPs expression pattern") +
+  my_theme +
+  theme(
+    plot.title = element_text(size=15)
+  )
+ggsave(file.path(result_path,"classify_ICP_exp_pattern_onlybyUQ.pdf"),device = "pdf",height = 4, width = 8)
+ggsave(file.path(result_path,"classify_ICP_exp_pattern_onlybyUQ.png"),device = "png",height = 4, width = 8)
 
 ICP_DE_FC_and_ratio_between_cellline_immune %>%
   dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` >=1 & `log2FC(I/T).mid` >=2, "Immune cell dominate","Immune and tumor cell almost")) %>%
