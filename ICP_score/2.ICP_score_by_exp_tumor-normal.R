@@ -231,7 +231,6 @@ tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::filter(!is.na(hot_per)) %>%
   dplyr::rename("time"="OS","status"="Status") %>%
   dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
-  # dplyr::filter(time<=1825) %>%
   fn_survival("OS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
 
@@ -262,6 +261,11 @@ tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
+tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
+  dplyr::filter(!is.na(hot_per)) %>%
+  dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
+  dplyr::select(cancer_types,barcode,group)
 ##### 1.2.2.cancer specific survival -----------------------------------
 # 1.2.2.1.group samples into 2groups by middle score ----
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
@@ -586,6 +590,66 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("OS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
+# sample composition of OS two groups ----
+tumor_class_by_T_N.only_paired.Score.clinical %>%
+  dplyr::filter(score_mean!=0) %>%
+  dplyr::rename("time"="OS","status"="Status") %>%
+  dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"High","Low")) %>%
+  dplyr::select(cancer_types,barcode,group) -> OS_2group_data
+OS_2group_data %>%
+  dplyr::group_by(cancer_types,group) %>%
+  dplyr::mutate(n = n()) %>%
+  dplyr::select(group,cancer_types,n) %>%
+  unique()  %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(n_a = sum(n)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(`Sample Composition (%)` = 100*n/n_a) %>%
+  dplyr::mutate(tcga = "tcga") %>%
+  dplyr::group_by(tcga) %>%
+  dplyr::mutate(all_n = sum(n_a)) %>%
+  dplyr::mutate(all_ratio = 100*n_a/all_n) -> cluster_cancers_statistic
+cluster_cancers_statistic %>%
+  dplyr::mutate(cancer_types = paste(cancer_types,"(",n_a,")",sep="")) %>%
+  dplyr::mutate(group=as.character(group)) %>%
+  dplyr::mutate(width = n_a/max(n_a)) %>%
+  dplyr::mutate(width = ifelse(width < 0.1,0.1,width)) %>%
+  ggplot(aes(x=cancer_types,y=`Sample Composition (%)`)) +
+  geom_bar(aes(fill=group,width=width),stat="identity",color= "grey")+
+  scale_fill_manual(
+    name = "Groups",
+    breaks = as.character(c("High","Low")),
+    values = as.character(c("red","#80aced"))
+  ) +
+  scale_x_discrete(position = "top") +
+  theme(
+    axis.text.x.top = element_text(angle = 90, vjust=0.5, hjust=0),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black", size = 0.5),
+    panel.background = element_rect(fill = "white"),
+    legend.position = "bottom",
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    legend.text = element_text(size = 10, colour = "black"),
+    axis.text = element_text(size = 10,color = "black"),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 8, colour = "black"),
+    # axis.line = element_blank(),
+    # axis.title = element_blank(),
+    # axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    # axis.title.y = element_blank(),
+    axis.line.x = element_blank()
+    # panel.spacing = unit(-1,"lines"),
+    # panel.spacing.x = unit(-10,"lines")
+  )
+ggsave(file.path(res_path,"sample_composition_OS_two_group_survival.pdf"),device = "pdf",width = 10, height = 6)
+
+
 color_list <- tibble::tibble(color=c( "#CD2626","#00B2EE",c("#CDAD00")),
                              group=c("High","Low","Mid"))
 
@@ -614,6 +678,65 @@ tumor_class_by_T_N.only_paired.Score.clinical %>%
   dplyr::mutate(group = ifelse(score_mean>quantile(score_mean,0.5),"High","Low")) %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
+
+# sample composition of high and low groups -----
+tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
+  dplyr::filter(!is.na(hot_per)) %>%
+  dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
+  dplyr::select(cancer_types,barcode,group) -> PFS_2group_data
+PFS_2group_data %>%
+  dplyr::group_by(cancer_types,group) %>%
+  dplyr::mutate(n = n()) %>%
+  dplyr::select(group,cancer_types,n) %>%
+  unique()  %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(n_a = sum(n)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(`Sample Composition (%)` = 100*n/n_a) %>%
+  dplyr::mutate(tcga = "tcga") %>%
+  dplyr::group_by(tcga) %>%
+  dplyr::mutate(all_n = sum(n_a)) %>%
+  dplyr::mutate(all_ratio = 100*n_a/all_n) -> cluster_cancers_statistic
+cluster_cancers_statistic %>%
+  dplyr::mutate(cancer_types = paste(cancer_types,"(",n_a,")",sep="")) %>%
+  dplyr::mutate(group=as.character(group)) %>%
+  dplyr::mutate(width = n_a/max(n_a)) %>%
+  dplyr::mutate(width = ifelse(width < 0.1,0.1,width)) %>%
+  ggplot(aes(x=cancer_types,y=`Sample Composition (%)`)) +
+  geom_bar(aes(fill=group,width=width),stat="identity",color= "grey")+
+  scale_fill_manual(
+    name = "Groups",
+    breaks = as.character(c("High","Low")),
+    values = as.character(c("red","#80aced"))
+  ) +
+  scale_x_discrete(position = "top") +
+  theme(
+    axis.text.x.top = element_text(angle = 90, vjust=0.5, hjust=0),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black", size = 0.5),
+    panel.background = element_rect(fill = "white"),
+    legend.position = "bottom",
+    legend.key = element_blank(),
+    legend.background = element_blank(),
+    legend.text = element_text(size = 10, colour = "black"),
+    axis.text = element_text(size = 10,color = "black"),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 8, colour = "black"),
+    # axis.line = element_blank(),
+    # axis.title = element_blank(),
+    # axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    # axis.title.y = element_blank(),
+    axis.line.x = element_blank()
+    # panel.spacing = unit(-1,"lines"),
+    # panel.spacing.x = unit(-10,"lines")
+  )
+ggsave(file.path(res_path,"sample_composition_PFS_two_group_survival.pdf"),device = "pdf",width = 10, height = 6)
 
 ##### 2.2.2.cancer specific survival -----------------------------------
 # 2.2.2.1.middle value classify samples into 2 groups(high and low)----
