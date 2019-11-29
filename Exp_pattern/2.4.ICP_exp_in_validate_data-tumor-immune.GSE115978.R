@@ -291,8 +291,8 @@ ICP_exp_in_GSE115978.wilcox.test.FC.TI %>%
   theme(
     plot.title = element_text(size=15)
   )
-ggsave(file.path(result_path,"classify_ICP_exp_pattern_onlybyUQ.GSE115978.pdf"),device = "pdf",height = 4, width = 8)
-ggsave(file.path(result_path,"classify_ICP_exp_pattern_onlybyUQ.GSE115978.png"),device = "png",height = 4, width = 8)
+ggsave(file.path(res_path,"classify_ICP_exp_pattern_onlybyUQ.GSE115978.pdf"),device = "pdf",height = 4, width = 8)
+ggsave(file.path(res_path,"classify_ICP_exp_pattern_onlybyUQ.GSE115978.png"),device = "png",height = 4, width = 8)
 
 save.image(file.path(
   res_path,"pattern_validation","GSE115978_melanoma.TI.compare.Rdata")

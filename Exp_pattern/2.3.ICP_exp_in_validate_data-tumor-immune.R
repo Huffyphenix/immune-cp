@@ -99,7 +99,8 @@ ICP_exp_in_GSE72056.wilcox.test.FC.TI %>%
   dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` >=1 & `log2FC(I/T).UQ` >=2, "Immune cell dominate","Immune and tumor cell almost")) %>%
   dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` <=(-1) & `log2FC(I/T).UQ` <=(-2), "Tumor cell dominate",Exp_site)) %>%
   dplyr::inner_join(gene_list_exp_site, by="symbol") %>%
-  dplyr::select(symbol, Exp_site.x, Exp_site.y) %>% View()
+  dplyr::select(symbol, Exp_site.x, Exp_site.y) %>% 
+  dplyr::filter(Exp_site.x==Exp_site.y)
   
 strip_color <- data.frame(Exp_site = unique(gene_list_exp_site$Exp_site),
                           site_cplor = c("green", "orange", "pink"),
