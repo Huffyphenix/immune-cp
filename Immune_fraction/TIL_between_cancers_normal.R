@@ -450,7 +450,26 @@ TIMER_data_dealed.peak.compareTN.paired.peak.x %>%
   unique() %>%
   dplyr::arrange(N) -> cancer_rank.paired
 
+TIMER_data_dealed %>%
+  tidyr::gather(-barcode_1,-barcode,-cancer_types,-Type,key="cell_type",value="value") %>%
+  dplyr::mutate(value=as.numeric(value)) %>%
+  tidyr::nest(-cancer_types,-cell_type) %>%
+  dplyr::mutate(name = paste(cancer_types,cell_type,sep=".")) %>%
+  dplyr::mutate(test = purrr::map2(name,data,.f=function(.y,.x){
+    print(.y)
+    .x %>%
+      tidyr::spread(key="Type",value="value") -> .x
+    broom::tidy(wilcox.test(.x$Tumor,.x$Normal,alternative = c("two.sided")))
+  })) %>%
+  dplyr::select(
+    -data,-name
+  ) %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(label = ifelse(p.value<=0.05,"*","")) %>%
+  dplyr::select(cancer_types,cell_type,label) -> TIMER_data_dealed.compareTN.paired.wilcox
+
 TIMER_data_dealed.peak.compareTN.paired.peak.x %>%
+  dplyr::inner_join(TIMER_data_dealed.compareTN.paired.wilcox,by=c("cancer_types", "cell_type")) %>%
   ggplot(aes(x=cancer_types,y=cell_type)) +
   geom_tile(aes(fill=Relationship_between_T.N, width=0.9, height=0.9),color="grey",size=0.5) +
   scale_x_discrete(
@@ -460,6 +479,7 @@ TIMER_data_dealed.peak.compareTN.paired.peak.x %>%
     name = NULL,
     values = c("#1E90FF", "#FF8C00")
   ) +
+  geom_text(aes(label=label)) +
   theme(
     legend.key = element_rect(fill = "white", colour = "black"),
     axis.text = element_text(colour = "black",size = 12),
