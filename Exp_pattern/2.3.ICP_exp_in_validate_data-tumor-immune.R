@@ -95,13 +95,15 @@ ICP_exp_in_GSE72056 %>%
   dplyr::select(-data) %>%
   tidyr::unnest() -> ICP_exp_in_GSE72056.wilcox.test.FC.TI
 
+
 ICP_exp_in_GSE72056.wilcox.test.FC.TI %>%
-  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` >=1 & `log2FC(I/T).UQ` >=2, "Immune cell dominate","Immune and tumor cell almost")) %>%
-  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).mean` <=(-1) & `log2FC(I/T).UQ` <=(-2), "Tumor cell dominate",Exp_site)) %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).UQ` >=1, "Immune cell dominate","Immune and tumor cell almost")) %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).UQ` <=(-1), "Tumor cell dominate",Exp_site)) %>%
   dplyr::inner_join(gene_list_exp_site, by="symbol") %>%
-  dplyr::select(symbol, Exp_site.x, Exp_site.y) %>% 
-  dplyr::filter(Exp_site.x==Exp_site.y)
-  
+  dplyr::select(symbol, Exp_site.x, Exp_site.y,`log2FC(I/T).UQ`) %>% 
+  dplyr::mutate(fit_fantom=ifelse(Exp_site.x==Exp_site.y,"yes","no")) %>%
+  readr::write_tsv(file.path(res_path,"predict_res_validate_by_GSE72056.tsv"))
+
 strip_color <- data.frame(Exp_site = unique(gene_list_exp_site$Exp_site),
                           site_cplor = c("green", "orange", "pink"),
                           rank = c(3,2,1))
@@ -543,13 +545,13 @@ ICP_exp_in_GSE72056.wilcox.test.FC.TI %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
   dplyr::mutate(log2Immune.UQ=log2(UQ_immune_exp+0.01),log2Tumor.UQ=log2(UQ_tumor_exp+0.01)) %>%
   ggplot(aes(x=`log2Immune.UQ`,y=`log2Tumor.UQ`)) +
-  geom_jitter(aes(color = Exp_site),width = 0.5,height = 0.5) +
-  geom_abline(intercept = 2, slope = 1) +
-  geom_abline(intercept = -2, slope = 1) +
+  geom_jitter(aes(color = Exp_site),width = 0.1,height = 0.1) +
+  geom_abline(intercept = 0.585, slope = 1, linetype=2) +
+  geom_abline(intercept = -0.585, slope = 1, linetype=2) +
   geom_text(aes(x=x,y=y,label=label),
             data=tibble::tibble(x=c(2,2),
                                 y=c(7,-4),
-                                label=c("log2(I/T)<-2","log2(I/T)>2"))) +
+                                label=c("log2(I/T)<-1","log2(I/T)>1"))) +
   # geom_smooth(method = "lm") +
   # geom_text_repel(aes(x=`log2FC(I/T).mean`,y=`log2FC(I/T).mid`,label=symbol)) +
   # geom_label(x=4,y=10,aes(label=label),data = cor_label) +
