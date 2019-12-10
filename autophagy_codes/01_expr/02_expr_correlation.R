@@ -12,7 +12,7 @@ expr_path <-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 out_path <- "/project/huff/huff/immune_checkpoint/result_20171025"
 
 # load data
-gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.tsv"))
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv"))
 
 gene_list_expr <- readr::read_rds(path = file.path(expr_path, ".rds_03_a_gene_list_expr.rds.gz"))
 
