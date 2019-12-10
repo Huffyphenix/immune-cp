@@ -105,33 +105,42 @@ ICP_exp_in_GSE75688.wilcox.test.FC.TI.Bulk %>%
   dplyr::select(symbol, Exp_site.x, Exp_site.y) %>% 
   dplyr::filter(Exp_site.x==Exp_site.y)
 
+ICP_exp_in_GSE75688.wilcox.test.FC.TI.SC %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).UQ` >=1, "Immune cell dominate","Immune and tumor cell almost")) %>%
+  dplyr::mutate(Exp_site = ifelse(`log2FC(I/T).UQ` <=(-1), "Tumor cell dominate",Exp_site)) %>%
+  dplyr::inner_join(gene_list_exp_site, by="symbol") %>%
+  dplyr::select(symbol, Exp_site.x, Exp_site.y, `log2FC(I/T).UQ`) %>% 
+  dplyr::mutate(fit_fantom=ifelse(Exp_site.x==Exp_site.y,"yes","no")) %>%
+  readr::write_tsv(file.path(res_path,"predict_res_validate_by_GSE75688.tsv"))
+
 strip_color <- data.frame(Exp_site = unique(gene_list_exp_site$Exp_site),
                           site_cplor = c("green", "orange", "pink"),
                           rank = c(3,2,1))
 # plot
 library(ggbeeswarm)
 ICP_exp_in_GSE75688 %>%
+  dplyr::rename("symbol"="gene_name") %>%
   tidyr::gather(-symbol,key="sample",value="Exp") %>%
   dplyr::inner_join(sample_info.class,by="sample") %>%
   dplyr::filter(cell_source %in% c("Tumor","Immune")) %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol")  %>%
-  dplyr::inner_join(ICP_exp_in_GSE75688.wilcox.test.FC.TI,by="symbol")  -> ready_for_draw
+  dplyr::inner_join(ICP_exp_in_GSE75688.wilcox.test.FC.TI.SC,by="symbol")  -> ready_for_draw.SC
 
-ready_for_draw %>%
+ready_for_draw.SC %>%
   dplyr::select(symbol,Exp_site,`log2FC(I/T).mean.x`) %>%
   dplyr::inner_join(strip_color,by="Exp_site") %>%
-  dplyr::arrange(rank,`log2FC(I/T).mean.x`)-> symbol_rank
+  dplyr::arrange(rank,`log2FC(I/T).mean.x`)-> symbol_rank.SC
 
-ready_for_draw <- within(ready_for_draw,symbol <- factor(symbol,levels = unique(symbol_rank$symbol)))  
-with(ready_for_draw, levels(symbol))
+ready_for_draw.SC <- within(ready_for_draw.SC,symbol <- factor(symbol,levels = unique(symbol_rank.SC$symbol)))  
+with(ready_for_draw.SC, levels(symbol))
 
-ready_for_draw %>%
+ready_for_draw.SC %>%
   dplyr::select(symbol,Exp_site) %>%
   unique() -> color_bac
 color_bac$cell_source <- color_bac$Exp <- 1
 
 
-ggplot(ready_for_draw,aes(x=cell_source, y=Exp)) +
+ggplot(ready_for_draw.SC,aes(x=cell_source, y=Exp)) +
   # geom_quasirandom(size=0.1) +
   geom_violin(size = 0.25) +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf,alpha=0.1) +
@@ -144,7 +153,7 @@ ggplot(ready_for_draw,aes(x=cell_source, y=Exp)) +
     breaks = c("Immune and tumor cell almost", "Immune cell dominate","Tumor cell dominate")
   ) +
   my_theme +
-  labs(y="Expression",title="GSE75688, melanoma") +
+  labs(y="Expression",title="GSE75688, breast cancer") +
   theme(
     axis.title.x = element_blank(),
     axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1,size = 6),
@@ -402,13 +411,13 @@ ICP_exp_in_GSE75688.wilcox.test.FC.TI.SC %>%
   dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
   dplyr::mutate(log2Immune.UQ=log2(UQ_immune_exp+0.01),log2Tumor.UQ=log2(UQ_tumor_exp+0.01)) %>%
   ggplot(aes(x=`log2Immune.UQ`,y=`log2Tumor.UQ`)) +
-  geom_jitter(aes(color = Exp_site),width = 0.5,height = 0.5) +
-  geom_abline(intercept = 2, slope = 1) +
-  geom_abline(intercept = -2, slope = 1) +
+  geom_jitter(aes(color = Exp_site),width = 0.1,height = 0.1) +
+  geom_abline(intercept = 1, slope = 1,linetype = 2) +
+  geom_abline(intercept = -1, slope = 1,linetype = 2) +
   geom_text(aes(x=x,y=y,label=label),
             data=tibble::tibble(x=c(2,2),
                                 y=c(7,-4),
-                                label=c("log2(I/T)<-2","log2(I/T)>2"))) +
+                                label=c("log2(I/T)<-1","log2(I/T)>1"))) +
   # geom_smooth(method = "lm") +
   # geom_text_repel(aes(x=`log2FC(I/T).mean`,y=`log2FC(I/T).mid`,label=symbol)) +
   # geom_label(x=4,y=10,aes(label=label),data = cor_label) +
