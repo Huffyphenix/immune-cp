@@ -16,6 +16,8 @@ ICP_fantom.gene_exp.cell_line.Immune_cell.combine <-
   readr::read_rds(file.path(immune_path,"genelist_data","FANTOM5","ICP_fantom.gene_exp.cell_line.Immune_cell.raw.exp.rds.gz")) %>%
   dplyr::filter(Group != "Stromal Cell")
 
+fantom_sample_info <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_exp_patthern/cell_type_info","xCell_Fantom_cellname_adjust.immune-cells.detailed-info.tsv")) %>%
+  dplyr::mutate(`Characteristics [Cell type]`=ifelse(`Characteristics [Cell type]` %in% c("T cell","t cell, CD4+","T cell, CD8+","t cell, gamma-delta"), "Tcell",`Characteristics [Cell type]`))
 
 TCGA_tissue <- readr::read_tsv(file.path(basic_path,"data/TCGA/TCGA_cancer_tissue_classification.txt"))
 TCGA_tissue$Tissues %>% unique()
@@ -176,10 +178,12 @@ ready_for_draw %>%
 color_bac$Group <- color_bac$gene_tpm <- 1
 
 library(ggbeeswarm)
-ggplot(ready_for_draw,
-       aes(x = Group,y = gene_tpm)) +
+ready_for_draw %>%
+  dplyr::left_join(fantom_sample_info,by="sample") %>%
+  dplyr::mutate(`Characteristics [Cell type]`=ifelse(is.na(`Characteristics [Cell type]`),"Tumor",`Characteristics [Cell type]`)) %>%
+  ggplot(aes(x = Group,y = gene_tpm)) +
   geom_violin(size = 0.25) +
-  # geom_quasirandom(size=0.2) +
+  geom_jitter(aes(color=`Characteristics [Cell type]`),size=0.2 ) +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin = -Inf,xmax = Inf,ymin = -Inf,ymax = Inf,alpha = 0.1) +
   facet_wrap(~symbol,scale = "free_y", ncol = 7) +
   # ggpubr::stat_compare_means(method = "wilcox.test",label = "p.format") +
@@ -190,6 +194,7 @@ ggplot(ready_for_draw,
     # values = c("#008B00", "#00EE00", "#CD8500", "#FF4500"),
     breaks = c("Immune and tumor cell almost", "Immune cell dominate","Tumor cell dominate")
   ) +
+  scale_color_manual(values=c(RColorBrewer::brewer.pal(n=8,name = "Dark2"),"red","black"))+
   # theme_bw() +
   ylab(TeX("log_2 (TPM+1)")) +
   my_theme +
@@ -197,7 +202,7 @@ ggplot(ready_for_draw,
     axis.title.x = element_blank(),
     axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1,size = 6),
     axis.text.y = element_text(size = 6),
-    legend.position = "top",
+    # legend.position = "top",
     legend.text = element_text(size = 8),
     legend.title = element_text(size = 10, face = "bold"),
     legend.background = element_blank(),
