@@ -140,7 +140,7 @@ ready_for_draw.SC %>%
 color_bac$cell_source <- color_bac$Exp <- 1
 
 
-ggplot(ready_for_draw.SC,aes(x=cell_source, y=Exp)) +
+ggplot(ready_for_draw.SC,aes(x=cell_source, y=log2(Exp+0.01))) +
   # geom_quasirandom(size=0.1) +
   geom_violin(size = 0.25) +
   geom_rect(data=color_bac,aes(fill = Exp_site),xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf,alpha=0.1) +
