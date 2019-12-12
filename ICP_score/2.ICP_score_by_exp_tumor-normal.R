@@ -29,7 +29,7 @@ tumor_class_by_T_N.only_paired.count %>%
 
 
 # survival data -------------------------------------------------------
-clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical-OS-Age-stage.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-cancer_types) %>%
   unique() %>%
@@ -46,12 +46,13 @@ clinical <- readr::read_rds(file.path(basic_path,"data/TCGA-survival-time/cell.2
   dplyr::rename("barcode" = "bcr_patient_barcode") %>%
   unique()
 
-fun_clinical_test <- function(expr_clinical_ready, cancer_types){
+fun_clinical_test <- function(expr_clinical_ready, cancer_types, covariate){
   if(nrow(expr_clinical_ready %>% dplyr::filter(status!=0)) < 5){return(tibble::tibble())}
   print(cancer_types)
   
   
   # cox p
+   
   .cox <- survival::coxph(survival::Surv(time, status) ~ group, data = expr_clinical_ready, na.action = na.exclude)
   summary(.cox) -> .z
   
@@ -260,6 +261,75 @@ tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
+
+
+# adjust cancer type as covariate -----------------------------------------
+
+fn_survival_covariate <- function(data,title,color,group,sur_name,xlab,result_path,h,w,lx=0.8,ly=0.6){
+  library(survival)
+  library(survminer)
+  fit <- survfit(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
+  diff <- survdiff(survival::Surv(time, status) ~ group, data = data, na.action = na.exclude)
+  kmp <- 1 - pchisq(diff$chisq, df = length(levels(as.factor(data$group))) - 1)
+  .cox <- survival::coxph(survival::Surv(time, status) ~ group+cancer_types, data = data, na.action = na.exclude)
+  summary(.cox) -> .z
+  coxp = .z$coefficients[1,5]
+  # legend <- data.frame(group=paste("C",sort(unique(data$group)),sep=""),n=fit$n)
+  # legend %>%
+  #   dplyr::mutate(
+  #     label = purrr::map2(
+  #       .x = group,
+  #       .y = n,
+  #       .f = function(.x,.y){
+  #         latex2exp::TeX(glue::glue("<<.x>>, n = <<.y>>", .open = "<<", .close = ">>"))
+  #       }
+  #     )
+  #   ) -> legend
+  color %>%
+    dplyr::inner_join(data,by="group") %>%
+    dplyr::group_by(group) %>%
+    dplyr::mutate(n = n()) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(group = paste(group,", n=",n,sep="")) %>%
+    dplyr::select(group,color) %>%
+    unique() -> color_paired
+  survminer::ggsurvplot(fit,pval=F, #pval.method = T,
+                        data = data,
+                        surv.median.line = "hv",
+                        title = paste(title,", log rank p =", signif(kmp, 2),", cox p = ", signif(coxp, 2)), # change it when doing diff data
+                        xlab = xlab,
+                        ylab = 'Probability of survival',
+                        # legend.title = "Methyla group:",
+                        legend= c(lx,ly),
+                        # ggtheme = theme_survminer(),
+                        ggtheme = theme(
+                          panel.border = element_blank(), panel.grid.major = element_blank(), 
+                          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black", 
+                                                                                       size = 0.5), 
+                          panel.background = element_rect(fill = "white"),
+                          legend.key = element_blank(),
+                          legend.background = element_blank(),
+                          legend.text = element_text(size = 8),
+                          axis.text = element_text(size = 12,color = "black"),
+                          legend.title = element_blank(),
+                          axis.title = element_text(size = 12,color = "black"),
+                          text = element_text(color = "black")
+                        )
+  )[[1]] +
+    scale_color_manual(
+      values = color_paired$color,
+      labels = color_paired$group
+    ) -> p
+  ggsave(filename = paste(sur_name,signif(kmp, 2),"png",sep = "."), plot = p, path = result_path,device = "png",height = h,width = w)
+  ggsave(filename = paste(sur_name,signif(kmp, 2),"pdf",sep = "."), plot = p, path = result_path,device = "pdf",height = h,width = w)
+}
+sur_name <- paste("Score_0.5_Tumor_allyear_PFS_from_OnlyPaired-cancer_types_adjust")
+tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
+  dplyr::filter(!is.na(hot_per)) %>%
+  dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
+  # dplyr::filter(time<=1825) %>%
+  fn_survival_covariate("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::filter(!is.na(hot_per)) %>%
