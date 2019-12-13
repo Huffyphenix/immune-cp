@@ -95,8 +95,8 @@ fn_ratio_A <- function(names,genelist,exp){
   exp %>%
     dplyr::filter(symbol %in% genes) %>%
     dplyr::inner_join(exp.sum,by="barcode") %>%
-    dplyr::mutate(value = (value+1)/(exp+1))  %>%
-    dplyr::mutate(Features = paste("Fold.",names,".",symbol,sep="")) %>%
+    dplyr::mutate(value = (exp+1)/(value+1))  %>%
+    dplyr::mutate(Features = paste("Frac.",symbol,".",names,sep="")) %>%
     dplyr::select(barcode,value,Features) %>%
     unique()
 }
@@ -154,5 +154,5 @@ TCGA_ratio_exp %>%
   tidyr::spread(key="Features",value="value") -> TCGA_mean_fold_ratio_features_value
 
 TCGA_mean_fold_ratio_features_value %>%
-  readr::write_rds(file.path(res_path,"new-TCGA_mean_fold_ratio_features_value.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(res_path,"new191213-TCGA_mean_fold_ratio_features_value.rds.gz"),compress = "gz")
 

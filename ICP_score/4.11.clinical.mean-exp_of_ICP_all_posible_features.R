@@ -101,8 +101,8 @@ fn_ratio_A <- function(names,genelist,exp){
   exp %>%
     dplyr::filter(symbol %in% genes) %>%
     dplyr::inner_join(exp.sum,by="barcode") %>%
-    dplyr::mutate(value = (value+1)/(exp+1))  %>%
-    dplyr::mutate(Features = paste("Fold.",names,".",symbol,sep="")) %>%
+    dplyr::mutate(value = (exp+1)/(value+1))  %>%
+    dplyr::mutate(Features = paste("Frac.",symbol,".",names,sep="")) %>%
     dplyr::select(barcode,value,Features) %>%
     unique()
 }
@@ -160,5 +160,5 @@ clinical_ratio_exp %>%
   tidyr::spread(key="Features",value="value") -> clinical_mean_fold_ratio_features_value
 
 clinical_mean_fold_ratio_features_value %>%
-  readr::write_rds(file.path(res_path,"new-clinical_mean_fold_ratio_features_value.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(res_path,"new191213-clinical_mean_fold_ratio_features_value.rds.gz"),compress = "gz")
 
