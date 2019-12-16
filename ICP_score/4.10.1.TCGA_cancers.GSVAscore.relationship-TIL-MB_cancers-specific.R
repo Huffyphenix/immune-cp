@@ -26,7 +26,7 @@ GSVA.score.onlytumor <-
   dplyr::mutate(Features=gsub(" ","_",Features)) %>%
   tidyr::spread(key="Features",value="value")
 exp_ratio <- 
-  readr::read_rds(file.path(exp_ratio_path,"new-TCGA_mean_fold_ratio_features_value.rds.gz"))  %>%
+  readr::read_rds(file.path(exp_ratio_path,"new191213-TCGA_mean_fold_ratio_features_value.rds.gz"))  %>%
   tidyr::gather(-barcode,key="Features",value="value") %>%
   # dplyr::mutate(Features=gsub("\\(","",Features)) %>%
   # dplyr::mutate(Features=gsub("\\)","",Features)) %>%
@@ -186,7 +186,7 @@ GSVA.CTL.res %>%
 
 # 3.survival analysis -------------------------------------------------------
 # 3.1.load survival data ----
-clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical-OS-Age-stage.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-cancer_types) %>%
   unique() %>%
@@ -998,17 +998,109 @@ ggsave(file.path(res_path,"top100_Feature_filtered_by_correlation_rank.png"),dev
 ggsave(file.path(res_path,"top100_Feature_filtered_by_correlation_rank.pdf"),device = "pdf",height = 15,width = 10)
 
 GSVA.combined.mean_rank %>%
-  ggplot(aes(x=cancer_types,y=Features)) +
-  geom_tile(aes(fill = mean_rank)) +
-  scale_fill_gradient(name = "Rank",high="white",low="red") +
+  dplyr::mutate(top100 = ifelse(mean_rank < 100,1,0)) %>%
+  dplyr::group_by(Features) %>%
+  dplyr::mutate(top100_counts = sum(top100)) %>%
+  dplyr::select(Features,top100_counts) %>%
+  unique() %>%
+  dplyr::arrange(desc(top100_counts)) %>%
+  dplyr::mutate(feature_color =  ifelse(top100_counts >= 10, "red", "black")) -> Features_rank_by_top100counts
+
+GSVA.combined.mean_rank <- within(GSVA.combined.mean_rank,Features<- factor(Features,levels = Features_rank_by_top100counts$Features))
+with(GSVA.combined.mean_rank,levels(Features)) 
+
+GSVA.combined.mean_rank %>%
+  dplyr::mutate(Rank = ifelse(mean_rank <= 100, "<=100", ">100")) %>%
+  ggplot(aes(x=cancer_types,y=Features)) + 
+  geom_tile(aes(fill = Rank)) +
+  scale_fill_manual(name = "Rank",values = c("goldenrod1","steelblue1")) +
   my_theme +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-    axis.text.y = element_blank()
+    axis.text.y = element_text(color = Features_rank_by_top100counts$feature_color)
   ) +
   labs(x="Cancer types")
 ggsave(file.path(res_path,"ALL_Feature_filtered_by_correlation_rank.png"),device = "png",height = 10,width = 10)
 ggsave(file.path(res_path,"ALL_Feature_filtered_by_correlation_rank.pdf"),device = "pdf",height = 10,width = 10)
+
+
+# filter only by fold change ----------------------------------------------
+
+GSVA.TIL.res %>%
+  tidyr::unnest() %>%
+  tidyr::nest(-cancer_types,-cell_type) %>%
+  dplyr::mutate(rank=purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::arrange(desc(abs(`log2FC(High/Low)`))) %>%
+      dplyr::mutate(rank = 1:nrow(.x)) %>%
+      dplyr::select(Features,rank)
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() %>% 
+  tidyr::spread(key="cell_type",value="rank") -> GSVA.TIL.res.rank.FC
+
+GSVA.MB.res %>%
+  tidyr::unnest() %>%
+  tidyr::nest(-cancer_types,-cell_type) %>%
+  dplyr::mutate(rank=purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::arrange(desc(abs(`log2FC(High/Low)`))) %>%
+      dplyr::mutate(rank = 1:nrow(.x)) %>%
+      dplyr::select(Features,rank)
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() %>% 
+  tidyr::spread(key="cell_type",value="rank")-> GSVA.MB.res.rank.FC
+
+GSVA.CTL.res %>%
+  tidyr::unnest() %>%
+  tidyr::nest(-cancer_types,-cell_type) %>%
+  dplyr::mutate(rank=purrr::map(data,.f=function(.x){
+    .x %>%
+      dplyr::arrange(desc(abs(`log2FC(High/Low)`))) %>%
+      dplyr::mutate(rank = 1:nrow(.x)) %>%
+      dplyr::select(Features,rank)
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest()%>% 
+  tidyr::spread(key="cell_type",value="rank") -> GSVA.CTL.res.rank.FC
+
+GSVA.TIL.res.rank.FC %>%
+  dplyr::inner_join(GSVA.MB.res.rank.FC, by=c("cancer_types","Features")) %>%
+  dplyr::inner_join(GSVA.CTL.res.rank.FC, by=c("cancer_types","Features")) -> GSVA.combined_rank.FC
+
+GSVA.combined_rank.FC %>%
+  dplyr::mutate(mean_rank = (B_cell+CD4_Tcell+ CD8_Tcell+ Dendritic+ Macrophage+ Neutrophil+TIL+ mutation_durden+CTL)/9) -> GSVA.combined.mean_rank.FC
+
+GSVA.combined.mean_rank.FC %>%
+  dplyr::mutate(top100 = ifelse(mean_rank < 100,1,0)) %>%
+  dplyr::group_by(Features) %>%
+  dplyr::mutate(top100_counts = sum(top100)) %>%
+  dplyr::select(Features,top100_counts) %>%
+  unique() %>%
+  dplyr::arrange(desc(top100_counts)) %>%
+  # dplyr::filter(Features %in% c("Immune_and_tumor_cell_almost","Frac.PDCD1.All_gene","Frac.BTN2A1.Pair_14","Frac.ICOSLG.Pair_3","Frac.PVR.TwoSide")) %>%
+  dplyr::mutate(feature_color =  ifelse(top100_counts >= 10, "red", "black")) -> Features_rank_by_top100counts.FC
+
+Features_rank_by_top100counts.FC %>%
+  readr::write_tsv(file.path(res_path,"ALL_Feature_ranked_by_FC.tsv"))
+
+GSVA.combined.mean_rank.FC <- within(GSVA.combined.mean_rank.FC,Features<- factor(Features,levels = Features_rank_by_top100counts.FC$Features))
+with(GSVA.combined.mean_rank.FC,levels(Features)) 
+
+GSVA.combined.mean_rank.FC %>%
+  dplyr::mutate(Rank = ifelse(mean_rank <= 100, "<=100", ">100")) %>%
+  ggplot(aes(x=cancer_types,y=Features)) + 
+  geom_tile(aes(fill = Rank)) +
+  scale_fill_manual(name = "Rank",values = c("goldenrod1","steelblue1")) +
+  my_theme +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    axis.text.y = element_text(color = Features_rank_by_top100counts.FC$feature_color)
+  ) +
+  labs(x="Cancer types")
+ggsave(file.path(res_path,"ALL_Feature_filtered_by_FC_rank.png"),device = "png",height = 10,width = 10)
+ggsave(file.path(res_path,"ALL_Feature_filtered_by_FC_rank.pdf"),device = "pdf",height = 10,width = 10)
 
 
 # get relation of feature with immuneFeatures, rank, combine cancer --------
