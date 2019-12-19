@@ -19,7 +19,7 @@ fn_CYT <- function(exp){
     dplyr::filter(SYMBOL %in% c("GZMA","PRF1")) %>%
     dplyr::select(-ENSEMBL) %>%
     tidyr::spread(key="SYMBOL",value="exp") %>%
-    dplyr::mutate(CYT_score = log(sqrt(GZMA*PRF1))) %>%
+    dplyr::mutate(CYT_score = sqrt(GZMA*PRF1)) %>%
     dplyr::select(Run,CYT_score)
 }
 
@@ -163,9 +163,17 @@ fn_IMPRESS_score <- function(data){
                      pair13 = c("CD40","CD28"),
                      pair14 = c("CD40","PDCD1"),
                      pair15 = c("TNFRSF14","CD86"))
+  # we normalize the IMPRES
+  # scores for datasets in which not all relevant checkpoint genes were measured
+  # (Supplementary Table 1). This normalization is done by linearly scaling the
+  # IMPRES score to compensate for the number of missing pairs whose expression is
+  # not available in the dataset. For example, if 13 out of the 15 IMPRES features are
+  # measured in a dataset, then the IMPRES score of these samples is multiplied by
+  # 15 and divided by 13 to linearly scale it back to the original scale of 0–15
   res <- tibble::tibble()
   for (i in names(gene_pairs)) {
     tmp <- c(gene_pairs[[i]])
+    
     data %>%
       dplyr::filter(SYMBOL %in% tmp) %>%
       dplyr::mutate(na_num = ifelse(is.na(sum(exp)),0,1)) %>%
