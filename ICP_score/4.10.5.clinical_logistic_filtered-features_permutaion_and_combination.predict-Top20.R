@@ -38,7 +38,7 @@ res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filter
 gsva.score <- readr::read_rds(file.path(gsva_score_path,"new-ICP_GSVA_score_all-possible-features_all-togather.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-tissue)
-exp_ratio <- readr::read_rds(file.path(exp_score_path, "new-clinical_mean_fold_ratio_features_value.rds.gz"))
+exp_ratio <- readr::read_rds(file.path(exp_score_path, "new191213-clinical_mean_fold_ratio_features_value.rds.gz"))
 exp <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/clinical_response_data/mRNA_exp/ICPs_FPKM_expression_2.txt")) %>%
   dplyr::select(-gene_id) %>%
   tidyr::gather(-symbol,key="Run",value="exp") %>%
@@ -48,8 +48,7 @@ exp <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/clinical_
 gsva.score %>%
   tidyr::unnest()  %>%
   dplyr::inner_join(exp_ratio %>%
-                      dplyr::rename("Run"="barcode"),by="Run") %>%
-  dplyr::inner_join(exp, by="Run") -> combine_GSVA.exp_ratio
+                      dplyr::rename("Run"="barcode"),by="Run") -> combine_GSVA.exp_ratio
 
 # filtered_features <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio/overall_feature_filter.tsv")) %>%
 #   dplyr::filter(Counts_of_significant_analysis_in_all_cancers>=3) %>%
@@ -415,8 +414,8 @@ print("###################### all analysis finished")
 #   dplyr::filter(group %in% c("V483182_5")) -> final_res
 # 
 # final_res$final_feature[[1]]$features -> final_features
-final_features <- c("Immune_and_tumor_cell_almost","Fold.All_gene.PDCD1","Fold.Pair_14.BTN2A1","Fold.Pair_3.ICOSLG","Fold.TwoSide.PVR")
-
+# final_features <- c("Immune_and_tumor_cell_almost","Fold.All_gene.PDCD1","Fold.Pair_14.BTN2A1","Fold.Pair_3.ICOSLG","Fold.TwoSide.PVR")
+final_features <- c("Immune.and.tumor.cell.almost","Frac.PDCD1.All_gene","Frac.BTN2A1.Pair.14","Frac.ICOSLG.Pair.3","Frac.PVR.TwoSide")
 data_for_logistic %>%
   dplyr::mutate(filter_score = purrr::map(GSVA, .f =function(.x){
     .x[,c("Run",final_features)]
@@ -443,7 +442,7 @@ colnames(data.ready) <- gsub("-",".",colnames(data.ready))
 formula.train <- paste("Response~", paste(final_features,collapse = "+"))
 model.train <- glm(as.formula(formula.train), data = data.ready, family = binomial)
 model.train %>%
-  readr::write_rds(file.path(file.path(res_path,"select_best_and_compare/our_ICP_lm_model.rds.gz")))
+  readr::write_rds(file.path(file.path(res_path,"select_best_and_compare/our_ICP_lm_model-191216.rds.gz")))
 # # Make predictions
 # 
 data_for_logistic %>%
