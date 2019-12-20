@@ -31,14 +31,14 @@ gene_list_path <- file.path(basic_path,"immune_checkpoint/checkpoint/20171021_ch
 exp_score_path <- file.path(immune_res_path,"ICP_score.new")
 gsva_score_path <-  file.path(immune_res_path,"ICP_score/5.GSVA-ICPs_exp_site-all_possible")
 # res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination")
-res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific")
+res_path <- file.path(exp_score_path,"logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific-191216")
 # res_path <- file.path(exp_score_path,"logistic_model_predict_Response/test")
 
 # load data ---------------------------------------------------------------
-gsva.score <- readr::read_rds(file.path(gsva_score_path,"ICP_GSVA_score_all-possible-features_all-togather.rds.gz")) %>%
+gsva.score <- readr::read_rds(file.path(gsva_score_path,"new-ICP_GSVA_score_all-possible-features_all-togather.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-tissue)
-exp_ratio <- readr::read_rds(file.path(exp_score_path, "clinical_mean_fold_ratio_features_value.rds.gz"))
+exp_ratio <- readr::read_rds(file.path(exp_score_path, "new191213-clinical_mean_fold_ratio_features_value.rds.gz"))
 exp <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/clinical_response_data/mRNA_exp/ICPs_FPKM_expression_2.txt")) %>%
   dplyr::select(-gene_id) %>%
   tidyr::gather(-symbol,key="Run",value="exp") %>%
@@ -54,7 +54,10 @@ gsva.score %>%
 # filtered_features <- readr::read_tsv(file.path(immune_res_path,"TCGA_GSVAScore/GSVA_add_exp_ratio/overall_feature_filter.tsv")) %>%
 #   dplyr::filter(Counts_of_significant_analysis_in_all_cancers>=3) %>%
 #   .$Features
-filtered_features <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/result_20171025/TCGA_GSVAScore/GSVA_add_exp_ratio_cancerSpecific/top_50_Feature_filtered_by_cor_FC-noMean.tsv")) %>%
+# filtered_features <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/result_20171025/TCGA_GSVAScore/GSVA_add_exp_ratio_cancerSpecific/top_50_Feature_filtered_by_cor_FC-noMean.tsv")) %>%
+#   .$Features
+filtered_features <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/result_20171025/TCGA_GSVAScore/GSVA_add_exp_ratio_cancerSpecific-new/ALL_Feature_ranked_by_FC.tsv")) %>%
+  dplyr::filter(top100_counts>=10) %>%
   .$Features
 colnames(combine_GSVA.exp_ratio) <- gsub(colnames(combine_GSVA.exp_ratio),pattern = " ",replacement = "_")
 colnames(combine_GSVA.exp_ratio) <- gsub(colnames(combine_GSVA.exp_ratio),pattern = "-",replacement = ".")
@@ -69,7 +72,7 @@ sample_info <- readr::read_tsv(file.path(basic_path,"immune_checkpoint/clinical_
                       unique(), by="data ID")
 
 sample_info %>%
-  dplyr::select(Run,Cancer.y,blockade,Biopsy_Time,Author,Response) %>%
+  dplyr::select(Run,Cancer.y,blockade,Biopsy_Time,Author,Response, Response_standard,Second_Response_standard) %>%
   unique() -> Run_pubmed.id
 
 combine_GSVA.exp_ratio %>%
@@ -79,8 +82,14 @@ combine_GSVA.exp_ratio %>%
 
 
 Run_pubmed.id %>%
-  dplyr::filter(! Response %in% c("NE", "X")) %>%
+  # dplyr::filter(! Response %in% c("NE", "X")) %>%
+  dplyr::filter(! Response %in% c("NE")) %>%
   dplyr::mutate(Response = ifelse(Response %in% c("CR", "PR", "PRCR", "R"), "yes", "no"))  %>%
+  dplyr::mutate(Response = ifelse(blockade == "anti-CTLA-4" & Second_Response_standard %in% c("R"), "yes", Response)) %>%
+  dplyr::mutate(Response = ifelse(blockade == "anti-CTLA-4" & Second_Response_standard %in% c("long-survival","NR"), "no", Response))  %>%
+  dplyr::mutate(x = ifelse(is.na(Second_Response_standard) & blockade == "anti-CTLA-4", "1","2")) %>%
+  dplyr::filter(x=="2") %>%
+  dplyr::select(-Response_standard,-Second_Response_standard,-x) %>%
   tidyr::nest(Run,Response,.key = "response") %>%
   dplyr::inner_join(gsva.score, by = c("Cancer.y","blockade","Author","Biopsy_Time")) -> data_for_logistic
 
@@ -297,7 +306,7 @@ fn_choose_feature <- function(n,f){
     dplyr::mutate(group = paste(group,n,sep="_"))
 }
 
-tibble::tibble(n=c(2:5)) %>%
+tibble::tibble(n=c(5)) %>%
   dplyr::mutate(feature_comn = purrr::map(n,.f=fn_choose_feature,f=filtered_features)) %>%
   tidyr::unnest() -> feature_group
 feature_group %>%
