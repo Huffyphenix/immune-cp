@@ -8,16 +8,17 @@ library(pROC)
 basic_path <- file.path("/home/huff/project")
 immune_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 res_path <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific-evenTop20/select_best_and_compare")
+res_path_final <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/hill_climbing_191223/repeat_858/select_best_and_compare")
 
 
 # load data ---------------------------------------------------------------
 
 publish_score <- readr::read_rds(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare","CYT_IFN_IMPRESS_score.rds.gz"))
-our_score <- readr::read_rds(file.path(res_path,"clinical_out_score.rds.gz"))
-our_model <- readr::read_rds(file.path(res_path,"our_ICP_lm_model.rds.gz"))
+our_score <- readr::read_rds(file.path(res_path_final,"clinical_out_score.rds.gz"))
+our_model <- readr::read_rds(file.path(res_path_final,"logic.model.rds.gz"))
 
 our_score %>%
-  dplyr::filter(!usage %in% c("train","test")) %>%
+  dplyr::filter(!Author %in% c("Auslander")) %>%
   dplyr::inner_join(publish_score %>% dplyr::select(-response), by=c("Cancer.y","blockade", "Author")) %>%
   dplyr::mutate(IFN_score = purrr::map2(IFN_score,filter_score, .f=function(.x,.y){
     .x %>%
@@ -30,9 +31,7 @@ our_score %>%
   dplyr::mutate(CYT_score = purrr::map2(CYT_score,filter_score, .f=function(.x,.y){
     .x %>%
       dplyr::filter(Run %in% .y$Run)
-  })) %>%
-  dplyr::filter(Author != "Auslander") %>%
-  dplyr::select(-usage)-> combine_data
+  })) -> combine_data
 
 
 # functions ---------------------------------------------------------------
@@ -43,11 +42,11 @@ fn_select_train_test <- function(response,percent = 0.6){
   response %>%
     dplyr::filter(Response=="no") -> no_response
   yes_trainIndex <- createDataPartition(yes_response$Response, p = percent, 
-                                    list = FALSE, 
-                                    times = 1)
-  no_trainIndex <- createDataPartition(no_response$Response, p = percent, 
                                         list = FALSE, 
                                         times = 1)
+  no_trainIndex <- createDataPartition(no_response$Response, p = percent, 
+                                       list = FALSE, 
+                                       times = 1)
   
   dataTrain <- response[c(yes_trainIndex,no_trainIndex),]
   
@@ -186,9 +185,9 @@ fn_auc_IMPRESS <- function(data, usage,response){
   auc <- 0
   cutoff.best <- 0
   for (cutoff in 1:15) {
-    predicted.classes <- ifelse(test_set$IMPRESS >= cutoff, "yes", "no")
-    observed.classes <- test_set$Response
-    probabilities <- test_set$IMPRESS/15
+    predicted.classes <- ifelse(train_set$IMPRESS >= cutoff, "yes", "no")
+    observed.classes <- train_set$Response
+    probabilities <- train_set$IMPRESS/15
     res.roc <- roc(observed.classes, probabilities,quiet=TRUE)
     auc.tmp <- res.roc$auc[[1]]
     if(auc.tmp > auc){
@@ -230,12 +229,13 @@ fn_cross_validation <- function(n,Author, response, filter_score, IFN_score, exp
     
     auc_IMPRESS <- fn_auc_IMPRESS(IMPRESS,  usage, response)
     
-    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS))
+    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS, CV = i))
   }
-  tmp %>%
-    tidyr::gather(key="feature_group",value="auc") %>%
-    dplyr::group_by(feature_group) %>%
-    dplyr::mutate(mean_auc = mean(auc)) 
+  tmp
+  # tmp %>%
+  #   tidyr::gather(key="feature_group",value="auc") %>%
+  #   dplyr::group_by(feature_group) %>%
+  #   dplyr::mutate(mean_auc = mean(auc)) 
 }
 
 fn_cross_validation_VA <- function(n,Author, response, filter_score, IFN_score, expanded_immune_score, CYT_score){
@@ -256,7 +256,7 @@ fn_cross_validation_VA <- function(n,Author, response, filter_score, IFN_score, 
     
     auc_IMPRESS <- fn_auc_IMPRESS(IMPRESS,  usage, response)
     
-    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS))
+    tmp<- rbind(tmp,tibble::tibble(auc_ICP=auc_ICP,auc_IFN=auc_IFN,auc_EIS=auc_EIS,auc_CYT=auc_CYT,auc_IMPRESS=auc_IMPRESS, iteration = n))
   }
   tmp %>%
     tidyr::gather(key="feature_group",value="auc") %>%
@@ -264,20 +264,20 @@ fn_cross_validation_VA <- function(n,Author, response, filter_score, IFN_score, 
     dplyr::mutate(mean_auc = mean(auc)) 
 }
 # Run ---------------------------------------------------------------------
-res_VanAllen <- tibble::tibble()
-for (j in 1:100) {
-  combine_data %>%
-    dplyr::filter(Author == "Van Allen") %>%
-    dplyr::mutate(AUC = purrr::pmap(list(Author,response, filter_score, IFN_score, expanded_immune_score, CYT_score),fn_cross_validation_VA,n=5)) %>%
-    dplyr::select(-response, -filter_score, -IFN_score, -expanded_immune_score, -CYT_score) %>%
-    tidyr::unnest() %>%
-    dplyr::select(-auc) %>%
-    unique() %>%
-    dplyr::mutate(repeats = j) -> .tmp
-  rbind(res_VanAllen,.tmp) -> res_VanAllen
-}
-res_VanAllen %>%
-  readr::write_tsv(file.path(res_path,"VanAllen_dataset_compare_res.tsv"))
+# res_VanAllen <- tibble::tibble()
+# for (j in 1:100) {
+#   combine_data %>%
+#     dplyr::filter(Author == "Van Allen") %>%
+#     dplyr::mutate(AUC = purrr::pmap(list(Author,response, filter_score, IFN_score, expanded_immune_score, CYT_score),fn_cross_validation_VA,n=5)) %>%
+#     dplyr::select(-response, -filter_score, -IFN_score, -expanded_immune_score, -CYT_score) %>%
+#     tidyr::unnest() %>%
+#     dplyr::select(-auc) %>%
+#     unique() %>%
+#     dplyr::mutate(repeats = j) -> .tmp
+#   rbind(res_VanAllen,.tmp) -> res_VanAllen
+# }
+# res_VanAllen %>%
+#   readr::write_tsv(file.path(res_path,"VanAllen_dataset_compare_res.tsv"))
 
 res2 <- tibble::tibble()
 for (j in 1:100) {
@@ -285,13 +285,13 @@ for (j in 1:100) {
     dplyr::mutate(AUC = purrr::pmap(list(Author,response, filter_score, IFN_score, expanded_immune_score, CYT_score,IMPRESS),fn_cross_validation,n=5)) %>%
     dplyr::select(-response, -filter_score, -IFN_score, -expanded_immune_score, -CYT_score, -IMPRESS) %>%
     tidyr::unnest() %>%
-    dplyr::select(-auc) %>%
-    unique() %>%
+    # dplyr::select(-auc) %>%
+    # unique() %>%
     dplyr::mutate(repeats = j) -> .tmp
   rbind(res2,.tmp) -> res2
 }
 res2 %>%
-  readr::write_tsv(file.path(res_path,"All_dataset_compare_res.tsv"))
+  readr::write_tsv(file.path(res_path_final,"All_dataset_compare_res.tsv"))
 # plot --------------------------------------------------------------------
 my_theme <-   theme(
   panel.background = element_rect(fill = "white",colour = "black"),
@@ -309,11 +309,21 @@ my_theme <-   theme(
   strip.text = element_text(size = 10),
   text = element_text(color = "black")
 )
-tibble::tibble(feature_group = unique(res2$feature_group),
-               feature_group2 = c("ICP","IFNy","Expanded immune","CYT","IMPRESS")) -> feature_correspond
 res2 %>%
-  dplyr::inner_join(feature_correspond,by="feature_group") %>%
+  tidyr::gather(-Cancer.y,-blockade,-Biopsy_Time,-Author,-Drug,-CV,-repeats,key="feature_group",value="AUC") -> res2_draw
+tibble::tibble(feature_group = unique(res2_draw$feature_group),
+               feature_group2 = c("ICGex","IFNy","Expanded immune","CYT","IMPRES")) -> feature_correspond
+res2_draw %>%
+  dplyr::inner_join(feature_correspond,by="feature_group") -> res2_draw
+res2_draw <- within(res2_draw,feature_group2<-factor(feature_group2,levels = c("IFNy","Expanded immune","CYT","IMPRES","ICGex")))
+with(res2_draw, levels(feature_group2))
+res2_draw %>%
   dplyr::mutate(group = paste(Author,Biopsy_Time,blockade,sep=",")) %>%
+  dplyr::group_by(feature_group,repeats,group) %>%
+  dplyr::mutate(mean_auc = mean(AUC)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(Cancer.y,blockade,Biopsy_Time,Author, Drug, repeats,feature_group2, mean_auc,group) %>%
+  unique() %>%
   ggplot(aes(x=feature_group2,y=mean_auc)) +
   geom_boxplot(aes(fill = group)) +
   facet_wrap(~feature_group2, scales = "free_x", nrow = 1) +
@@ -327,8 +337,18 @@ res2 %>%
     axis.ticks.x = element_blank()
   )
 
-ggsave(file.path(res_path,"All_compare_plot.png"),device = "png",height = 4, width = 8)
-ggsave(file.path(res_path,"All_compare_plot.pdf"),device = "pdf",height = 4, width = 8)
+ggsave(file.path(res_path_final,"All_compare_plot.png"),device = "png",height = 4, width = 8)
+ggsave(file.path(res_path_final,"All_compare_plot.pdf"),device = "pdf",height = 4, width = 8)
+
+res2_draw %>%
+  dplyr::mutate(group = paste(Author,Biopsy_Time,blockade,sep=",")) %>%
+  dplyr::group_by(feature_group,repeats,group) %>%
+  dplyr::mutate(mean_auc = mean(AUC)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(Cancer.y,blockade,Biopsy_Time,Author, Drug, repeats,feature_group2, mean_auc,group) %>%
+  unique() %>%
+  readr::write_tsv(file.path(res_path_final,"All_dataset_mean_ACU_compare_res.tsv"))
+
 
 comp_list <- list(c("CYT","Immune regulators"),
                   c("Expanded immune","Immune regulators"),
@@ -349,8 +369,8 @@ res_VanAllen %>%
   ) +
   ggpubr::stat_compare_means(comparisons = comp_list,method = "wilcox.test",label = "p.signif")
 
-ggsave(file.path(res_path,"VanAllen_compare_plot.png"),device = "png",height = 4, width = 4)
-ggsave(file.path(res_path,"VanAllen_compare_plot.pdf"),device = "pdf",height = 4, width = 4)
+ggsave(file.path(res_path_final,"VanAllen_compare_plot.png"),device = "png",height = 4, width = 4)
+ggsave(file.path(res_path_final,"VanAllen_compare_plot.pdf"),device = "pdf",height = 4, width = 4)
 
 # res2 %>% dplyr::filter(feature_group=="auc_ICP") %>% dplyr::mutate(res="2") %>%
 #   rbind(res %>% dplyr::filter(feature_group=="auc_ICP") %>% dplyr::mutate(res="1")) %>%
