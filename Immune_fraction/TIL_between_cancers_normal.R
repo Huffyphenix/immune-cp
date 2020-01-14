@@ -185,6 +185,7 @@ fn_draw_density("Neutrophil")
 fn_draw_density("Macrophage")
 fn_draw_density("Dendritic")
 
+
 # function to draw density plot (by cancer types)
 fn_draw_density_cancer <- function(value){
   TIMER_data_dealed.peak %>%
@@ -295,6 +296,87 @@ TIMER_data_dealed %>%
   dplyr::filter(Type=="Normal") %>%
   dplyr::select(barcode) %>%
   unique() -> TIMER_T.N.paired_sample
+
+# scatter relation between tumor and normal
+TIMER_data_dealed %>%
+  dplyr::filter(barcode %in% TIMER_T.N.paired_sample$barcode) %>%
+  dplyr::select(barcode,Type,TIL,cancer_types) %>%
+  dplyr::group_by(barcode,Type) %>%
+  dplyr::mutate(TIL = mean(TIL)) %>%
+  unique() %>%
+  tidyr::spread(key="Type", value="TIL") %>%
+  dplyr::filter(!is.na(Tumor)) %>%
+  dplyr::filter(!is.na(Normal)) %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(n = n()) %>%
+  dplyr::filter(n>=10) -> scatter_plot_data
+
+scatter_plot_data %>%
+  dplyr::select(-n) %>%
+  tidyr::gather(-barcode,-cancer_types,key="Type",value="TIL") %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(mid = quantile(TIL,0.5)[[1]]) %>%
+  dplyr::select(cancer_types,mid) %>%
+  unique() -> scatter_plot_mid.cancers
+
+scatter_plot_data %>%
+  dplyr::inner_join(scatter_plot_mid.cancers, by="cancer_types") %>%
+  dplyr::mutate(group = ifelse(Tumor >= mid, "Hot","Cold")) %>%
+  dplyr::mutate(group = ifelse(Normal > mid & Tumor < mid, "Excluded",group)) %>%
+  dplyr::ungroup() -> scatter_for_draw
+
+scatter_for_draw %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::mutate(statistic = purrr::map(data,.f=function(.x){
+    .x$group %>%
+      table() %>%
+      t() %>%
+      as.data.frame() %>%
+      dplyr::as.tbl() %>%
+      dplyr::mutate(all = nrow(.x)) %>%
+      dplyr::mutate(per = (Freq/all)*100)
+  })) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() %>%
+  dplyr::rename("group"=".") -> pie_for_draw
+pie_for_draw %>%
+  dplyr::filter(group == "Hot") %>%
+  dplyr::arrange(per) -> cancer_rank_hot
+
+# scatter plot 
+
+scatter_for_draw <- within(scatter_for_draw,cancer_types <- factor(cancer_types,cancer_rank_hot$cancer_types))
+with(scatter_for_draw,levels(cancer_types))
+scatter_for_draw %>%
+  ggplot(aes(x=Normal,y=Tumor)) +
+  geom_point(aes(color=group)) +
+  geom_vline(aes(xintercept=mid), linetype=2) +
+  geom_hline(aes(yintercept=mid), linetype=2) +
+  # geom_vline(xintercept=1.15) +
+  # geom_hline(yintercept=1.01) +
+  labs(x="Total 6 immune cells infiltration in Normal", y="Total 6 immune cells infiltration in Tumor") +
+  facet_wrap(.~cancer_types) +
+  scale_color_manual(values = RColorBrewer::brewer.pal(3,"Dark2")) +
+  my_theme
+ggsave(file.path(result_path, "scatter_hot_cold_excluded_tumor.pdf"),height = 7, width = 10)
+
+# pie plot
+
+pie_for_draw %>% 
+  ggplot(aes(x=Var1,y=per, fill=group)) +
+  geom_bar(stat = 'identity') +
+  coord_polar("y")+
+  facet_wrap(".~cancer_types") +
+  my_theme +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(3,"Dark2")) +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),        
+        axis.text.y = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks = element_blank(),
+        panel.background = element_rect(fill = "white",colour = NA),
+        legend.position = "none")
+ggsave(file.path(result_path, "pie_hot_cold_excluded_tumor.pdf"),height = 4, width = 5)
 
 # get peak
 TIMER_data_dealed %>%
