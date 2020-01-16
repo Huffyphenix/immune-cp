@@ -8,7 +8,7 @@ library(pROC)
 basic_path <- file.path("/home/huff/project")
 immune_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
 res_path <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific-evenTop20/select_best_and_compare")
-res_path_final <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/hill_climbing_191223/repeat_858/select_best_and_compare")
+res_path_final <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/hill_climbing_191223/repeat_858_best/select_best_and_compare")
 
 
 # load data ---------------------------------------------------------------
@@ -292,6 +292,7 @@ for (j in 1:100) {
 }
 res2 %>%
   readr::write_tsv(file.path(res_path_final,"All_dataset_compare_res.tsv"))
+
 # plot --------------------------------------------------------------------
 my_theme <-   theme(
   panel.background = element_rect(fill = "white",colour = "black"),
@@ -311,6 +312,17 @@ my_theme <-   theme(
 )
 res2 %>%
   tidyr::gather(-Cancer.y,-blockade,-Biopsy_Time,-Author,-Drug,-CV,-repeats,key="feature_group",value="AUC") -> res2_draw
+
+res2 %>% 
+  tidyr::gather(-Cancer.y,-blockade,-Biopsy_Time,-Author,-Drug,-CV,-repeats,key="method",value="AUC") %>% 
+  dplyr::group_by(Author,Biopsy_Time,method) %>% 
+  dplyr::mutate(mean = quantile(AUC,0.5)) %>% 
+  dplyr::select(-CV,-repeats,-AUC) %>% 
+  unique() %>% 
+  tidyr::spread(key="method",value="mean") %>% 
+  dplyr::mutate(dataset = paste(Author,Biopsy_Time,blockade)) %>%
+  readr::write_tsv(file.path(res_path_final,"mean_AUC_compared.tsv"))
+
 tibble::tibble(feature_group = unique(res2_draw$feature_group),
                feature_group2 = c("ICGex","IFNy","Expanded immune","CYT","IMPRES")) -> feature_correspond
 res2_draw %>%
