@@ -419,7 +419,8 @@ he = Heatmap(for_heatmap.m.scaled,
              # cluster_rows = color_branches(row_dend, k = 3),
              heatmap_legend_param = list(title = c("Exp.")))
 he
-pdf(file.path(result_path,"e_6_exp_profile","ICP_exp_in_cancers.pdf"),width = 8,height = 6)
+
+pdf(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_exp_patthern-byratio.new","pattern_validation","68ICP_exp_cluster_heatmap.pdf"),width = 12,height = 6)
 he
 dev.off()
 # save image --------------------------------------------------------------
