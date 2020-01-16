@@ -345,6 +345,83 @@ ready_for_rank.cor %>%
   ylab("log2(Mean exppression in immune cells)") 
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.pdf"),device = "pdf",height = 6,width = 8)
 ggsave(file.path(result_path,"pattern_validation","1.2.FANTOM5-T-I-meanExp.correlation.png"),device = "png",height = 6,width = 8)
+
+
+# heatmap -----------------------------------------------------------------
+library(ComplexHeatmap)
+library(circlize)
+library(dendextend)
+gene_list_exp_site <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_exp_patthern-byMeanUQ","pattern_info","ICP_exp_pattern_in_immune_tumor_cell-by-FC-pvalue.tsv")) %>%
+  dplyr::select(symbol,Exp_site)
+
+ready_for_analysis %>%
+  dplyr::select(sample,gene_tpm,symbol,Group,Role) %>%
+  dplyr::inner_join(gene_list_exp_site,by="symbol") %>%
+  dplyr::mutate(Role = ifelse(Role %in% c("Immune cells of blood tumor(Activate)","Immune cells of blood tumor(Inhibitory)"),"Blood tumor cells",Role)) %>%
+  dplyr::mutate(Role = ifelse(Role %in% c("Tumor cells(non-blood)"),"Solid tumor cells",Role)) %>%
+  dplyr::filter(!Role %in% c("Blood tumor cells")) -> ready_for_analysis_no_bloodtumor
+
+ready_for_analysis_no_bloodtumor %>%
+  dplyr::select(sample,symbol,gene_tpm) %>%
+  dplyr::arrange(sample) %>%
+  tidyr::spread(key="symbol",value="gene_tpm") -> for_heatmap
+for_heatmap.m <- as.matrix(for_heatmap[,-1])
+rownames(for_heatmap.m) <- for_heatmap$sample
+
+ready_for_analysis_no_bloodtumor %>%
+  dplyr::select(symbol,Exp_site) %>%
+  unique()%>%
+  dplyr::arrange(symbol) %>%
+  as.data.frame() -> symbol_anno
+rownames(symbol_anno) <- symbol_anno[,1]
+symbol_anno <- symbol_anno[,-1]
+
+top_anno <- HeatmapAnnotation(`ICG type`=symbol_anno,
+                               col = list(`ICG type`=c("Immune cell dominate" = "#7FFF00",
+                                                 "Immune and tumor cell almost" = "#CD950C",
+                                                 "Tumor cell dominate" = "#FF3030")),
+                               height = unit(0.2, "cm"),
+                               show_annotation_name =T)
+draw(top_anno,1:69)
+
+ready_for_analysis_no_bloodtumor %>%
+  dplyr::select(sample,Role) %>%
+  unique()%>%
+  dplyr::arrange(sample) %>%
+  as.data.frame() -> sample_anno
+rownames(sample_anno) <- sample_anno[,1]
+sample_anno <- sample_anno[,-1]
+side_anno <- rowAnnotation(`Sample group`=sample_anno,
+                           col = list(`Sample group`=c("Immune cells(Activate)" = "#1C86EE",
+                                             "Immune cells(Inhibitory)" = "#FFB90F",
+                                             "Solid tumor cells" = "#919191")),
+                           width = unit(0.2, "cm"),
+                           show_annotation_name =T)
+draw(side_anno,1:197)
+
+for_heatmap.m.scaled <- apply(t(for_heatmap.m),1,scale)
+rownames(for_heatmap.m.scaled) <- rownames(for_heatmap.m)
+
+col_dend = hclust(dist(t(for_heatmap.m.scaled))) # column clustering
+row_dend = hclust(dist((for_heatmap.m.scaled))) # row clustering
+
+he = Heatmap(for_heatmap.m.scaled,
+             col = colorRamp2(c(-2, 0, 17), c("blue", "white", "red")),
+             row_names_gp = gpar(fontsize = 8),
+             show_row_names = FALSE,
+             show_column_names = TRUE,
+             show_row_dend = T, # whether show row clusters.
+             show_column_dend = T,
+             top_annotation = top_anno,
+             left_annotation =side_anno,
+             row_names_side = c("left"),
+             # cluster_columns = color_branches(col_dend, k = 3),   # add color on the column tree branches
+             # cluster_rows = color_branches(row_dend, k = 3),
+             heatmap_legend_param = list(title = c("Exp.")))
+he
+pdf(file.path(result_path,"e_6_exp_profile","ICP_exp_in_cancers.pdf"),width = 8,height = 6)
+he
+dev.off()
 # save image --------------------------------------------------------------
 
 save.image(file.path(result_path,"pattern_validation","FANTOM5.validation.Rdata"))
