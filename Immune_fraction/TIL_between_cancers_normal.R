@@ -378,6 +378,41 @@ pie_for_draw %>%
         legend.position = "none")
 ggsave(file.path(result_path, "pie_hot_cold_excluded_tumor.pdf"),height = 4, width = 5)
 
+# relationship between upregulated ICGs with hot/cold tumors
+immune_path <- file.path(basic_path,"immune_checkpoint")
+tumor_class_by_T_N.only_paired.count <- readr::read_tsv(file.path(immune_path,"result_20171025/ICP_exp_patthern-byratio","tumor_class_by_T_N.only_paired.by_geneCounts","tumor_class_by_T_N.only_paired"))
+tumor_class_by_T_N.only_paired.count %>%
+  dplyr::select(-`<NA>`) %>%
+  dplyr::mutate(hot_per = Immunity_hot/(Immunity_hot+Immunity_cold)) -> tumor_class_by_T_N.only_paired.genePercent
+
+tumor_class_by_T_N.only_paired.genePercent %>%
+  dplyr::rename("barcode" = "Participant") %>%
+  dplyr::group_by(cancer_types,barcode) %>%
+  dplyr::mutate(hot_per = mean(hot_per)) %>%
+  dplyr::select(hot_per) %>%
+  dplyr::ungroup() %>%
+  unique() %>%
+  dplyr::inner_join(scatter_for_draw, by=c("barcode","cancer_types")) -> ICG_percent_hotTumor_combine
+ICG_percent_hotTumor_combine %>%
+  dplyr::select(cancer_types,barcode,hot_per,Normal, Tumor,mid, group) %>%
+  readr::write_tsv(file.path(result_path,"ICG_percent_hotTumorClass_combine.tsv"))
+
+cpm_list <- list(c("Cold","Excluded"),
+     c("Cold","Hot"),
+     c("Hot","Excluded"))
+ICG_percent_hotTumor_combine %>%
+  ggplot(aes(x=group, y=hot_per*100)) +
+  geom_boxplot() +
+  ggpubr::stat_compare_means(comparisons =cpm_list,
+                             method = "wilcox.test",label = "p.signif") +
+  # facet_wrap(.~cancer_types) +
+  labs(y="Upregulated ICGs (%)") +
+  my_theme +
+  theme(
+    axis.title.x = element_blank()
+  )
+ggsave(file.path(result_path,"UpICGs_diff_in_hot_cold_exclude.pdf"),height = 3,width = 4)
+
 # get peak
 TIMER_data_dealed %>%
   dplyr::filter(barcode %in% TIMER_T.N.paired_sample$barcode) %>%
