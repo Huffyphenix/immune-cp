@@ -59,7 +59,7 @@ survival_path <- "/home/huff/project/data/TCGA-survival-time/cell.2018.survival"
 survival_data <- readr::read_rds(file.path(survival_path, "TCGA_pancan_cancer_cell_survival_time.rds.gz")) %>%
   dplyr::rename("cancer_types" = "type")
 
-clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical.rds.gz")) %>%
+clinical_tcga <- readr::read_rds(file.path(basic_path,"TCGA_survival/data","Pancan.Merge.clinical-OS-Age-stage.rds.gz")) %>%
   tidyr::unnest() %>%
   dplyr::select(-cancer_types) %>%
   unique() %>%
@@ -495,6 +495,137 @@ plot_ready %>%
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers-noMHC.pdf"),device = "pdf", width = 12,height = 7)  
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-cancers-noMHC.png"),device = "png",width = 12,height = 7)  
 
+# compare exp pattern among, with normal and tumor ---------
+# expression in 3 groups by function: exp site Mainly_Tumor, Mainly_Immune, both -----
+# 样本中在各基因的平均表达量
+
+fn_average.by_expsite.TN <- function(.data){
+  .data %>%
+    dplyr::filter(!symbol %in% MHC_class_genes) %>%
+    tidyr::gather(-symbol,-entrez_id,key="barcode",value="expr") %>%
+    dplyr::left_join(gene_list,by="symbol") %>%
+    dplyr::filter(!is.na(expr)) %>%
+    dplyr::mutate(group = ifelse(substr(barcode,14,14)==0, "Tumor", "Normal")) %>%
+    dplyr::filter(Exp_site %in% c("Immune and tumor cell almost" ,"Immune cell dominate","Tumor cell dominate" )) %>%
+    # dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
+    # dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
+    # dplyr::mutate(Exp_site = Exp_site.1) %>%
+    dplyr::group_by(barcode,Exp_site, group) %>%
+    dplyr::mutate(average_exp = mean(expr)) %>%
+    dplyr::select(barcode,Exp_site,group,average_exp) %>%
+    unique() %>%
+    dplyr::ungroup()
+}
+
+gene_list_expr %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(ICP_mean_expr = purrr::map(filter_expr,fn_average.by_expsite.TN)) %>%
+  dplyr::select(-filter_expr) %>%
+  dplyr::ungroup() -> ICP_mean_expr_in_cancers.by_expsite.TN
+
+ICP_mean_expr_in_cancers.by_expsite.TN %>%
+  readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_TN.by_expsite-noMHC.rds.gz"),compress = "gz") 
+
+ICP_mean_expr_in_cancers.by_expsite.TN %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(average_exp = log2(average_exp)) %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(sum = quantile(average_exp,0.5)) %>%
+  dplyr::select(cancer_types,sum) %>%
+  unique() %>%
+  dplyr::arrange(sum) -> cancer_rank.by_expsite.TN
+
+# ICP_mean_expr_in_cancers.by_expsite %>%
+#   tidyr::unnest() %>%
+#   dplyr::filter(Exp_site!="N") %>%
+#   dplyr::mutate(average_exp = log2(average_exp)) %>%
+#   ggplot(aes(x=cancer_types,y=average_exp)) +
+#   geom_violin(aes(fill=Exp_site),alpha=0.5) +
+#   facet_wrap(~Exp_site) +
+#   coord_flip() +
+#   scale_x_discrete(limits= cancer_rank$cancer_types) +
+#   scale_fill_manual(values = c("#9A32CD", "Blue" ,"red","pink","orange","grey")) +
+#   theme_bw() +
+#   xlab("Cancer Types") +
+#   ylab("log2 (Expression)") +
+#   theme(
+#     strip.background = element_rect(colour = "black", fill = "white"),
+#     strip.text = element_text(size = 12,color = "black"),
+#     axis.text = element_text(size = 10, colour = "black"),
+#     legend.position = "none",
+#     panel.background = element_blank(),
+#     panel.border = element_rect(fill='transparent',colour = "black"),
+#     panel.grid = element_line(linetype = "dashed")
+#   )
+# ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_cancers-by_expsite.pdf"),device = "pdf", width = 6,height = 6)  
+# ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_cancers-by_expsite.png"),device = "png",width = 6,height = 6)  
+
+# class by cancers
+ICP_mean_expr_in_cancers.by_expsite.TN %>%
+  tidyr::unnest() %>%
+  dplyr::filter(!Exp_site %in% c("N","Not_sure")) -> plot_ready
+
+plot_ready %>%
+  dplyr::group_by(cancer_types, Exp_site, group) %>%
+  dplyr::mutate(mean = mean(average_exp)) %>%
+  dplyr::select(cancer_types, Exp_site,mean)%>%
+  unique() %>%
+  tidyr::spread(key="Exp_site",value="mean") %>%
+  dplyr::mutate(`log2FC(I/T)`=log2(`Immune cell dominate`/`Tumor cell dominate`)) %>%
+  dplyr::mutate(title = paste(cancer_types,", log2FC=",signif(`log2FC(I/T)`,2),sep="")) %>%
+  dplyr::select(cancer_types,title,`log2FC(I/T)`) -> label
+plot_ready %>%
+  dplyr::inner_join(label,by=c("cancer_types","group")) -> plot_ready
+
+plot_ready %>%
+  dplyr::select(Exp_site) %>%
+  dplyr::inner_join(data.frame(Exp_site =c("Immune and tumor cell almost" ,"Immune cell dominate","Tumor cell dominate" ),
+                               rank = c(3,2,1),
+                               Exp_site.s = c("TIC-ICGs","IC-ICGs","TC-ICGs")), by = "Exp_site") %>%
+  dplyr::arrange(rank) %>%
+  dplyr::select(-rank)%>%
+  unique() -> Exp_site.rank
+plot_ready %>%
+  dplyr::inner_join(Exp_site.rank, by="Exp_site") %>%
+  dplyr::mutate(Exp_site.s = paste(Exp_site.s,group,sep = ".")) -> plot_ready
+# plot_ready <- within(plot_ready,Exp_site.s <- factor(Exp_site.s,levels = unique(Exp_site.rank$Exp_site.s)))
+# with(plot_ready, levels(Exp_site.s))
+
+plot_ready %>%
+  dplyr::filter(group == "Tumor") %>%
+  dplyr::arrange(`log2FC(I/T)`) %>%
+  .$cancer_types -> c.rank
+plot_ready <- within(plot_ready,cancer_types <- factor(cancer_types,levels = unique(c.rank)))
+with(plot_ready, levels(cancer_types))
+
+plot_ready %>%
+  dplyr::mutate(average_exp = log2(average_exp)) %>%
+  ggplot(aes(x=Exp_site.s,y=average_exp)) +
+  geom_violin(aes(fill=group), size = 0.5, color = "black") +
+  facet_wrap(~cancer_types) +
+  coord_flip() +
+  theme_bw() +
+  xlab("Expression pattern of ICGs") +
+  ylab("Average expression (log2)") +
+  scale_fill_manual(values=c("#1E90FF","#CD9B1D")) +
+  ggpubr::stat_compare_means(comparisons = list(c("IC-ICGs.Normal","IC-ICGs.Tumor"),
+                                                c("TC-ICGs.Normal","TC-ICGs.Tumor"),
+                                                c("TIC-ICGs.Normal","TIC-ICGs.Tumor"),
+                                                c("IC-ICGs.Tumor","TC-ICGs.Tumor"),
+                                                c("IC-ICGs.Normal","TC-ICGs.Normal")),
+                             label = "p.signif") +
+  theme(
+    strip.background = element_rect(colour = "black", fill = "white"),
+    strip.text = element_text(size = 10,color = "black"),
+    axis.text = element_text(size = 10, colour = "black"),
+    # legend.position = "none",
+    legend.title = element_blank(),
+    panel.background = element_blank(),
+    panel.border = element_rect(fill='transparent',colour = "black"),
+    panel.grid = element_blank()
+  )
+ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-TN-noMHC.pdf"),device = "pdf", width = 12,height = 10)
+
 # survival analysis [univariable survival analysis] ----------------------------
 ## PFS
 ICP_mean_expr_in_cancers.by_expsite %>%
@@ -552,13 +683,13 @@ ICP_mean_expr_in_cancers.byexpsite.PFS %>%
     .x %>%
       dplyr::select(hr,functionWithImmune) %>%
       tidyr::spread(key="functionWithImmune",value="hr") %>%
-      dplyr::mutate(hr_sum=`Immune cell dominate`-`Tumor cell dominate`) %>%
+      dplyr::mutate(hr_sum=`Tumor cell dominate`-`Immune cell dominate`) %>%
       dplyr::select(hr_sum)-> tmp
     rbind(tmp,tmp)
   })) %>%
   tidyr::unnest() %>%
   dplyr::mutate(hr=log2(hr)+1,hr_l=log2(hr_l)+1,hr_h=log2(hr_h)+1) %>%
-  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-Expsite.all-noMHC",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 6, h = 6)
+  fn_cox_plot.all(filename="Meanexp.COX_PFS.by-Expsite.all-noMHC-reorder",hr="hr",hr_l="hr_l",hr_h="hr_h",title="Progression-free survival",facet="~ functionWithImmune",dir = "survival_byExpsite",w = 6, h = 6)
 
 # PFS, cox, continus
 ICP_mean_expr_in_cancers.byexpsite.PFS %>% 
