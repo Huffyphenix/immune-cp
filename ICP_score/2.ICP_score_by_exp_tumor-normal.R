@@ -331,11 +331,12 @@ tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   # dplyr::filter(time<=1825) %>%
   fn_survival_covariate("PFS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 
+sur_name <- paste("Score_0.5_Tumor_allyear_OS_from_OnlyPaired-cancer_types_adjust")
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
   dplyr::filter(!is.na(hot_per)) %>%
-  dplyr::rename("time"="PFS.time","status"="PFS") %>%
+  dplyr::rename("time"="OS","status"="Status") %>%
   dplyr::mutate(group = ifelse(hot_per>quantile(hot_per,0.5),"High","Low")) %>%
-  dplyr::select(cancer_types,barcode,group)
+  fn_survival_covariate("OS",color_list,"group",sur_name,"Survival in days",res_path,3,4,0.7,0.9)
 ##### 1.2.2.cancer specific survival -----------------------------------
 # 1.2.2.1.group samples into 2groups by middle score ----
 tumor_class_by_T_N.only_paired.immunityScore.clinical %>%
