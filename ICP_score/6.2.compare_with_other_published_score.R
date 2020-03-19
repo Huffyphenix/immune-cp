@@ -7,15 +7,35 @@ library(pROC)
 # path config -------------------------------------------------------------
 basic_path <- file.path("/home/huff/project")
 immune_path <- file.path(basic_path,"immune_checkpoint/result_20171025")
-res_path <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific-evenTop20/select_best_and_compare")
+res_path <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/hill_climbing_191226/best_repeat_2907")
 res_path_final <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/hill_climbing_191223/repeat_858_best/select_best_and_compare")
-
+res_path_final <- file.path(immune_path, "ICP_score.new/logistic_model_predict_Response/hill_climbing_191226/best_repeat_2907/select_best_and_compare")
+exp_score_path <- file.path(immune_path,"ICP_score.new")
 
 # load data ---------------------------------------------------------------
+readr::read_rds(file.path(exp_score_path,"clinical_data_for_logistic.rds.gz")) -> data_for_logistic
+filtered_features <- readr::read_tsv(file.path("/home/huff/project/immune_checkpoint/result_20171025/TCGA_GSVAScore/GSVA_add_exp_ratio_cancerSpecific-new/ALL_Feature_ranked_by_FC.tsv")) %>%
+  dplyr::filter(top100_counts>=10) %>%
+  .$Features
+data_for_logistic %>%
+  dplyr::mutate(GSVA = purrr::map(GSVA, .f = function(.x){
+    colnames(.x) <- gsub(colnames(.x),pattern = " ",replacement = "_")
+    colnames(.x) <- gsub(colnames(.x),pattern = "-",replacement = ".")
+    filtered_features <- intersect(colnames(.x),filtered_features)
+    .x[,c("Run",filtered_features)]
+  })) -> data_for_logistic
+final_features <- readr::read_rds(file.path(res_path,"final_feature.rds.gz"))$features_all_success
+data_for_logistic %>%
+  dplyr::mutate(filter_score = purrr::map(GSVA, .f =function(.x){
+    .x[,c("Run",final_features)]
+  })) %>%
+  dplyr::select(-GSVA) %>%
+  readr::write_rds(file.path(res_path_final,"clinical_out_score.rds.gz"))
+
 
 publish_score <- readr::read_rds(file.path("/home/huff/project/immune_checkpoint/result_20171025/ICP_score.new/logistic_model_predict_Response/use_filtered_signatures_permutation_and_combination-from_GSVA_add_exp_ratio_cancerSpecific/select_best_and_compare","CYT_IFN_IMPRESS_score.rds.gz"))
 our_score <- readr::read_rds(file.path(res_path_final,"clinical_out_score.rds.gz"))
-our_model <- readr::read_rds(file.path(res_path_final,"logic.model.rds.gz"))
+our_model <- readr::read_rds(file.path(res_path,"logic.model.rds.gz"))
 
 our_score %>%
   dplyr::filter(!Author %in% c("Auslander")) %>%
@@ -32,8 +52,13 @@ our_score %>%
     .x %>%
       dplyr::filter(Run %in% .y$Run)
   })) -> combine_data
-
-
+combine_data %>%
+  dplyr::mutate(n=purrr::map(response,.f=function(.x){
+    nrow(.x)
+  })) %>%
+  tidyr::unnest(n) %>%
+  dplyr::filter(n>1) %>%
+  dplyr::select(-n) -> combine_data
 # functions ---------------------------------------------------------------
 
 fn_select_train_test <- function(response,percent = 0.6){
