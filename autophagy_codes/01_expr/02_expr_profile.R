@@ -804,21 +804,19 @@ symbol_anno <- symbol_anno[,-1]
 library(ComplexHeatmap)
 # gene row annotation
 gene_anno <- HeatmapAnnotation(df=symbol_anno,
-                               col = list(Immunity=c("Inhibit" = "#EE3B3B",
-                                                               "Activate" = "#1C86EE",
-                                                               "TwoSide" = "#EE7600"),
-                                          `Exp. pattern`=c("Mainly_exp_on_Tumor" = "pink",
-                                                     "Tumor cell dominate" = "red",
-                                                     "Immune and tumor cell almost" = "#9A32CD",
-                                                     "Immune cell dominate" = "blue",
-                                                     "Only_exp_on_Immune" = "blue",
+                               col = list(Immunity=c("Inhibit" = "#FF82AB",
+                                                     "Activate" = "#1E90FF",
+                                                     "TwoSide" = "#FFB90F"),
+                                          `Exp. pattern`=c("Tumor cell dominate" = "#FFC1C1",
+                                                     "Immune and tumor cell almost" = "#EED8AE",
+                                                     "Immune cell dominate" = "#B4EEB4",
                                                      "Not_sure" = "grey"),
-                                          `Function type` = c("Receptor" = "black",
-                                                   "Ligand" = "red",
-                                                   "Ligand&Receptor" = "purple"),
+                                          `Function type` = c("Receptor" = "#9400D3",
+                                                   "Ligand" = "#556B2F",
+                                                   "Ligand&Receptor" = "#76EE00"),
                                           `Gene family` = c("BTN" = "#838B8B", 
                                                      "KIR_activate"= "#000000",
-                                                     "KIR_inhibit"  ="#0000FF",
+                                                     "KIR_inhibit"  ="#104E8B",
                                                      "MHC class I"= "#8B2323",
                                                      "MHC class II"="#CDAA7D",
                                                      "Other"="#8EE5EE")),
@@ -846,15 +844,15 @@ dev.off()
 
 plot(row_dend)
 he = Heatmap(mean_exp_of_ICP_in_cancers_samples.df.scaled,
-             col = colorRamp2(c(-2, 0, 4), c("blue", "white", "red")),
+             col = colorRamp2(c(-1, 0, 5), c("blue", "white", "red")),
              row_names_gp = gpar(fontsize = 8),
              show_row_names = T, 
              show_column_names = FALSE,
-             show_row_dend = T, # whether show row clusters.
+             show_row_dend = F, # whether show row clusters.
              top_annotation = gene_anno,
              row_names_side = c("left"),
              cluster_columns = color_branches(col_dend, k = 6),   # add color on the column tree branches
-             cluster_rows = color_branches(row_dend, k = 4), 
+             # cluster_rows = color_branches(row_dend, k = 4), 
              heatmap_legend_param = list(title = c("Mean exp.")))
 pdf(file.path(out_path,"e_6_exp_profile","ICP_exp_in_cancers.pdf"),width = 8,height = 6)
 he
