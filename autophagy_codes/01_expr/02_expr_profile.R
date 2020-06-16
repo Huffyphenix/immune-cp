@@ -506,10 +506,10 @@ fn_average.by_expsite.TN <- function(.data){
     dplyr::left_join(gene_list,by="symbol") %>%
     dplyr::filter(!is.na(expr)) %>%
     dplyr::mutate(group = ifelse(substr(barcode,14,14)==0, "Tumor", "Normal")) %>%
-    dplyr::filter(Exp_site %in% c("Immune and tumor cell almost" ,"Immune cell dominate","Tumor cell dominate" )) %>%
-    # dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
-    # dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
-    # dplyr::mutate(Exp_site = Exp_site.1) %>%
+    # dplyr::filter(Exp_site %in% c("Immune and tumor cell almost" ,"Immune cell dominate","Tumor cell dominate" )) %>%
+    dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Only_exp_on_Immune","Mainly_exp_on_Immune"),"Mainly_exp_on_Immune","Mainly_exp_on_Tumor")) %>%
+    dplyr::mutate(Exp_site.1 = ifelse(Exp_site %in% c("Both_exp_on_Tumor_Immune"),"Both_exp_on_Tumor_Immune",Exp_site.1)) %>%
+    dplyr::mutate(Exp_site = Exp_site.1) %>%
     dplyr::group_by(barcode,Exp_site, group) %>%
     dplyr::mutate(average_exp = mean(expr)) %>%
     dplyr::select(barcode,Exp_site,group,average_exp) %>%
@@ -525,6 +525,8 @@ gene_list_expr %>%
 
 ICP_mean_expr_in_cancers.by_expsite.TN %>%
   readr::write_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_TN.by_expsite-noMHC.rds.gz"),compress = "gz") 
+
+# ICP_mean_expr_in_cancers.by_expsite.TN <- readr::read_rds(file.path(out_path,"e_6_exp_profile","ICP_mean_expr_in_TN.by_expsite-noMHC.rds.gz"))
 
 ICP_mean_expr_in_cancers.by_expsite.TN %>%
   tidyr::unnest() %>%
@@ -571,7 +573,8 @@ plot_ready %>%
   dplyr::select(cancer_types, Exp_site,mean)%>%
   unique() %>%
   tidyr::spread(key="Exp_site",value="mean") %>%
-  dplyr::mutate(`log2FC(I/T)`=log2(`Immune cell dominate`/`Tumor cell dominate`)) %>%
+  # dplyr::mutate(`log2FC(I/T)`=log2(`Immune cell dominate`/`Tumor cell dominate`)) %>%
+  dplyr::mutate(`log2FC(I/T)`=log2(Mainly_exp_on_Immune/Mainly_exp_on_Tumor)) %>%
   dplyr::mutate(title = paste(cancer_types,", log2FC=",signif(`log2FC(I/T)`,2),sep="")) %>%
   dplyr::select(cancer_types,title,`log2FC(I/T)`) -> label
 plot_ready %>%
@@ -579,9 +582,7 @@ plot_ready %>%
 
 plot_ready %>%
   dplyr::select(Exp_site) %>%
-  dplyr::inner_join(data.frame(Exp_site =c("Immune and tumor cell almost" ,"Immune cell dominate","Tumor cell dominate" ),
-                               rank = c(3,2,1),
-                               Exp_site.s = c("TIC-ICGs","IC-ICGs","TC-ICGs")), by = "Exp_site") %>%
+  dplyr::inner_join(data.frame(Exp_site =c("Both_exp_on_Tumor_Immune" ,"Mainly_exp_on_Immune","Mainly_exp_on_Tumor" ), rank = c(3,2,1), Exp_site.s = c("TIC-ICGs","IC-ICGs","TC-ICGs")), by = "Exp_site") %>%
   dplyr::arrange(rank) %>%
   dplyr::select(-rank)%>%
   unique() -> Exp_site.rank
@@ -597,6 +598,7 @@ plot_ready %>%
   .$cancer_types -> c.rank
 plot_ready <- within(plot_ready,cancer_types <- factor(cancer_types,levels = unique(c.rank)))
 with(plot_ready, levels(cancer_types))
+
 
 plot_ready %>%
   dplyr::mutate(average_exp = log2(average_exp)) %>%
@@ -625,6 +627,101 @@ plot_ready %>%
     panel.grid = element_blank()
   )
 ggsave(file.path(out_path,"e_6_exp_profile","ICP_average_exp_in_expsite-by-TN-noMHC.pdf"),device = "pdf", width = 12,height = 10)
+
+## added by chunjie
+# split figure into 2 figure
+# 1 compare the tumor between ICG
+# 2 compare the ICG between normal and tumor
+
+gene_color <- c('IC-ICGs' = '#bbf4b0', 'TC-ICGs' = '#f4c2c2', 'TIC-ICGs' = '#e7ddac')
+plot_ready_tumor <- plot_ready %>% 
+  dplyr::mutate(cancer_types = as.character(cancer_types)) %>% 
+  dplyr::filter(group == 'Tumor') %>% 
+  dplyr::mutate(average_exp = log2(average_exp)) %>% 
+  dplyr::mutate(average_exp = ifelse(average_exp > 12, 12, average_exp)) %>% 
+  dplyr::mutate(average_exp = ifelse(average_exp < 5.5, 5.5, average_exp))
+
+plot_ready_tumor %>% 
+  dplyr::filter(Exp_site.s == 'IC-ICGs.Tumor') %>% 
+  dplyr::group_by(cancer_types) %>% 
+  dplyr::summarise(m = mean(average_exp)) %>% 
+  dplyr::arrange(-m) %>% 
+  dplyr::pull(cancer_types) ->
+  plot_ready_tumor_tumor_rank
+
+plot_ready_tumor %>% 
+  ggplot(aes(x = cancer_types, y = average_exp, color = Exp_site.s)) +
+  geom_boxplot(outlier.shape = NA, width = 0.5) +
+  scale_color_manual(values = unname(gene_color), name = 'ICG Type', label = c('IC-ICG', 'TC-ICG', 'TIC-ICG')) +
+  scale_x_discrete(limit = plot_ready_tumor_tumor_rank) +
+  labs(x = 'Cancer Types', y = 'Expression(log2)') +
+  theme(
+    plot.title = element_blank(),
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    axis.line.x.bottom = element_line(color = 'black'),
+    axis.line.y.left = element_line(color = 'black'),
+    legend.position = 'top',
+    legend.background = element_blank(),
+    legend.key = element_blank()
+  ) -> plot_within_tumor
+
+ggsave(filename = 'plot_within_tumor.pdf', plot = plot_within_tumor, device = 'pdf', path = '/project/huff/huff/bib-newoutput', height = 3, width = 11)
+
+# plot2
+# 2 compare the ICG between normal and tumor
+plot_ready %>% 
+  dplyr::mutate(cancer_types = as.character(cancer_types)) %>% 
+  dplyr::group_by(cancer_types) %>% 
+  tidyr::nest() %>% 
+  dplyr::mutate(data = purrr::map(.x = data, .f = function(.x) {
+    .x %>% 
+      dplyr::select(barcode) %>% 
+      dplyr::distinct() %>% 
+      dplyr::mutate(patient = substr(x = barcode, start = 1, stop = 12)) %>% 
+      dplyr::mutate(code = substr(x = barcode, start = 14, stop = 15)) %>% 
+      dplyr::filter(code %in% c('01', '11')) %>% 
+      dplyr::group_by(patient) %>% 
+      dplyr::mutate(n = dplyr::n()) %>% 
+      dplyr::filter(n > 1) %>% dplyr::ungroup() %>% dplyr::pull(barcode) -> 
+      .pair_barcode
+    .x %>% dplyr::filter(barcode %in% .pair_barcode)
+  })) %>% 
+  dplyr::filter(purrr::map_lgl(.x = data, .f = function(.x){nrow(.x)> 60})) %>% 
+  tidyr::unnest(cols = data) %>% 
+  dplyr::ungroup() ->
+  plot_ready_tumor_normal
+
+plot_ready_tumor_normal %>% 
+  dplyr::mutate(average_exp = log2(average_exp)) %>% 
+  dplyr::mutate(average_exp = ifelse(average_exp > 11, 11, average_exp)) %>% 
+  dplyr::mutate(average_exp = ifelse(average_exp < 6, 6, average_exp)) %>% 
+  dplyr::mutate(icg_type = gsub(pattern = 's.Normal|s.Tumor', replacement = '', x = Exp_site.s)) %>% 
+  dplyr::mutate(group = factor(x = group, levels = c('Tumor', 'Normal'))) %>% 
+  ggplot(aes(x = cancer_types, y = average_exp, color = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.5) +
+  scale_color_manual(values = c('#bfa500', '#6775ff'), name = '') +
+  facet_wrap(~icg_type, ncol = 1, strip.position = 'right') +
+  labs(x = 'Cancer Types', y = 'Expression(log2)') +
+  theme(
+    plot.title = element_blank(),
+    panel.background = element_rect(fill = 'transparent', color = 'transparent'),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    axis.line.x.bottom = element_line(color = 'black'),
+    axis.line.y.left = element_line(color = 'black'),
+    legend.position = 'top',
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    strip.background = element_blank()
+  ) -> plot_compare_tumor_normal
+ggsave(filename = 'plot_compare_tumor_normal.pdf', plot = plot_compare_tumor_normal, device = 'pdf', path = '/project/huff/huff/bib-newoutput', height = 4, width = 11)
+
+load(file = '/project/huff/huff/bib-newoutput/cj_02_expr_proile.rda')
+
+save.image(file = '/project/huff/huff/bib-newoutput/cj_02_expr_proile.rda')
+
 
 # survival analysis [univariable survival analysis] ----------------------------
 ## PFS
@@ -919,3 +1016,4 @@ ggsave(file.path(out_path,"e_6_exp_profile","ICP_GSVA-score_in_expsite-by-cancer
 # save image --------------------------------------------------------------
 
 save.image(file.path(out_path,"e_6_exp_profile","e_6_exp_profile.rdata"))
+
