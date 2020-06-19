@@ -19,6 +19,7 @@ TIMER_immunity <- readr::read_tsv(file.path(immunity_path_2,"immuneEstimation.tx
 
 # result path -------------------------------------------------------------
 result_path <- "/project/huff/huff/immune_checkpoint/result_20171025/e_5_immune_infiltration"
+result_path <- "/project/huff/huff/immune_checkpoint/result_20171025/e_5_immune_infiltration/BIB_revised" # huff BIB revised results
 
 # load data ---------------------------------------------------------------
 TCGA_cancer_info <- readr::read_tsv(file.path("/project/huff/huff/data/TCGA", "TCGA_sample_cancer_info.txt")) %>%
@@ -543,14 +544,6 @@ TIMER_data_T.N.paired.peak %>%
 
 # draw density plot and output
 TIMER_data_dealed.peak.compareTN.paired %>%
-  dplyr::filter(peak.pos=="peak.x") %>%
-  dplyr::filter(Relationship_between_T.N!="Not Applicable") %>%
-  dplyr::select(cancer_types) %>%
-  unique() %>%
-  dplyr::mutate(x=purrr::map(cancer_types,fn_draw_density_cancer_paired)) %>%
-  tidyr::unnest()
-
-TIMER_data_dealed.peak.compareTN.paired %>%
   readr::write_tsv(file.path(result_path,"compareTN.paired.TIMER_cell_density.peak.tsv"))
 
 
@@ -568,22 +561,43 @@ TIMER_data_dealed.peak.compareTN.paired.peak.x %>%
   dplyr::arrange(N) -> cancer_rank.paired
 
 TIMER_data_dealed %>%
+  dplyr::filter(cancer_types %in% cancer_rank.paired$cancer_types) %>%
   tidyr::gather(-barcode_1,-barcode,-cancer_types,-Type,key="cell_type",value="value") %>%
   dplyr::mutate(value=as.numeric(value)) %>%
-  tidyr::nest(-cancer_types,-cell_type) %>%
-  dplyr::mutate(name = paste(cancer_types,cell_type,sep=".")) %>%
-  dplyr::mutate(test = purrr::map2(name,data,.f=function(.y,.x){
+  tidyr::nest(-cancer_types) %>%
+  # dplyr::mutate(name = paste(cancer_types,cell_type,sep=".")) %>%
+  dplyr::mutate(test = purrr::map2(cancer_types,data,.f=function(.y,.x){
     print(.y)
     .x %>%
-      tidyr::spread(key="Type",value="value") -> .x
-    broom::tidy(wilcox.test(.x$Tumor,.x$Normal,alternative = c("two.sided")))
+      dplyr::select(-barcode_1) %>%
+      tidyr::nest(-barcode,-Type,-cell_type) %>%
+      dplyr::mutate(data = purrr::map(data,.f=function(.y){
+        .y %>%
+          dplyr::mutate(id = 1:nrow(.y))
+      })) %>%
+      tidyr::unnest() %>%
+      tidyr::spread(key="Type",value="value") %>%
+      dplyr::filter(!is.na(Normal) & !is.na(Tumor)) -> .x
+    .x %>%
+      tidyr::nest(-cell_type) %>%
+      dplyr::mutate(p = purrr::map(data,.f=function(.z){
+        broom::tidy(wilcox.test(.z$Tumor,.z$Normal,alternative = c("two.sided"),paired = T))
+      })) %>%
+      dplyr::select(-data) %>%
+      tidyr::unnest() -> .pvalue
+    
+    .pvalue %>%
+      dplyr::mutate(fdr = p.adjust(.pvalue$p.value,method = "fdr"))
   })) %>%
-  dplyr::select(
-    -data,-name
-  ) %>%
+  dplyr::select(-data) %>%
   tidyr::unnest() %>%
-  dplyr::mutate(label = ifelse(p.value<=0.05,"*","")) %>%
-  dplyr::select(cancer_types,cell_type,label) -> TIMER_data_dealed.compareTN.paired.wilcox
+  dplyr::mutate(label = ifelse(fdr<=0.05,"*","")) %>%
+  dplyr::select(cancer_types,cell_type,label,fdr) -> TIMER_data_dealed.compareTN.paired.wilcox
+
+TIMER_data_dealed.peak.compareTN.paired.peak.x %>%
+  dplyr::inner_join(TIMER_data_dealed.compareTN.paired.wilcox,by=c("cancer_types", "cell_type")) %>%
+  readr::write_tsv(file.path(result_path,"compareTN.paired.TIMER_cell_density.peak.tsv"))
+
 
 TIMER_data_dealed.peak.compareTN.paired.peak.x %>%
   dplyr::inner_join(TIMER_data_dealed.compareTN.paired.wilcox,by=c("cancer_types", "cell_type")) %>%
