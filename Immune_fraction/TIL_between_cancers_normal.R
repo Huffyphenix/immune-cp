@@ -405,7 +405,7 @@ ICG_percent_hotTumor_combine %>%
   ggplot(aes(x=group, y=hot_per*100)) +
   geom_boxplot() +
   ggpubr::stat_compare_means(comparisons =cpm_list,
-                             method = "wilcox.test",label = "p.signif") +
+                             method = "t.test",label = "p.signif") +
   # facet_wrap(.~cancer_types) +
   labs(y="Upregulated ICGs (%)") +
   my_theme +
@@ -413,6 +413,31 @@ ICG_percent_hotTumor_combine %>%
     axis.title.x = element_blank()
   )
 ggsave(file.path(result_path,"UpICGs_diff_in_hot_cold_exclude.pdf"),height = 3,width = 4)
+
+  
+ICG_percent_hotTumor_combine %>%
+  dplyr::filter(group == "Cold") %>%
+  .$hot_per -> Cold_score
+ICG_percent_hotTumor_combine %>%
+  dplyr::filter(group == "Excluded") %>%
+  .$hot_per -> Excluded_score
+ICG_percent_hotTumor_combine %>%
+  dplyr::filter(group == "Hot") %>%
+  .$hot_per -> Hot_score
+  
+broom::tidy(t.test(Cold_score,Excluded_score)) %>%
+  dplyr::mutate(group1 = "Cold", group2 = "Excluded") %>%
+  rbind(
+    broom::tidy(t.test(Cold_score,Hot_score))%>%
+      dplyr::mutate(group1 = "Cold", group2 = "Hot")
+  )%>%
+  rbind(
+    broom::tidy(t.test(Hot_score,Excluded_score))%>%
+      dplyr::mutate(group1 = "Hot", group2 = "Excluded")
+  ) -> DE_p.value
+DE_p.value %>%
+  dplyr::mutate(FDR = p.adjust(DE_p.value$p.value,method = "fdr")) %>%
+  readr::write_tsv(file.path(result_path,"DE_FDR_cold_hot_compare.tsv"))
 
 # get peak
 TIMER_data_dealed %>%
