@@ -4,7 +4,7 @@ library(RDS)
 library(gtools)
 # processed path
 basic_path <- "/home/huff/project/"
-tcga_path = c("/project/huff/huff/immune_checkpoint/data/TCGA_data")
+tcga_path = file.path(basic_path,"immune_checkpoint/data/TCGA_data")
 expr <- readr::read_rds(file.path(tcga_path, "pancan33_expr.rds.gz"))
 result_path<-c("/project/huff/huff/immune_checkpoint/result_20171025")
 expr_path<-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
@@ -12,12 +12,12 @@ expr_path<-c("/project/huff/huff/immune_checkpoint/result_20171025/expr_rds")
 # Read gene list
 # Gene list was compress as rds
 gene_list_path <- "/project/huff/huff/immune_checkpoint/checkpoint/20171021_checkpoint"
-gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.tsv")) %>%
+gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class.new.20200619.tsv")) %>%
   dplyr::mutate(site_col = ifelse(Exp_site== "Immune and tumor cell almost","darkorange", site_col)) %>%
   dplyr::mutate(site_col = ifelse(Exp_site== "Immune cell dominate","darkgreen", site_col)) %>%
-  dplyr::mutate(site_col = ifelse(Exp_site== "Tumor cell dominate","red", site_col)) 
+  dplyr::mutate(site_col = ifelse(Exp_site== "Tumor cell dominate","red", site_col)) %>%
+  dplyr::mutate(site_col = ifelse(is.na(Exp_site),"grey", site_col)) 
   
-
 #output path
 out_path<-c(file.path(result_path,"e_2_DE")) 
 out_path<-c(file.path(result_path,"e_2_DE/BIB_revised"))  # huff BIB revised results
@@ -82,7 +82,7 @@ calculate_fc_pvalue <- function(.x, .y) {
   df_f %>%
     dplyr::group_by(cancer_types, symbol, entrez_id) %>%
     tidyr::drop_na(expr) %>%
-    dplyr::do(broom::tidy(t.test(expr ~ type, data = .))) %>%
+    dplyr::do(broom::tidy(wilcox.test(expr ~ type, data = ., paired = T))) %>%
     dplyr::ungroup() %>%
     dplyr::select(cancer_types, symbol, entrez_id, p.value) -> df_pvalue
   
