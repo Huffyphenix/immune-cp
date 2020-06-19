@@ -3,6 +3,7 @@ library(dplyr)
 library(RDS)
 library(gtools)
 # processed path
+basic_path <- "/home/huff/project/"
 tcga_path = c("/project/huff/huff/immune_checkpoint/data/TCGA_data")
 expr <- readr::read_rds(file.path(tcga_path, "pancan33_expr.rds.gz"))
 result_path<-c("/project/huff/huff/immune_checkpoint/result_20171025")
@@ -18,7 +19,9 @@ gene_list <- readr::read_tsv(file.path(gene_list_path, "ICPs_all_info_class-new.
   
 
 #output path
-out_path<-c(file.path(result_path,"e_2_DE"))
+out_path<-c(file.path(result_path,"e_2_DE")) 
+out_path<-c(file.path(result_path,"e_2_DE/BIB_revised"))  # huff BIB revised results
+
 load(file = file.path(out_path, "rda_00_gene_expr.rda"))
 
 #######################
@@ -81,8 +84,10 @@ calculate_fc_pvalue <- function(.x, .y) {
     tidyr::drop_na(expr) %>%
     dplyr::do(broom::tidy(t.test(expr ~ type, data = .))) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(fdr = p.adjust(p.value, method = "fdr")) %>%
-    dplyr::select(cancer_types, symbol, entrez_id, p.value, fdr) -> df_pvalue
+    dplyr::select(cancer_types, symbol, entrez_id, p.value) -> df_pvalue
+  
+  df_pvalue %>%
+    dplyr::mutate(fdr = p.adjust(df_pvalue$p.value, method = "fdr")) -> df_pvalue
   
   # log2 fold change mean
   df_f %>%
@@ -460,7 +465,7 @@ p3 + theme(axis.text.x = element_blank(),
            axis.title.y = element_text(size = 10),
            plot.margin=unit(c(0,0,-0,0), "cm")) +
   labs(y="DE gene\n counts")-> p1.1
-ggarrange(NULL,p1.1,NULL,p2.1,p3.1,p4.1,
+ggpubr::ggarrange(NULL,p1.1,NULL,p2.1,p3.1,p4.1,
           ncol = 3, nrow = 2,  align = "hv", 
           widths = c(3, 11, 5), heights = c(1, 5),
           legend = "left",
